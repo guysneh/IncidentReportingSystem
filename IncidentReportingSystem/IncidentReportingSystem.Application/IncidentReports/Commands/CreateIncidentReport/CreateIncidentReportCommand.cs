@@ -1,7 +1,7 @@
 ﻿using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 
-namespace IncidentReportingSystem.Application.Incidents.Commands.CreateIncident
+namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport
 {
     /// <summary>
     /// Command representing a request to create a new incident report.
