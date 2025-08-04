@@ -16,7 +16,8 @@ namespace IncidentReportingSystem.API.Controllers
     /// Handles API requests related to incident reports.
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiVersion("1.0")]
     [Authorize]
     public class IncidentReportsController : ControllerBase
     {

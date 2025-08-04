@@ -1,6 +1,7 @@
 using FluentValidation;
 
 using IncidentReportingSystem.API.Converters;
+using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Validators;
@@ -11,6 +12,7 @@ using IncidentReportingSystem.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
@@ -26,7 +28,7 @@ ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
-ConfigureMiddleware(app);
+ConfigureMiddleware(app,builder.Services);
 
 app.MapControllers();
 
@@ -81,8 +83,23 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
             };
         });
 
+    // Versioning
+    services.AddApiVersioning(options =>
+    {
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.ReportApiVersions = true;
+    });
+
+    services.AddVersionedApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
     // Swagger + JWT support
     services.AddEndpointsApiExplorer();
+    services.ConfigureOptions<ConfigureSwaggerOptions>();
     services.AddSwaggerGen(c =>
     {
         c.SupportNonNullableReferenceTypes();
@@ -188,13 +205,20 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
     services.AddAuthorization();
 }
 
-static void ConfigureMiddleware(WebApplication app)
+static void ConfigureMiddleware(WebApplication app, IServiceCollection services)
 {
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.GlobalExceptionHandlingMiddleware>();
-
+    var apiVersionDescriptionProvider = services.BuildServiceProvider()
+    .GetRequiredService<IApiVersionDescriptionProvider>();
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+        {
+            options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+        }
+    });
 
     app.UseHttpsRedirection();
 

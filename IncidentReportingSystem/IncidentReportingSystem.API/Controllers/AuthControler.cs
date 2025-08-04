@@ -8,7 +8,8 @@ namespace IncidentReportingSystem.API.Controllers;
 /// Controller for generating JWT tokens for demo purposes.
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 [AllowAnonymous]
 public class AuthController : ControllerBase
 {
