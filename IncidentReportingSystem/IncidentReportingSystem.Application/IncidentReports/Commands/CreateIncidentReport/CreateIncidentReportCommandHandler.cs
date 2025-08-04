@@ -1,53 +1,45 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Interfaces;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
-namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-
-/// <summary>
-/// Handles the logic for creating a new incident report.
-/// </summary>
-public class CreateIncidentReportCommandHandler : IRequestHandler<CreateIncidentReportCommand, Guid>
+namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport
 {
-    private readonly IIncidentReportRepository _repository;
-    private readonly ILogger<CreateIncidentReportCommandHandler> _logger;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="CreateIncidentReportCommandHandler"/> class.
+    /// Handles creation of a new incident report.
     /// </summary>
-    /// <param name="repository">Repository for persisting incident reports.</param>
-    /// <param name="logger">Logger instance for diagnostics and audit logging.</param>
-    public CreateIncidentReportCommandHandler(
-        IIncidentReportRepository repository,
-        ILogger<CreateIncidentReportCommandHandler> logger)
+    public class CreateIncidentReportCommandHandler : IRequestHandler<CreateIncidentReportCommand, IncidentReport>
     {
-        _repository = repository;
-        _logger = logger;
-    }
+        private readonly IIncidentReportRepository _repository;
 
-    /// <summary>
-    /// Handles the incoming command and creates a new incident report in the system.
-    /// </summary>
-    /// <param name="request">The command containing the report details.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The ID of the newly created incident report.</returns>
-    public async Task<Guid> Handle(CreateIncidentReportCommand request, CancellationToken cancellationToken)
-    {
-        var report = new IncidentReport(
-            id: Guid.NewGuid(),
-            description: request.Description,
-            location: request.Location,
-            reporterId: request.ReporterId,
-            category: request.Category,
-            systemAffected: request.SystemAffected,
-            severity: request.Severity
-        );
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CreateIncidentReportCommandHandler"/> class.
+        /// </summary>
+        /// <param name="repository">Repository for persisting incident reports.</param>
+        public CreateIncidentReportCommandHandler(IIncidentReportRepository repository)
+        {
+            _repository = repository;
+        }
 
-        await _repository.SaveAsync(report, cancellationToken);
+        /// <summary>
+        /// Handles the command to create a new incident report.
+        /// </summary>
+        /// <param name="request">Command containing incident report details.</param>
+        /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
+        /// <returns>The created <see cref="IncidentReport"/>.</returns>
+        public async Task<IncidentReport> Handle(CreateIncidentReportCommand request, CancellationToken cancellationToken)
+        {
+            var incident = new IncidentReport(
+                description: request.Description,
+                location: request.Location,
+                reporterId: request.ReporterId,
+                category: request.Category,
+                systemAffected: request.SystemAffected,
+                severity: request.Severity,
+                reportedAt: request.ReportedAt
+            );
 
-        _logger.LogInformation("Incident report created with ID: {IncidentReportId}", report.Id);
-
-        return report.Id;
+            await _repository.SaveAsync(incident, cancellationToken);
+            return incident;
+        }
     }
 }

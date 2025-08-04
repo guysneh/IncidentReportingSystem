@@ -1,23 +1,46 @@
 ﻿using IncidentReportingSystem.Domain.Enums;
+using IncidentReportingSystem.Domain.Entities;
 using MediatR;
 
 namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport
 {
     /// <summary>
-    /// Command representing a request to create a new incident report.
+    /// Command for creating a new incident report.
     /// </summary>
-    /// <param name="Description">Detailed description of the incident.</param>
-    /// <param name="Location">Location where the incident occurred (e.g., address, area).</param>
-    /// <param name="ReporterId">Identifier of the user submitting the report.</param>
-    /// <param name="Category">Category of the incident (e.g., infrastructure, safety).</param>
-    /// <param name="SystemAffected">Name of the system or service affected, if known.</param>
-    /// <param name="Severity">Severity level of the incident (Low, Medium, High).</param>
     public record CreateIncidentReportCommand(
+        /// <summary>
+        /// Description of the incident.
+        /// </summary>
         string Description,
+
+        /// <summary>
+        /// Location where the incident occurred.
+        /// </summary>
         string Location,
-        string ReporterId,
+
+        /// <summary>
+        /// Unique identifier of the reporter.
+        /// </summary>
+        Guid ReporterId,
+
+        /// <summary>
+        /// Category of the incident.
+        /// </summary>
         IncidentCategory Category,
-        string? SystemAffected,
-        IncidentSeverity Severity
-    ) : IRequest<Guid>;
+
+        /// <summary>
+        /// System or service affected by the incident.
+        /// </summary>
+        string SystemAffected,
+
+        /// <summary>
+        /// Severity level of the incident.
+        /// </summary>
+        IncidentSeverity Severity,
+
+        /// <summary>
+        /// Optional timestamp when the incident was reported.
+        /// </summary>
+        DateTime? ReportedAt
+    ) : IRequest<IncidentReport>; 
 }

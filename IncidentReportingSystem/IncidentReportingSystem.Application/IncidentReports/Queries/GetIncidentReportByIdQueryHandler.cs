@@ -1,0 +1,34 @@
+﻿using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Interfaces;
+using MediatR;
+
+namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById
+{
+    /// <summary>
+    /// Handles the query for retrieving an incident report by its ID.
+    /// </summary>
+    public class GetIncidentReportByIdQueryHandler : IRequestHandler<GetIncidentReportByIdQuery, IncidentReport>
+    {
+        private readonly IIncidentReportRepository _repository;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetIncidentReportByIdQueryHandler"/> class.
+        /// </summary>
+        /// <param name="repository">The repository for incident reports.</param>
+        public GetIncidentReportByIdQueryHandler(IIncidentReportRepository repository)
+        {
+            _repository = repository;
+        }
+
+        /// <inheritdoc />
+        public async Task<IncidentReport> Handle(GetIncidentReportByIdQuery request, CancellationToken cancellationToken)
+        {
+            var report = await _repository.GetByIdAsync(request.Id, cancellationToken);
+
+            if (report is null)
+                throw new KeyNotFoundException($"Incident with ID '{request.Id}' was not found.");
+
+            return report;
+        }
+    }
+}

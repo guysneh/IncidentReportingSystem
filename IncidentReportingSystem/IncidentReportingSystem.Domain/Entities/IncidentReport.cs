@@ -3,91 +3,87 @@
 namespace IncidentReportingSystem.Domain.Entities
 {
     /// <summary>
-    /// Represents an incident reported by a user, including description, location, status, and metadata.
+    /// Represents a reported incident in the system.
     /// </summary>
     public class IncidentReport
     {
         /// <summary>
-        /// Unique identifier for the incident.
+        /// Gets the unique identifier for the incident.
         /// </summary>
-        public Guid Id { get; init; }
+        public Guid Id { get; private set; }
 
         /// <summary>
-        /// Description of the incident as reported by the user.
+        /// Gets the textual description of the incident.
         /// </summary>
-        public string Description { get; init; }
+        public string Description { get; private set; } = default!;
 
         /// <summary>
-        /// Location of the incident (e.g., address, area).
+        /// Gets the physical or logical location where the incident occurred.
         /// </summary>
-        public string Location { get; init; }
+        public string Location { get; private set; } = default!;
 
         /// <summary>
-        /// Timestamp of when the incident was reported.
-        /// Defaults to current UTC time if not provided.
+        /// Gets the identifier of the user or system that reported the incident.
         /// </summary>
-        public DateTime ReportedAt { get; init; } 
+        public Guid ReporterId { get; private set; }
 
         /// <summary>
-        /// Current status of the incident (Open, InProgress, Closed).
+        /// Gets the category of the incident.
         /// </summary>
-        public IncidentStatus Status { get; private set; } = IncidentStatus.Open;
+        public IncidentCategory Category { get; private set; }
 
         /// <summary>
-        /// Identifier of the user who reported the incident.
+        /// Gets the name of the affected system or service.
         /// </summary>
-        public string ReporterId { get; init; }
+        public string SystemAffected { get; private set; } = default!;
 
         /// <summary>
-        /// Optional category of the incident (e.g., infrastructure, transportation).
+        /// Gets the severity level of the incident.
         /// </summary>
-        public IncidentCategory Category { get; init; }
+        public IncidentSeverity Severity { get; private set; }
 
         /// <summary>
-        /// Optional affected system or service.
+        /// Gets the timestamp when the incident was reported.
         /// </summary>
-        public string? SystemAffected { get; init; }
+        public DateTime? ReportedAt { get; private set; }
 
         /// <summary>
-        /// Optional severity level of the incident (Low, Medium, High).
+        /// Gets the current status of the incident.
         /// </summary>
-        public IncidentSeverity Severity { get; init; }
+        public IncidentStatus Status { get; private set; }
 
         /// <summary>
-        /// Creation timestamp in UTC.
+        /// Gets the creation timestamp of the incident.
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IncidentReport"/> class.
+        /// </summary>
         public IncidentReport(
-            Guid id,
             string description,
             string location,
-            string reporterId,
-            IncidentCategory category = IncidentCategory.Unknown,
-            string? systemAffected = null,
-            IncidentSeverity severity = IncidentSeverity.Medium,
-            DateTime? reportedAt = null)
+            Guid reporterId,
+            IncidentCategory category,
+            string systemAffected,
+            IncidentSeverity severity,
+            DateTime? reportedAt)
         {
-            Id = id;
+            Id = Guid.NewGuid();
             Description = description;
             Location = location;
             ReporterId = reporterId;
             Category = category;
             SystemAffected = systemAffected;
             Severity = severity;
-            ReportedAt = reportedAt ?? DateTime.UtcNow;
+            ReportedAt = reportedAt;
+            CreatedAt = DateTime.UtcNow;
+            Status = IncidentStatus.Open;
         }
 
         /// <summary>
-        /// Marks the incident as closed.
+        /// For EF Core.
         /// </summary>
-        public void Close() => Status = IncidentStatus.Closed;
-
-        /// <summary>
-        /// Updates the incident's status.
-        /// </summary>
-        /// <param name="newStatus">New status to assign.</param>
-        public void UpdateStatus(IncidentStatus newStatus) => Status = newStatus;
+        private IncidentReport() { }
     }
 }
-
