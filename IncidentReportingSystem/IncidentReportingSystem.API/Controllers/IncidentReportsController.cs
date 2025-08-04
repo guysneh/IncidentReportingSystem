@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Application.IncidentReports.Mappers;
@@ -6,6 +6,8 @@ using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentRep
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IncidentReportingSystem.API.Controllers
@@ -33,6 +35,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// </summary>
         /// <param name="command">Details of the incident to report.</param>
         /// <returns>The created incident report as DTO including its ID and metadata.</returns>
+        [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command)
@@ -47,6 +50,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="id">The incident ID.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The incident report as DTO if found.</returns>
+        [Authorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -70,6 +74,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="skip">Number of items to skip (for paging).</param>
         /// <param name="take">Number of items to return (for paging).</param>
         /// <returns>List of incident reports as DTOs.</returns>
+        [Authorize]
         [HttpGet]
         [ProducesResponseType(typeof(IReadOnlyList<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
@@ -89,6 +94,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="newStatus">New status to apply.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
+        [Authorize]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
