@@ -155,34 +155,35 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 
 static void ConfigureJwtAuthentication(IServiceCollection services, IConfiguration configuration)
 {
-    var jwtSecret = configuration["Jwt:SecretKey"];
+    var jwtSecret = configuration["Jwt:Secret"];
     if (string.IsNullOrWhiteSpace(jwtSecret))
-        throw new InvalidOperationException("Missing Jwt:SecretKey in configuration.");
+        throw new InvalidOperationException("Missing Jwt:Secret in configuration.");
 
-    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+    services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        var jwtSettings = configuration.GetSection("Jwt");
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ValidateLifetime = false,
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
-            };
-
-            options.Events = new JwtBearerEvents
-            {
-                OnAuthenticationFailed = context =>
-                {
-                    var logger = context.HttpContext.RequestServices
-                        .GetRequiredService<ILogger<Program>>();
-
-                    logger.LogError(context.Exception, "JWT Authentication failed");
-                    return Task.CompletedTask;
-                }
-            };
-        });
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"],
+    
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"],
+    
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(5),
+    
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
+            )
+        };
+    });
 
     services.AddAuthorization();
 }

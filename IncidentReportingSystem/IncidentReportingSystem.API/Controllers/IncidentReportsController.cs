@@ -17,6 +17,7 @@ namespace IncidentReportingSystem.API.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class IncidentReportsController : ControllerBase
     {
         private readonly IMediator _mediator;
