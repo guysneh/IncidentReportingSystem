@@ -5,7 +5,7 @@ using MediatR;
 namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport
 {
     /// <summary>
-    /// Handles creation of a new incident report.
+    /// Handles the creation of a new incident report.
     /// </summary>
     public class CreateIncidentReportCommandHandler : IRequestHandler<CreateIncidentReportCommand, IncidentReport>
     {
@@ -17,18 +17,16 @@ namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateInc
         /// <param name="repository">Repository for persisting incident reports.</param>
         public CreateIncidentReportCommandHandler(IIncidentReportRepository repository)
         {
-            _repository = repository;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         }
 
-        /// <summary>
-        /// Handles the command to create a new incident report.
-        /// </summary>
-        /// <param name="request">Command containing incident report details.</param>
-        /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
-        /// <returns>The created <see cref="IncidentReport"/>.</returns>
+        /// <inheritdoc />
         public async Task<IncidentReport> Handle(CreateIncidentReportCommand request, CancellationToken cancellationToken)
         {
+            ArgumentNullException.ThrowIfNull(request);
+
             cancellationToken.ThrowIfCancellationRequested();
+
             var incident = new IncidentReport(
                 description: request.Description,
                 location: request.Location,
@@ -40,6 +38,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateInc
             );
 
             await _repository.SaveAsync(incident, cancellationToken).ConfigureAwait(false);
+
             return incident;
         }
     }

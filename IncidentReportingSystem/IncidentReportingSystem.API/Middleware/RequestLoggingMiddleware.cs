@@ -1,45 +1,47 @@
-namespace IncidentReportingSystem.API.Middleware
+namespace IncidentReportingSystem.API.Middleware;
+
+/// <summary>
+/// Middleware that logs incoming HTTP requests.
+/// </summary>
+public class RequestLoggingMiddleware
 {
+    private readonly RequestDelegate _next;
+    private readonly ILogger<RequestLoggingMiddleware> _logger;
+
     /// <summary>
-    /// Middleware that logs incoming HTTP requests.
+    /// Initializes a new instance of the <see cref="RequestLoggingMiddleware"/> class.
     /// </summary>
-    public class RequestLoggingMiddleware
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <param name="logger">The logger instance.</param>
+    public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<RequestLoggingMiddleware> _logger;
+        _next = next ?? throw new ArgumentNullException(nameof(next));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestLoggingMiddleware"/> class.
-        /// </summary>
-        /// <param name="next">The next middleware in the pipeline.</param>
-        /// <param name="logger">The logger instance.</param>
-        public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
+    /// <summary>
+    /// Logs the HTTP request details before passing to the next middleware.
+    /// </summary>
+    /// <param name="context">HTTP context.</param>
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+
+        var method = context.Request.Method;
+        var path = context.Request.Path;
+        var queryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : "";
+
+        _logger.LogInformation("Incoming request: {Method} {Path}{Query}", method, path, queryString);
+
+        if (context.Request.RouteValues is { Count: > 0 })
         {
-            _next = next;
-            _logger = logger;
-        }
-
-        /// <summary>
-        /// Logs the HTTP request details before passing to the next middleware.
-        /// </summary>
-        /// <param name="context">HTTP context.</param>
-        public async Task InvokeAsync(HttpContext context)
-        {
-            var method = context.Request.Method;
-            var path = context.Request.Path;
-            var queryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : "";
-
-            _logger.LogInformation("Incoming request: {Method} {Path}{Query}", method, path, queryString);
-
-            if (context.Request.RouteValues != null && context.Request.RouteValues.Any())
+            foreach (var (key, value) in context.Request.RouteValues)
             {
-                foreach (var kvp in context.Request.RouteValues)
-                {
-                    _logger.LogInformation("Route value: {Key} = {Value}", kvp.Key, kvp.Value);
-                }
+                _logger.LogDebug("Route value: {Key} = {Value}", key, value);
             }
-
-            await _next(context).ConfigureAwait(false);
         }
+
+        await _next(context).ConfigureAwait(false);
     }
 }

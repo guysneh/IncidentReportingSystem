@@ -1,9 +1,5 @@
-using FluentValidation;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-
 using System.Text.Json;
+using FluentValidation;
 
 namespace IncidentReportingSystem.API.Middleware;
 
@@ -17,8 +13,8 @@ public class GlobalExceptionHandlingMiddleware
 
     public GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlingMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        _next = next ?? throw new ArgumentNullException(nameof(next));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -26,12 +22,17 @@ public class GlobalExceptionHandlingMiddleware
     /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+
         try
         {
             await _next(context).ConfigureAwait(false);
         }
         catch (ValidationException ex)
         {
+            _logger.LogWarning(ex, "Validation exception occurred.");
+
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
 
@@ -45,7 +46,7 @@ public class GlobalExceptionHandlingMiddleware
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Invalid JSON payload.");
+            _logger.LogWarning(ex, "Invalid JSON payload received.");
 
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
@@ -60,7 +61,7 @@ public class GlobalExceptionHandlingMiddleware
                     new
                     {
                         path = path ?? "unknown",
-                        message = ex.Message
+                        message = "Invalid JSON format"
                     }
                 }
             };
@@ -76,8 +77,8 @@ public class GlobalExceptionHandlingMiddleware
 
             var result = new
             {
-                error = "An unexpected error occurred",
-                message = ex.Message
+                error = "An unexpected error occurred"
+                // intentionally omitting 'message = ex.Message' to avoid information disclosure
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
@@ -89,12 +90,13 @@ public class GlobalExceptionHandlingMiddleware
     /// </summary>
     private static string? ExtractJsonPathFromMessage(string message)
     {
-        var marker = "Path: ";
-        var startIndex = message.IndexOf(marker);
+        const string marker = "Path: ";
+        var startIndex = message.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (startIndex == -1) return null;
 
         var endIndex = message.IndexOf(".", startIndex);
-        if (endIndex == -1) return message.Substring(startIndex + marker.Length).Trim();
+        if (endIndex == -1)
+            return message.Substring(startIndex + marker.Length).Trim();
 
         return message.Substring(startIndex + marker.Length, endIndex - startIndex - marker.Length).Trim();
     }
