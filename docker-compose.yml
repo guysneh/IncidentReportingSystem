@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: incident_db
+    environment:
+      POSTGRES_USER: incident_user
+      POSTGRES_PASSWORD: incident_pass
+      POSTGRES_DB: incident_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - incident_pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@incident.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+  incident_app:
+    image: incident-reporting-app
+    container_name: incident_app
+    build:
+      context: ./IncidentReportingSystem
+      dockerfile: IncidentReportingSystem.API/Dockerfile
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+
+  ef_migrator:
+    image: incident-reporting-app
+    container_name: ef_migrator
+    build:
+      context: ./IncidentReportingSystem
+      dockerfile: IncidentReportingSystem.API/Dockerfile
+    entrypoint: ["dotnet", "IncidentReportingSystem.API.dll", "--migrate"]
+    depends_on:
+      - db
+    restart: "no"
+
+volumes:
+  incident_pgdata:
