@@ -1,4 +1,4 @@
-﻿namespace IncidentReportingSystem.API.Middleware
+namespace IncidentReportingSystem.API.Middleware
 {
     /// <summary>
     /// Middleware that logs incoming HTTP requests.
@@ -23,7 +23,7 @@
         /// Logs the HTTP request details before passing to the next middleware.
         /// </summary>
         /// <param name="context">HTTP context.</param>
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, CancellationToken cancellationToken)
         {
             var method = context.Request.Method;
             var path = context.Request.Path;

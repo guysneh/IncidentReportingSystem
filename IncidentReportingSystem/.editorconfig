@@ -1,0 +1,25 @@
+root = true
+
+[*.cs]
+
+########################
+# async best practices
+########################
+dotnet_diagnostic.AsyncFixer03.severity = warning   # חסר CancellationToken
+dotnet_diagnostic.AsyncFixer01.severity = warning   # async ללא await
+
+########################
+# Roslynator – critical usage issues
+########################
+dotnet_diagnostic.RCS1096.severity = warning        # תנאים תמידיים
+dotnet_diagnostic.RCS1213.severity = warning        # חזרה מיותרת על return
+dotnet_diagnostic.RCS1097.severity = warning        # unreachable code
+dotnet_diagnostic.RCS1197.severity = warning        # הבטחות async שלא await
+
+########################
+# Optional cleanup – non-breaking only
+########################
+dotnet_diagnostic.RCS1045.severity = silent         # הגדרת private מיותרת
+dotnet_diagnostic.RCS1118.severity = none           # שם לא תקני לפרמטר
+dotnet_diagnostic.IDE0060.severity = none           # פרמטרים שלא בשימוש
+dotnet_diagnostic.CA1707.severity = none            # שם עם קו תחתון

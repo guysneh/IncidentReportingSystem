@@ -11,6 +11,9 @@ namespace IncidentReportingSystem.Domain.Exceptions
     /// </summary>
     public class InvalidIncidentOperationException : DomainException
     {
+        public InvalidIncidentOperationException() { }
         public InvalidIncidentOperationException(string message) : base(message) { }
+        public InvalidIncidentOperationException(string message, Exception innerException) : base(message, innerException) { }
+
     }
 }

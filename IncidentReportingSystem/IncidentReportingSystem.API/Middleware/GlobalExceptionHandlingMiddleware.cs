@@ -24,7 +24,7 @@ public class GlobalExceptionHandlingMiddleware
     /// <summary>
     /// Middleware pipeline handler.
     /// </summary>
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, CancellationToken cancellationToken)
     {
         try
         {
