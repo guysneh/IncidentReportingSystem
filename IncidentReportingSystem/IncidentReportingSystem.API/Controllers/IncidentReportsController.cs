@@ -1,8 +1,9 @@
 ﻿using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.IncidentReports.DTOs;
+using IncidentReportingSystem.Application.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
-using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -31,13 +32,13 @@ namespace IncidentReportingSystem.API.Controllers
         /// Creates a new incident report.
         /// </summary>
         /// <param name="command">Details of the incident to report.</param>
-        /// <returns>The created incident report including its ID and metadata.</returns>
+        /// <returns>The created incident report as DTO including its ID and metadata.</returns>
         [HttpPost]
-        [ProducesResponseType(typeof(IncidentReport), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command)
         {
             var result = await _mediator.Send(command);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result.ToDto());
         }
 
         /// <summary>
@@ -45,16 +46,16 @@ namespace IncidentReportingSystem.API.Controllers
         /// </summary>
         /// <param name="id">The incident ID.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>The incident report if found.</returns>
+        /// <returns>The incident report as DTO if found.</returns>
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(IncidentReport), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
         {
             try
             {
                 var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken);
-                return Ok(result);
+                return Ok(result.ToDto());
             }
             catch (KeyNotFoundException ex)
             {
@@ -68,9 +69,9 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="includeClosed">Include closed incidents.</param>
         /// <param name="skip">Number of items to skip (for paging).</param>
         /// <param name="take">Number of items to return (for paging).</param>
-        /// <returns>List of incident reports.</returns>
+        /// <returns>List of incident reports as DTOs.</returns>
         [HttpGet]
-        [ProducesResponseType(typeof(IReadOnlyList<IncidentReport>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IReadOnlyList<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
             [FromQuery] bool includeClosed = false,
             [FromQuery] int skip = 0,
@@ -78,7 +79,7 @@ namespace IncidentReportingSystem.API.Controllers
         {
             var query = new GetIncidentReportsQuery(includeClosed, skip, take);
             var results = await _mediator.Send(query);
-            return Ok(results);
+            return Ok(results.Select(r => r.ToDto()).ToList());
         }
 
         /// <summary>
@@ -103,6 +104,5 @@ namespace IncidentReportingSystem.API.Controllers
                 return NotFound(ex.Message);
             }
         }
-
     }
 }

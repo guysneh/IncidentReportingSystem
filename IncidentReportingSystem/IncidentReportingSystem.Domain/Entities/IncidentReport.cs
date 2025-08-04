@@ -58,6 +58,12 @@ namespace IncidentReportingSystem.Domain.Entities
         public DateTime CreatedAt { get; private set; }
 
         /// <summary>
+        /// Gets the last modification timestamp, if any.
+        /// </summary>
+        public DateTime? ModifiedAt { get; private set; }
+
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="IncidentReport"/> class.
         /// </summary>
         public IncidentReport(
@@ -93,6 +99,7 @@ namespace IncidentReportingSystem.Domain.Entities
         public void UpdateStatus(IncidentStatus newStatus)
         {
             Status = newStatus;
+            ModifiedAt = DateTime.UtcNow;
         }
     }
 }

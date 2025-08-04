@@ -6,6 +6,7 @@ using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +45,11 @@ app.Run();
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
     // Add basic framework services
-    services.AddControllers();
+    services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen();
 
@@ -87,15 +92,17 @@ static void ApplyMigrations(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     var pending = db.Database.GetPendingMigrations().ToList();
     if (pending.Any())
     {
-        Console.WriteLine("Applying pending migrations...");
+        logger.LogInformation("Applying {Count} pending migrations...", pending.Count);
         db.Database.Migrate();
+        logger.LogInformation("Migrations applied successfully.");
     }
     else
     {
-        Console.WriteLine("No pending migrations. Skipping.");
+        logger.LogInformation("No pending migrations. Skipping.");
     }
 }
