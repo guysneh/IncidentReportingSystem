@@ -1,5 +1,6 @@
 ﻿using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
+using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -58,5 +59,25 @@ namespace IncidentReportingSystem.API.Controllers
                 return NotFound(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Retrieves a list of incident reports with optional filters.
+        /// </summary>
+        /// <param name="includeClosed">Include closed incidents.</param>
+        /// <param name="skip">Number of items to skip (for paging).</param>
+        /// <param name="take">Number of items to return (for paging).</param>
+        /// <returns>List of incident reports.</returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(IReadOnlyList<IncidentReport>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll(
+            [FromQuery] bool includeClosed = false,
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 50)
+        {
+            var query = new GetIncidentReportsQuery(includeClosed, skip, take);
+            var results = await _mediator.Send(query);
+            return Ok(results);
+        }
+
     }
 }
