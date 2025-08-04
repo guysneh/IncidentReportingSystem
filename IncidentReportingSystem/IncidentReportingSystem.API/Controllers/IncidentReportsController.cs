@@ -1,7 +1,9 @@
 ﻿using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,6 +79,29 @@ namespace IncidentReportingSystem.API.Controllers
             var query = new GetIncidentReportsQuery(includeClosed, skip, take);
             var results = await _mediator.Send(query);
             return Ok(results);
+        }
+
+        /// <summary>
+        /// Updates the status of an existing incident report.
+        /// </summary>
+        /// <param name="id">ID of the incident report to update.</param>
+        /// <param name="newStatus">New status to apply.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
+        [HttpPut("{id}/status")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
     }

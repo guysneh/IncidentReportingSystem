@@ -28,6 +28,7 @@ builder.Services.AddScoped<IIncidentReportRepository, IncidentReportRepository>(
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
+app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 

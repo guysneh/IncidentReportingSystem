@@ -85,5 +85,14 @@ namespace IncidentReportingSystem.Domain.Entities
         /// For EF Core.
         /// </summary>
         private IncidentReport() { }
+
+        /// <summary>
+        /// Updates the status of the incident.
+        /// </summary>
+        /// <param name="newStatus">New status to assign.</param>
+        public void UpdateStatus(IncidentStatus newStatus)
+        {
+            Status = newStatus;
+        }
     }
 }
