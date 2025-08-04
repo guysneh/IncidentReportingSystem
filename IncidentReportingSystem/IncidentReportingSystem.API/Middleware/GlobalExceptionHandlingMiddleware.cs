@@ -24,11 +24,11 @@ public class GlobalExceptionHandlingMiddleware
     /// <summary>
     /// Middleware pipeline handler.
     /// </summary>
-    public async Task InvokeAsync(HttpContext context, CancellationToken cancellationToken)
+    public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
         }
         catch (ValidationException ex)
         {
@@ -41,7 +41,7 @@ public class GlobalExceptionHandlingMiddleware
                 details = ex.Errors.Select(e => new { field = e.PropertyName, message = e.ErrorMessage })
             };
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(result));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
         }
         catch (JsonException ex)
         {
@@ -65,7 +65,7 @@ public class GlobalExceptionHandlingMiddleware
                 }
             };
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(result));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public class GlobalExceptionHandlingMiddleware
                 message = ex.Message
             };
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(result));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
         }
     }
 

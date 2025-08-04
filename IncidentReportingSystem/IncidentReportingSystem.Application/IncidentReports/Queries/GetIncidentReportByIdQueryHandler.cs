@@ -23,7 +23,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
         /// <inheritdoc />
         public async Task<IncidentReport> Handle(GetIncidentReportByIdQuery request, CancellationToken cancellationToken)
         {
-            var report = await _repository.GetByIdAsync(request.Id, cancellationToken);
+            var report = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
 
             if (report is null)
                 throw new KeyNotFoundException($"Incident with ID '{request.Id}' was not found.");

@@ -26,11 +26,11 @@ namespace IncidentReportingSystem.Application.IncidentReports.Commands.UpdateInc
         /// <inheritdoc />
         public async Task<Unit> Handle(UpdateIncidentStatusCommand request, CancellationToken cancellationToken)
         {
-            var incident = await _repository.GetByIdAsync(request.Id, cancellationToken)
+            var incident = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false)
                 ?? throw new KeyNotFoundException($"Incident with ID {request.Id} not found.");
 
             incident.UpdateStatus(request.NewStatus);
-            await _repository.SaveAsync(incident, cancellationToken);
+            await _repository.SaveAsync(incident, cancellationToken).ConfigureAwait(false);
 
             return Unit.Value;
         }

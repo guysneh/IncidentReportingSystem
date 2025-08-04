@@ -40,7 +40,7 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await _mediator.Send(command).ConfigureAwait(false);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result.ToDto());
         }
 
@@ -58,7 +58,7 @@ namespace IncidentReportingSystem.API.Controllers
         {
             try
             {
-                var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken);
+                var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken).ConfigureAwait(false);
                 return Ok(result.ToDto());
             }
             catch (KeyNotFoundException ex)
@@ -83,7 +83,7 @@ namespace IncidentReportingSystem.API.Controllers
             [FromQuery] int take = 50)
         {
             var query = new GetIncidentReportsQuery(includeClosed, skip, take);
-            var results = await _mediator.Send(query);
+            var results = await _mediator.Send(query).ConfigureAwait(false);
             return Ok(results.Select(r => r.ToDto()).ToList());
         }
 
@@ -102,7 +102,7 @@ namespace IncidentReportingSystem.API.Controllers
         {
             try
             {
-                await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken);
+                await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken).ConfigureAwait(false);
                 return NoContent();
             }
             catch (KeyNotFoundException ex)

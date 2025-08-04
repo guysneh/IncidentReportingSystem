@@ -31,7 +31,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
         public async Task<IncidentReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.IncidentReports
-                .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -48,13 +48,13 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
                 .OrderByDescending(i => i.CreatedAt)
                 .Skip(skip)
                 .Take(take)
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
         public async Task SaveAsync(IncidentReport report, CancellationToken cancellationToken = default)
         {
-            var exists = await _context.IncidentReports.AnyAsync(i => i.Id == report.Id, cancellationToken);
+            var exists = await _context.IncidentReports.AnyAsync(i => i.Id == report.Id, cancellationToken).ConfigureAwait(false);
 
             if (exists)
             {
@@ -62,10 +62,10 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             }
             else
             {
-                await _context.IncidentReports.AddAsync(report, cancellationToken);
+                await _context.IncidentReports.AddAsync(report, cancellationToken).ConfigureAwait(false);
             }
 
-            await _context.SaveChangesAsync(cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }

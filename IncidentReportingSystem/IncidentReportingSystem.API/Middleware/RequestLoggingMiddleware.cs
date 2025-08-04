@@ -23,7 +23,7 @@ namespace IncidentReportingSystem.API.Middleware
         /// Logs the HTTP request details before passing to the next middleware.
         /// </summary>
         /// <param name="context">HTTP context.</param>
-        public async Task InvokeAsync(HttpContext context, CancellationToken cancellationToken)
+        public async Task InvokeAsync(HttpContext context)
         {
             var method = context.Request.Method;
             var path = context.Request.Path;
@@ -39,7 +39,7 @@ namespace IncidentReportingSystem.API.Middleware
                 }
             }
 
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
         }
     }
 }

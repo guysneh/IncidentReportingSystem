@@ -39,7 +39,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateInc
                 reportedAt: request.ReportedAt
             );
 
-            await _repository.SaveAsync(incident, cancellationToken);
+            await _repository.SaveAsync(incident, cancellationToken).ConfigureAwait(false);
             return incident;
         }
     }
