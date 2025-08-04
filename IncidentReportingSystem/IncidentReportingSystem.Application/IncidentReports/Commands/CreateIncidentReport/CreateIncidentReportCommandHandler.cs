@@ -28,6 +28,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateInc
         /// <returns>The created <see cref="IncidentReport"/>.</returns>
         public async Task<IncidentReport> Handle(CreateIncidentReportCommand request, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var incident = new IncidentReport(
                 description: request.Description,
                 location: request.Location,
