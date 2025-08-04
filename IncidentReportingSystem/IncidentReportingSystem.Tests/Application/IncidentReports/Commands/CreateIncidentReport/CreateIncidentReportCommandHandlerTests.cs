@@ -11,7 +11,7 @@ using Moq;
 
 using Xunit;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
+namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.CreateIncidentReport
 {
     public class CreateIncidentReportCommandHandlerTests
     {
