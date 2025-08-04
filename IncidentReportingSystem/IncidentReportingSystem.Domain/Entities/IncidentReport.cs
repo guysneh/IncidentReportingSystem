@@ -1,9 +1,4 @@
-﻿using IncidentReportingSystem.Domain.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using IncidentReportingSystem.Domain.Enums;
 
 namespace IncidentReportingSystem.Domain.Entities
 {
@@ -56,7 +51,12 @@ namespace IncidentReportingSystem.Domain.Entities
         /// <summary>
         /// Optional severity level of the incident (Low, Medium, High).
         /// </summary>
-        public IncidentSeverity Severity { get; init; } 
+        public IncidentSeverity Severity { get; init; }
+
+        /// <summary>
+        /// Creation timestamp in UTC.
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public IncidentReport(
             Guid id,
