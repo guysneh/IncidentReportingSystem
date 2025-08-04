@@ -1,32 +1,29 @@
 ﻿using FluentValidation;
+using IncidentReportingSystem.Application.IncidentReports.Commands;
+using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 
-namespace IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+namespace IncidentReportingSystem.Application.IncidentReports.Validators;
 
 /// <summary>
-/// Validator for <see cref="CreateIncidentReportCommand"/>, ensuring required fields and business rules are met.
+/// Validator for the CreateIncidentReportCommand.
+/// Ensures all required fields are present and valid.
 /// </summary>
 public class CreateIncidentReportCommandValidator : AbstractValidator<CreateIncidentReportCommand>
 {
     public CreateIncidentReportCommandValidator()
     {
         RuleFor(x => x.Description)
-            .NotEmpty()
-            .WithMessage("Description is required.");
+            .NotEmpty().WithMessage("Description is required.")
+            .MaximumLength(1000);
 
         RuleFor(x => x.Location)
-            .NotEmpty()
-            .WithMessage("Location is required.");
+            .NotEmpty().WithMessage("Location is required.")
+            .MaximumLength(255);
 
         RuleFor(x => x.ReporterId)
-            .NotEmpty()
-            .WithMessage("Reporter ID is required.");
+            .NotEmpty().WithMessage("ReporterId is required.");
 
-        RuleFor(x => x.Category)
-            .IsInEnum()
-            .WithMessage("Category must be a valid value.");
-
-        RuleFor(x => x.Severity)
-            .IsInEnum()
-            .WithMessage("Severity must be a valid value.");
+        RuleFor(x => x.SystemAffected)
+            .MaximumLength(255);
     }
 }
