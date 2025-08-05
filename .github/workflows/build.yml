@@ -19,35 +19,35 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
       - name: Run Tests with Coverage
         run: >
-          dotnet test --no-build --configuration Release
+          dotnet test IncidentReportingSystem/IncidentReportingSystem.sln --no-build --configuration Release
           --collect:"XPlat Code Coverage"
-          --results-directory TestResults
+          --results-directory IncidentReportingSystem/TestResults
           --logger "trx"
 
       - name: Generate HTML coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
         with:
-          reports: 'TestResults/**/coverage.cobertura.xml'
-          targetdir: 'CoverageReport'
+          reports: 'IncidentReportingSystem/TestResults/**/coverage.cobertura.xml'
+          targetdir: 'IncidentReportingSystem/CoverageReport'
           reporttypes: 'HtmlInline_AzurePipelines'
 
       - name: Upload HTML coverage report as artifact
         uses: actions/upload-artifact@v4
         with:
           name: CodeCoverageReport
-          path: CoverageReport
+          path: IncidentReportingSystem/CoverageReport
 
       - name: Publish test results in GitHub UI
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: Unit Tests
-          path: TestResults/**/*.trx
+          path: IncidentReportingSystem/TestResults/**/*.trx
           reporter: dotnet-trx
