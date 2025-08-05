@@ -1,5 +1,5 @@
 using FluentValidation;
-
+using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application.Common.Behaviors;
@@ -17,40 +17,49 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using Polly;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-ConfigureConfiguration(builder.Configuration);
-ConfigureServices(builder.Services, builder.Configuration);
-
-var app = builder.Build();
-
-ConfigureMiddleware(app,builder.Services);
-
-app.MapControllers();
+// Always configure configuration first
+ConfigureConfiguration(builder.Configuration, builder.Services);
 
 if (args.Contains("--migrate"))
 {
+    // Only load the minimum required services for migration
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("No valid connection string found.");
+
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseNpgsql(connectionString));
+
+    var app = builder.Build();
     ApplyMigrations(app);
     return;
 }
 
-app.Run();
+ConfigureServices(builder.Services, builder.Configuration);
+var fullApp = builder.Build();
+
+ConfigureMiddleware(fullApp, builder.Services);
+fullApp.MapControllers();
+
+fullApp.Run();
 
 
 // ------------------------------
 // METHODS
 // ------------------------------
 
-static void ConfigureConfiguration(ConfigurationManager configuration)
+static void ConfigureConfiguration(ConfigurationManager configuration, IServiceCollection services)
 {
     configuration
         .SetBasePath(Directory.GetCurrentDirectory())
         .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
         .AddEnvironmentVariables();
+    services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
 }
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -154,8 +163,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
     // Register database context
-    var connectionString = configuration.GetConnectionString("DefaultConnection") ??
-                           configuration["CONNECTION_STRING"];
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
     if (string.IsNullOrWhiteSpace(connectionString))
     {
         throw new InvalidOperationException("No valid database connection string found.");
@@ -229,18 +237,24 @@ static void ConfigureMiddleware(WebApplication app, IServiceCollection services)
 static void ApplyMigrations(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    var pending = db.Database.GetPendingMigrations().ToList();
-    if (pending.Any())
+    var policy = Policy
+        .Handle<Exception>()
+        .WaitAndRetry(
+            retryCount: 10,
+            sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)), 
+            onRetry: (exception, timespan, retryCount, context) =>
+            {
+                logger.LogWarning(exception, "Retry {RetryAttempt}: Failed to connect to DB. Waiting {Delay} before next try...", retryCount, timespan);
+            });
+
+    policy.Execute(() =>
     {
-        logger.LogInformation("Applying {Count} pending migrations...", pending.Count);
-        db.Database.Migrate();
+        logger.LogInformation("Attempting to apply migrations...");
+        dbContext.Database.Migrate();
         logger.LogInformation("Migrations applied successfully.");
-    }
-    else
-    {
-        logger.LogInformation("No pending migrations. Skipping.");
-    }
+    });
 }
+

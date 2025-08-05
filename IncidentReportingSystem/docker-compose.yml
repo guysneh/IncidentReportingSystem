@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: incidentreportingsystem-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_INTERNAL_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: incidentreportingsystem-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "${PGADMIN_PORT}:80"
+    depends_on:
+      - db 
+      
+  incidentreportingsystem-migrator:
+      build:
+        context:  .
+        dockerfile: IncidentReportingSystem.API/Dockerfile
+      depends_on:
+        db:
+          condition: service_started
+      command: ["dotnet", "IncidentReportingSystem.API.dll", "--migrate"]
+      restart: "no"
+      environment:
+        ASPNETCORE_ENVIRONMENT: Production
+        ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_INTERNAL_PORT};Database=${POSTGRES_DATABASE};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}"
+        
+  api:
+      build:
+        context: .
+        dockerfile: IncidentReportingSystem.API/Dockerfile
+      container_name: incidentreportingsystem-api
+      restart: always
+      depends_on:
+        db:
+          condition: service_started
+        incidentreportingsystem-migrator:
+          condition: service_completed_successfully
+      environment:
+        ASPNETCORE_ENVIRONMENT: Production
+        JWT__Secret: ${JWT_SECRET}
+        JWT__Issuer: ${JWT_ISSUER}
+        JWT__Audience: ${JWT_AUDIENCE}
+        JWT__ExpiryMinutes: ${JWT_EXPIRY_MINUTES}
+        ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_INTERNAL_PORT};Database=${POSTGRES_DATABASE};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}"
+      ports:
+        - "${API_PORT}:8080"
+        
+volumes:
+  pgdata:

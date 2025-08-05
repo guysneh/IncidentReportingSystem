@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/TestResults/
+*.user
+*.vs
+.vscode
+*.suo
+*.pdb
+*.db
+*.log
+*.ts
+*.csproj.user
+.env

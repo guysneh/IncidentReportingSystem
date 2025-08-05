@@ -1,6 +1,7 @@
 using IncidentReportingSystem.API.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace IncidentReportingSystem.API.Controllers;
 
@@ -13,11 +14,10 @@ namespace IncidentReportingSystem.API.Controllers;
 [AllowAnonymous]
 public class AuthController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
-
-    public AuthController(IConfiguration configuration)
+    private readonly IOptions<JwtSettings> _jwtOptions;
+    public AuthController(IOptions<JwtSettings> jwtOptions)
     {
-        _configuration = configuration;
+        _jwtOptions = jwtOptions;
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public class AuthController : ControllerBase
     [HttpGet("token")]
     public ActionResult<string> GetToken([FromQuery] string userId = "demo", [FromQuery] string role = "Admin")
     {
-        var token = JwtTokenGenerator.GenerateToken(_configuration, userId, role);
+        var token = JwtTokenGenerator.GenerateToken(_jwtOptions, userId, role);
         return Ok(token);
     }
 }
