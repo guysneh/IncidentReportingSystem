@@ -4,6 +4,7 @@ using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Application.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
+using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 
@@ -70,24 +71,46 @@ namespace IncidentReportingSystem.API.Controllers
         }
 
         /// <summary>
-        /// Retrieves a list of incident reports with optional filters.
+        /// Retrieves a filtered list of incident reports with optional pagination and search criteria.
         /// </summary>
-        /// <param name="includeClosed">Include closed incidents.</param>
-        /// <param name="skip">Number of items to skip (for paging).</param>
-        /// <param name="take">Number of items to return (for paging).</param>
-        /// <returns>List of incident reports as DTOs.</returns>
-        [Authorize]
+        /// <param name="includeClosed">Whether to include incidents with status 'Closed'.</param>
+        /// <param name="skip">Number of incidents to skip for pagination.</param>
+        /// <param name="take">Number of incidents to return for pagination (default is 50).</param>
+        /// <param name="category">Optional filter by incident category (e.g., Electrical, Mechanical).</param>
+        /// <param name="severity">Optional filter by incident severity (e.g., Low, Medium, High).</param>
+        /// <param name="searchText">Optional text to search in description, location or reporter ID.</param>
+        /// <param name="reportedAfter">Optional filter to include only incidents reported after this date.</param>
+        /// <param name="reportedBefore">Optional filter to include only incidents reported before this date.</param>
+        /// <param name="cancellationToken">Cancellation token for aborting the request.</param>
+        /// <returns>A list of matching incident reports.</returns>
         [HttpGet]
-        [ProducesResponseType(typeof(IReadOnlyList<IncidentReportDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<IncidentReport>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
             [FromQuery] bool includeClosed = false,
             [FromQuery] int skip = 0,
-            [FromQuery] int take = 50)
+            [FromQuery] int take = 50,
+            [FromQuery] IncidentCategory? category = null,
+            [FromQuery] IncidentSeverity? severity = null,
+            [FromQuery] string? searchText = null,
+            [FromQuery] DateTime? reportedAfter = null,
+            [FromQuery] DateTime? reportedBefore = null,
+            CancellationToken cancellationToken = default)
         {
-            var query = new GetIncidentReportsQuery(includeClosed, skip, take);
-            var results = await _mediator.Send(query).ConfigureAwait(false);
-            return Ok(results.Select(r => r.ToDto()).ToList());
+            var query = new GetIncidentReportsQuery(
+                IncludeClosed: includeClosed,
+                Skip: skip,
+                Take: take,
+                Category: category,
+                Severity: severity,
+                SearchText: searchText,
+                ReportedAfter: reportedAfter,
+                ReportedBefore: reportedBefore
+            );
+
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(result);
         }
+
 
         /// <summary>
         /// Updates the status of an existing incident report.

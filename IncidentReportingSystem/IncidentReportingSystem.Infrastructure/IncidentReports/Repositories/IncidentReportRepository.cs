@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.Persistence;
@@ -35,20 +35,64 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<IReadOnlyList<IncidentReport>> GetAsync(bool includeClosed = false, int skip = 0, int take = 50, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<IncidentReport>> GetAsync(
+            bool includeClosed = false,
+            int skip = 0,
+            int take = 50,
+            IncidentCategory? category = null,
+            IncidentSeverity? severity = null,
+            string? searchText = null,
+            DateTime? reportedAfter = null,
+            DateTime? reportedBefore = null,
+            CancellationToken cancellationToken = default)
         {
             IQueryable<IncidentReport> query = _context.IncidentReports;
 
+            // Filter out closed if not requested
             if (!includeClosed)
             {
                 query = query.Where(i => i.Status != IncidentStatus.Closed);
             }
 
+            // Filter by category
+            if (category.HasValue)
+            {
+                query = query.Where(i => i.Category == category.Value);
+            }
+
+            // Filter by severity
+            if (severity.HasValue)
+            {
+                query = query.Where(i => i.Severity == severity.Value);
+            }
+
+            // Text search (description or location)
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var lowerSearch = searchText.ToLower();
+                query = query.Where(i =>
+                    i.Description.ToLower().Contains(lowerSearch) ||
+                    i.Location.ToLower().Contains(lowerSearch));
+            }
+
+            // Filter by reported date
+            if (reportedAfter.HasValue)
+            {
+                query = query.Where(i => i.ReportedAt >= reportedAfter.Value);
+            }
+
+            if (reportedBefore.HasValue)
+            {
+                query = query.Where(i => i.ReportedAt <= reportedBefore.Value);
+            }
+
+            // Paging and sorting
             return await query
                 .OrderByDescending(i => i.CreatedAt)
                 .Skip(skip)
                 .Take(take)
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc/>

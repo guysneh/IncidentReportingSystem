@@ -1,9 +1,5 @@
-﻿using IncidentReportingSystem.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Enums;
 
 namespace IncidentReportingSystem.Domain.Interfaces
 {
@@ -25,8 +21,22 @@ namespace IncidentReportingSystem.Domain.Interfaces
         /// <param name="includeClosed">Whether to include closed incidents.</param>
         /// <param name="skip">Number of incidents to skip (for paging).</param>
         /// <param name="take">Number of incidents to take (for paging).</param>
+        /// <param name="category">Optional category filter.</param>
+        /// <param name="severity">Optional severity filter.</param>
+        /// <param name="searchText">Optional free-text search (in description or location).</param>
+        /// <param name="reportedAfter">Filter incidents reported after this date.</param>
+        /// <param name="reportedBefore">Filter incidents reported before this date.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        Task<IReadOnlyList<IncidentReport>> GetAsync(bool includeClosed = false, int skip = 0, int take = 50, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentReport>> GetAsync(
+            bool includeClosed = false,
+            int skip = 0,
+            int take = 50,
+            IncidentCategory? category = null,
+            IncidentSeverity? severity = null,
+            string? searchText = null,
+            DateTime? reportedAfter = null,
+            DateTime? reportedBefore = null,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Saves or updates an incident.

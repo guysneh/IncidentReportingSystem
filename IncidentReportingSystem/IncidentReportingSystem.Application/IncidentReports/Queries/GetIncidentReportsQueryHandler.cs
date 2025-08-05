@@ -1,9 +1,6 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Interfaces;
 using MediatR;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports
 {
@@ -14,14 +11,29 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
     {
         private readonly IIncidentReportRepository _repository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetIncidentReportsQueryHandler"/> class.
+        /// </summary>
+        /// <param name="repository">Incident report repository.</param>
         public GetIncidentReportsQueryHandler(IIncidentReportRepository repository)
         {
             _repository = repository;
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> Handle(GetIncidentReportsQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.GetAsync(request.IncludeClosed, request.Skip, request.Take, cancellationToken).ConfigureAwait(false);
+            return await _repository.GetAsync(
+                includeClosed: request.IncludeClosed,
+                skip: request.Skip,
+                take: request.Take,
+                category: request.Category,
+                severity: request.Severity,
+                searchText: request.SearchText,
+                reportedAfter: request.ReportedAfter,
+                reportedBefore: request.ReportedBefore,
+                cancellationToken: cancellationToken
+            ).ConfigureAwait(false);
         }
     }
 }

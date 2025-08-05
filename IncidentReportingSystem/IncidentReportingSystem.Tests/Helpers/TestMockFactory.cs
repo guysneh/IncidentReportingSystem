@@ -1,6 +1,7 @@
 using System;
 
 using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 
@@ -36,6 +37,29 @@ namespace IncidentReportingSystem.Tests.Helpers
         public static Mock<IIncidentReportRepository> CreateIncidentReportRepositoryMock()
         {
             return new Mock<IIncidentReportRepository>();
+        }
+
+        /// <summary>
+        /// Creates an IncidentReport with optional overrides.
+        /// </summary>
+        public static IncidentReport CreateIncidentReport(
+            Guid id,
+            string description = "Default Description",
+            string location = "Default Location",
+            Guid? reporterId = null,
+            IncidentCategory category = IncidentCategory.Infrastructure,
+            string systemAffected = "System A",
+            IncidentSeverity severity = IncidentSeverity.Medium,
+            DateTime? reportedAt = null)
+        {
+            return new IncidentReport(
+                description,
+                location,
+                reporterId ?? Guid.NewGuid(),
+                category,
+                systemAffected,
+                severity,
+                reportedAt ?? DateTime.UtcNow);
         }
     }
 }

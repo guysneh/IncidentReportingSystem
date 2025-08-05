@@ -1,14 +1,50 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 
-namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports
-{
+namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
+
+/// <summary>
+/// Query for retrieving incident reports with optional filters and paging.
+/// </summary>
+public record GetIncidentReportsQuery(
     /// <summary>
-    /// Query for retrieving incident reports with optional filters and paging.
+    /// Whether to include closed incidents in the results.
     /// </summary>
-    public record GetIncidentReportsQuery(
-        bool IncludeClosed = false,
-        int Skip = 0,
-        int Take = 50
-    ) : IRequest<IReadOnlyList<IncidentReport>>;
-}
+    bool IncludeClosed = false,
+
+    /// <summary>
+    /// Number of records to skip for paging.
+    /// </summary>
+    int Skip = 0,
+
+    /// <summary>
+    /// Number of records to take for paging.
+    /// </summary>
+    int Take = 50,
+
+    /// <summary>
+    /// Optional category filter.
+    /// </summary>
+    IncidentCategory? Category = null,
+
+    /// <summary>
+    /// Optional severity filter.
+    /// </summary>
+    IncidentSeverity? Severity = null,
+
+    /// <summary>
+    /// Optional keyword to search in the description or location.
+    /// </summary>
+    string? SearchText = null,
+
+    /// <summary>
+    /// Optional filter for reports created after a specific date.
+    /// </summary>
+    DateTime? ReportedAfter = null,
+
+    /// <summary>
+    /// Optional filter for reports created before a specific date.
+    /// </summary>
+    DateTime? ReportedBefore = null
+) : IRequest<IReadOnlyList<IncidentReport>>;
