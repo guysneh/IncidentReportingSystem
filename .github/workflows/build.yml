@@ -1,52 +1,53 @@
-name: Build and Test
+name: CI - Build and Test
 
 on:
   push:
     branches:
-      - main  
+      - main
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build, Test & Publish
+  build_and_test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 SDK
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
+        run: dotnet restore
 
-      - name: Build solution
-        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
 
-      - name: Run tests with coverage
-        run: dotnet test IncidentReportingSystem/IncidentReportingSystem.sln --no-build --configuration Release --collect:"XPlat Code Coverage"
+      - name: Run Tests with Coverage
+        run: >
+          dotnet test --no-build --configuration Release
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --logger "trx"
 
-      - name: Publish test results
+      - name: Generate HTML coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+        with:
+          reports: 'TestResults/**/coverage.cobertura.xml'
+          targetdir: 'CoverageReport'
+          reporttypes: 'HtmlInline_AzurePipelines'
+
+      - name: Upload HTML coverage report as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: '**/TestResults/*.trx'
+          name: CodeCoverageReport
+          path: CoverageReport
 
-      - name: Publish code coverage results
-        uses: actions/upload-artifact@v4
+      - name: Publish test results in GitHub UI
+        uses: dorny/test-reporter@v1
+        if: always()
         with:
-          name: code-coverage
-          path: '**/TestResults/**/coverage.cobertura.xml'
-
-      - name: Publish API artifact
-        run: |
-          dotnet publish IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj -c Release -o publish
-
-      - name: Upload published artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: incident-api
-          path: publish
+          name: Unit Tests
+          path: TestResults/**/*.trx
+          reporter: dotnet-trx
