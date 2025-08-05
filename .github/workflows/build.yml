@@ -15,10 +15,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: IncidentReportingSystem
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,28 +25,28 @@ jobs:
           dotnet-version: '8.x'
 
       - name: Restore dependencies
-        run: dotnet restore IncidentReportingSystem.sln
+        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
       - name: Build solution
-        run: dotnet build IncidentReportingSystem.sln --no-restore --configuration Release
+        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
       - name: Run tests with coverage
         run: |
-          dotnet test IncidentReportingSystem.sln \
+          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
             --no-build \
             --configuration Release \
             --logger "trx;LogFileName=unit-tests.trx" \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            --results-directory IncidentReportingSystem/TestResults
 
       - name: List TestResults content (debug)
-        run: ls -R ./TestResults
+        run: ls -R IncidentReportingSystem/TestResults
 
       - name: Publish test results (GitHub Checks)
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
-          path: TestResults/**/*.trx
+          path: IncidentReportingSystem/TestResults/**/*.trx
           reporter: dotnet-trx
           fail-on-error: true
           fail-on-empty: false
@@ -58,8 +54,8 @@ jobs:
       - name: Generate HTML code coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
         with:
-          reports: TestResults/**/coverage.cobertura.xml
-          targetdir: TestResults/CoverageReport
+          reports: IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
+          targetdir: IncidentReportingSystem/TestResults/CoverageReport
           reporttypes: Html
 
       - name: Upload code coverage report (HTML)
