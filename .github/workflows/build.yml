@@ -2,57 +2,51 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main  
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build, Test & Publish
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
-    - name: Run Tests
-      run: dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage"
+      - name: Run tests with coverage
+        run: dotnet test IncidentReportingSystem/IncidentReportingSystem.sln --no-build --configuration Release --collect:"XPlat Code Coverage"
 
-    - name: Publish Test Results
-      if: success() || failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: '**/TestResults/**/*.trx'
+      - name: Publish test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
 
-    - name: Publish Code Coverage Report
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
-      with:
-        reports: '**/coverage.cobertura.xml'
-        targetdir: 'coveragereport'
-        reporttypes: 'HtmlInline;Cobertura'
+      - name: Publish code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: '**/TestResults/**/coverage.cobertura.xml'
 
-    - name: Upload Coverage Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-coverage-report
-        path: coveragereport
+      - name: Publish API artifact
+        run: |
+          dotnet publish IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj -c Release -o publish
 
-    - name: Publish Web API
-      run: dotnet publish IncidentReportingSystem.API/IncidentReportingSystem.API.csproj -c Release -o ./publish
-
-    - name: Upload Published Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: api-publish
-        path: ./publish
+      - name: Upload published artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: incident-api
+          path: publish
