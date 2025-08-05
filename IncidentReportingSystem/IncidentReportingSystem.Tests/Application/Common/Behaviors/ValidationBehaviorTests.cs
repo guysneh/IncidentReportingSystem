@@ -30,7 +30,7 @@ namespace IncidentReportingSystem.Tests.Application.Common.Behaviors
 
             bool wasCalled = false;
 
-            RequestHandlerDelegate<TestResponse> next = (cancellationToken) =>
+            RequestHandlerDelegate<TestResponse> next = () =>
             {
                 wasCalled = true;
                 return Task.FromResult(new TestResponse());
