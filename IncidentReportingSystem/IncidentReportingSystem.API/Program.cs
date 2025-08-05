@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Swagger;
@@ -41,6 +41,7 @@ if (args.Contains("--migrate"))
 }
 
 ConfigureServices(builder.Services, builder.Configuration);
+
 var fullApp = builder.Build();
 
 ConfigureMiddleware(fullApp, builder.Services);
@@ -55,11 +56,24 @@ fullApp.Run();
 
 static void ConfigureConfiguration(ConfigurationManager configuration, IServiceCollection services)
 {
-    configuration
-        .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-        .AddEnvironmentVariables();
+    var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
+    configuration.SetBasePath(Directory.GetCurrentDirectory());
+
+    if (!IsRunningInDocker())
+    {
+        configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        configuration.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
+    }
+
+    configuration.AddEnvironmentVariables();
+
     services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+}
+
+static bool IsRunningInDocker()
+{
+    return File.Exists("/.dockerenv") || Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 }
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
