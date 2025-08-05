@@ -6,14 +6,14 @@ A cleanly architected .NET 8 Web API for reporting and managing incidents.
 
 ## 🚀 Features
 
-- RESTful API (v1)
-- Create and update incident reports
-- Filter and search incidents
-- View statistics by category and severity
-- JWT-based authentication (demo only)
-- Full Swagger UI documentation
-- PostgreSQL database
-- Docker Compose support
+* RESTful API (v1)
+* Create and update incident reports
+* Filter and search incidents
+* View statistics by category and severity
+* JWT-based authentication (demo only)
+* Full Swagger UI documentation
+* PostgreSQL database
+* Docker Compose support
 
 ---
 
@@ -21,8 +21,8 @@ A cleanly architected .NET 8 Web API for reporting and managing incidents.
 
 ### 1. Requirements
 
-- Docker
-- Docker Compose
+* Docker
+* Docker Compose
 
 ### 2. Clone the Repository
 
@@ -53,10 +53,13 @@ docker compose up --build
 
 The following services will be available:
 
-| Service          | URL |
-| ---------------- | --- |
-| API (Swagger UI) |  [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)    |
-| pgAdmin           | [http://localhost:5050](http://localhost:5050) |
+| Service          | URL                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| API (Swagger UI) | [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) |
+| pgAdmin          | [http://localhost:5050](http://localhost:5050)                                       |
+
+> 📌 **Note:** pgAdmin default port is **5050**.
+
 ---
 
 ## 🔐 Authentication (Demo Only)
@@ -84,8 +87,8 @@ To generate a demo token, use the following hardcoded values:
 
 Swagger is enabled to help you explore and test the API.
 
-- URL: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
-- Click **"Authorize"** and paste your JWT token to access endpoints
+* URL: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+* Click **"Authorize"** and paste your JWT token to access endpoints
 
 ---
 
@@ -112,7 +115,30 @@ dotnet test
 
 ---
 
+## 🏗️ Architecture
+
+This project follows the principles of **Clean Architecture**, separating concerns across layers:
+
+* `API` Layer: Handles HTTP requests, routing, and middleware.
+* `Application` Layer: Contains business logic, CQRS handlers, validators, and MediatR setup.
+* `Domain` Layer: Defines core domain models and enumerations.
+* `Infrastructure` Layer: Implements persistence logic using EF Core.
+* `Tests`: Unit and integration test projects.
+
+```mermaid
+graph TD
+    A[API Layer] --> B[Application Layer]
+    B --> C[Domain Layer]
+    B --> D[Infrastructure Layer]
+    A --> E[Authentication & Middleware]
+    B --> F[MediatR Handlers]
+    D --> G[PostgreSQL DB]
+```
+
+> 🧠 This architecture enforces separation of concerns and allows for maintainability, scalability, and testability.
+
+---
+
 ## 📝 License
 
 This project is licensed under the MIT License.
-
