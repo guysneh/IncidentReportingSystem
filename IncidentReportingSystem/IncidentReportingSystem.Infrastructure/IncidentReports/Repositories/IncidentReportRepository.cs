@@ -96,7 +96,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
         /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.IncidentReports.ToListAsync(cancellationToken);
+            return await _context.IncidentReports.ToListAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>

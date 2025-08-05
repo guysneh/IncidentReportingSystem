@@ -1,5 +1,6 @@
 ﻿using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Domain.Entities;
+using MediatR;
 
 namespace IncidentReportingSystem.Application.IncidentReports.Mappers;
 
@@ -13,6 +14,8 @@ public static class IncidentReportMapper
     /// </summary>
     public static IncidentReportDto ToDto(this IncidentReport entity)
     {
+        ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+
         return new IncidentReportDto
         {
             Id = entity.Id,

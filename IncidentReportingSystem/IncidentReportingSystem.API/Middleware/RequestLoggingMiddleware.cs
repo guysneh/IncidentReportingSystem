@@ -25,8 +25,7 @@ public class RequestLoggingMiddleware
     /// <param name="context">HTTP context.</param>
     public async Task InvokeAsync(HttpContext context)
     {
-        if (context is null)
-            throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
 
         var method = context.Request.Method;
         var path = context.Request.Path;

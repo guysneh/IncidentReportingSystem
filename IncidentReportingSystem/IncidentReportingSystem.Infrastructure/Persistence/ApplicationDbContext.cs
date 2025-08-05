@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using IncidentReportingSystem.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence
 {
@@ -18,6 +19,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            ArgumentNullException.ThrowIfNull(modelBuilder, nameof(modelBuilder));
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         }
     }

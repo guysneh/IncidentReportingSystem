@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -10,6 +11,7 @@ public static class JwtTokenGenerator
 {
     public static string GenerateToken(IOptions<JwtSettings> options, string userId, string role)
     {
+        ArgumentNullException.ThrowIfNull(options, nameof(options));
         var settings = options.Value;
 
         if (string.IsNullOrWhiteSpace(settings.Secret) ||

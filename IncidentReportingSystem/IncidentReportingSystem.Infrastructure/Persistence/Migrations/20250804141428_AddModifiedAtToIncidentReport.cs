@@ -11,6 +11,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder, nameof(migrationBuilder));
             migrationBuilder.AddColumn<DateTime>(
                 name: "ModifiedAt",
                 table: "IncidentReports",
@@ -21,6 +22,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder, nameof(migrationBuilder));
             migrationBuilder.DropColumn(
                 name: "ModifiedAt",
                 table: "IncidentReports");

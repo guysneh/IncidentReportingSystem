@@ -28,7 +28,7 @@ public class IncidentStatisticsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IncidentStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetIncidentStatisticsQuery(), cancellationToken);
+        var result = await _mediator.Send(new GetIncidentStatisticsQuery(), cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 }

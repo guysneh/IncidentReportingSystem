@@ -1,6 +1,7 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Interfaces;
 using MediatR;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports
 {
@@ -23,6 +24,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
         /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> Handle(GetIncidentReportsQuery request, CancellationToken cancellationToken)
         {
+            ArgumentNullException.ThrowIfNull(request, nameof(request));
             return await _repository.GetAsync(
                 status: request.Status,
                 skip: request.Skip,

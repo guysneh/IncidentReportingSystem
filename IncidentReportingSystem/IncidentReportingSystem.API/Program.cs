@@ -245,7 +245,7 @@ static void ApplyMigrations(WebApplication app)
         .WaitAndRetry(
             retryCount: 10,
             sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)), 
-            onRetry: (exception, timespan, retryCount, context) =>
+            onRetry: (exception, timespan, retryCount,context) =>
             {
                 logger.LogWarning(exception, "Retry {RetryAttempt}: Failed to connect to DB. Waiting {Delay} before next try...", retryCount, timespan);
             });

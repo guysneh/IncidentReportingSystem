@@ -107,7 +107,7 @@ namespace IncidentReportingSystem.API.Controllers
                 ReportedBefore: reportedBefore
             );
 
-            var result = await _mediator.Send(query, cancellationToken);
+            var result = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
             return Ok(result);
         }
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace IncidentReportingSystem.API.Converters
 {
@@ -11,6 +12,7 @@ namespace IncidentReportingSystem.API.Converters
     {
         public override bool CanConvert(Type typeToConvert)
         {
+            ArgumentNullException.ThrowIfNull(typeToConvert, nameof(typeToConvert));
             return typeToConvert.IsEnum;
         }
 

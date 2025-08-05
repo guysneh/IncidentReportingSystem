@@ -15,7 +15,7 @@ public class GetIncidentStatisticsQueryHandler : IRequestHandler<GetIncidentStat
 
     public async Task<IncidentStatisticsDto> Handle(GetIncidentStatisticsQuery request, CancellationToken cancellationToken)
     {
-        var allIncidents = await _repository.GetAllAsync(cancellationToken);
+        var allIncidents = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         return new IncidentStatisticsDto
         {

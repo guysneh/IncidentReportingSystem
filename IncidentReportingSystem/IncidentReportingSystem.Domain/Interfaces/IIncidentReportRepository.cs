@@ -18,7 +18,6 @@ namespace IncidentReportingSystem.Domain.Interfaces
         /// <summary>
         /// Retrieves incidents with optional filtering.
         /// </summary>
-        /// <param name="includeClosed">Whether to include closed incidents.</param>
         /// <param name="skip">Number of incidents to skip (for paging).</param>
         /// <param name="take">Number of incidents to take (for paging).</param>
         /// <param name="category">Optional category filter.</param>

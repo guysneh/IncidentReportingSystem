@@ -1,4 +1,5 @@
 ﻿using System;
+using MediatR;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,6 +12,7 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder, nameof(migrationBuilder));
             migrationBuilder.CreateTable(
                 name: "IncidentReports",
                 columns: table => new
@@ -35,6 +37,7 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            ArgumentNullException.ThrowIfNull(migrationBuilder, nameof(migrationBuilder));
             migrationBuilder.DropTable(
                 name: "IncidentReports");
         }

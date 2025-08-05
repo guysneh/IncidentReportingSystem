@@ -22,8 +22,7 @@ public class GlobalExceptionHandlingMiddleware
     /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
-        if (context is null)
-            throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
 
         try
         {
@@ -94,7 +93,7 @@ public class GlobalExceptionHandlingMiddleware
         var startIndex = message.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (startIndex == -1) return null;
 
-        var endIndex = message.IndexOf(".", startIndex);
+        var endIndex = message.IndexOf('.', startIndex);
         if (endIndex == -1)
             return message.Substring(startIndex + marker.Length).Trim();
 

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Migrations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -22,6 +23,7 @@ namespace IncidentReportingSystem.API.Converters
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         {
+            ArgumentNullException.ThrowIfNull(writer, nameof(writer));
             writer.WriteStringValue(value.ToString());
         }
     }
