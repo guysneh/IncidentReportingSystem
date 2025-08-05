@@ -1,4 +1,4 @@
-name: CI - Build and Test
+name: Build and Test
 
 on:
   push:
@@ -6,9 +6,18 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
-  build_and_test:
+  build-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: IncidentReportingSystem
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,33 +25,21 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
+        run: dotnet restore IncidentReportingSystem.sln
 
-      - name: Build
-        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
+      - name: Build solution
+        run: dotnet build IncidentReportingSystem.sln --configuration Release --no-restore
 
-      - name: Run Tests with Coverage
+      - name: Run tests with coverage
         run: >
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.sln --no-build --configuration Release
+          dotnet test IncidentReportingSystem.sln
+          --configuration Release
+          --no-build
           --collect:"XPlat Code Coverage"
-          --results-directory IncidentReportingSystem/TestResults
-          --logger "trx"
-
-      - name: Generate HTML coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
-        with:
-          reports: 'IncidentReportingSystem/TestResults/**/coverage.cobertura.xml'
-          targetdir: 'IncidentReportingSystem/CoverageReport'
-          reporttypes: 'HtmlInline_AzurePipelines'
-
-      - name: Upload HTML coverage report as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: CodeCoverageReport
-          path: IncidentReportingSystem/CoverageReport
+          --results-directory ./TestResults
 
       - name: Publish test results in GitHub UI
         uses: dorny/test-reporter@v1
@@ -51,3 +48,20 @@ jobs:
           name: Unit Tests
           path: IncidentReportingSystem/TestResults/**/*.trx
           reporter: dotnet-trx
+          fail-on-empty: true
+
+      - name: Install ReportGenerator tool
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate HTML code coverage report
+        run: |
+          reportgenerator \
+            -reports:IncidentReportingSystem/TestResults/**/coverage.cobertura.xml \
+            -targetdir:IncidentReportingSystem/TestResults/CoverageReport \
+            -reporttypes:Html
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeCoverageHtml
+          path: IncidentReportingSystem/TestResults/CoverageReport
