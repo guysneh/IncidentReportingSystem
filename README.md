@@ -55,14 +55,8 @@ The following services will be available:
 
 | Service          | URL |
 | ---------------- | --- |
-| API (Swagger UI) |     |
-
-| [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) |                                                |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| pgAdmin                                                                              | [http://localhost:5050](http://localhost:5050) |
-
-> 📌 **Note:** pgAdmin default port is **5050**.
-
+| API (Swagger UI) |  [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)    |
+| pgAdmin           | [http://localhost:5050](http://localhost:5050) |
 ---
 
 ## 🔐 Authentication (Demo Only)
