@@ -119,10 +119,10 @@ dotnet test
 
 This project follows the principles of **Clean Architecture**, separating concerns across layers:
 
-* `API` Layer: Handles HTTP requests, routing, and middleware.
-* `Application` Layer: Contains business logic, CQRS handlers, validators, and MediatR setup.
-* `Domain` Layer: Defines core domain models and enumerations.
-* `Infrastructure` Layer: Implements persistence logic using EF Core.
+* `API`: Handles HTTP requests, routing, and middleware.
+* `Application`: Contains business logic, CQRS handlers, validators, and MediatR setup.
+* `Domain`: Defines core domain models and enumerations.
+* `Infrastructure`: Implements persistence logic using EF Core.
 * `Tests`: Unit and integration test projects.
 
 ```mermaid
