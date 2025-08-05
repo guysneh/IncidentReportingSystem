@@ -32,5 +32,10 @@ namespace IncidentReportingSystem.Tests.Helpers
                 ReportedAt: DateTime.UtcNow
             );
         }
+
+        public static Mock<IIncidentReportRepository> CreateIncidentReportRepositoryMock()
+        {
+            return new Mock<IIncidentReportRepository>();
+        }
     }
 }
