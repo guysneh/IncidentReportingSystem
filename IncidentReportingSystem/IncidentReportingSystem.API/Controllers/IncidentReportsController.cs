@@ -73,7 +73,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <summary>
         /// Retrieves a filtered list of incident reports with optional pagination and search criteria.
         /// </summary>
-        /// <param name="includeClosed">Whether to include incidents with status 'Closed'.</param>
+        /// <param name="status">Optional filter by incident category (e.g., Closed, InProgress).</param>
         /// <param name="skip">Number of incidents to skip for pagination.</param>
         /// <param name="take">Number of incidents to return for pagination (default is 50).</param>
         /// <param name="category">Optional filter by incident category (e.g., Electrical, Mechanical).</param>
@@ -86,7 +86,7 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<IncidentReport>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
-            [FromQuery] bool includeClosed = false,
+            [FromQuery] IncidentStatus? status = null,
             [FromQuery] int skip = 0,
             [FromQuery] int take = 50,
             [FromQuery] IncidentCategory? category = null,
@@ -97,7 +97,7 @@ namespace IncidentReportingSystem.API.Controllers
             CancellationToken cancellationToken = default)
         {
             var query = new GetIncidentReportsQuery(
-                IncludeClosed: includeClosed,
+                Status: status,
                 Skip: skip,
                 Take: take,
                 Category: category,

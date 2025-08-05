@@ -24,7 +24,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         {
             // Arrange
             var query = new GetIncidentReportsQuery(
-                IncludeClosed: true,
+                Status: null,
                 Skip: 0,
                 Take: 10
             );
@@ -37,7 +37,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
 
             _repositoryMock
                 .Setup(r => r.GetAsync(
-                    true, 0, 10,
+                    null, 0, 10,
                     null, null, null, null, null,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReports);
@@ -48,7 +48,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             // Assert
             result.Should().BeEquivalentTo(expectedReports);
             _repositoryMock.Verify(r => r.GetAsync(
-                true, 0, 10,
+                null, 0, 10,
                 null, null, null, null, null,
                 It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -58,7 +58,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         {
             // Arrange
             var query = new GetIncidentReportsQuery(
-                IncludeClosed: false,
+                Status: IncidentStatus.Closed,
                 Skip: 5,
                 Take: 5,
                 Category: IncidentCategory.Security,
@@ -75,7 +75,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
 
             _repositoryMock
                 .Setup(r => r.GetAsync(
-                    false, 5, 5,
+                    IncidentStatus.Closed, 5, 5,
                     IncidentCategory.Security,
                     IncidentSeverity.High,
                     "Berlin",
@@ -90,7 +90,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             // Assert
             result.Should().BeEquivalentTo(expectedReports);
             _repositoryMock.Verify(r => r.GetAsync(
-                false, 5, 5,
+                IncidentStatus.Closed, 5, 5,
                 IncidentCategory.Security,
                 IncidentSeverity.High,
                 "Berlin",
@@ -107,7 +107,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
 
             _repositoryMock
                 .Setup(r => r.GetAsync(
-                    false, 0, 50,
+                    null, 0, 50,
                     null, null, null, null, null,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<IncidentReport>());
@@ -118,7 +118,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             // Assert
             result.Should().BeEmpty();
             _repositoryMock.Verify(r => r.GetAsync(
-                false, 0, 50,
+                null, 0, 50,
                 null, null, null, null, null,
                 It.IsAny<CancellationToken>()), Times.Once);
         }

@@ -9,9 +9,9 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
 /// </summary>
 public record GetIncidentReportsQuery(
     /// <summary>
-    /// Whether to include closed incidents in the results.
+    /// Optional filter for incident status.
     /// </summary>
-    bool IncludeClosed = false,
+    IncidentStatus? Status = null,
 
     /// <summary>
     /// Number of records to skip for paging.

@@ -24,7 +24,7 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
         public async Task<IReadOnlyList<IncidentReport>> Handle(GetIncidentReportsQuery request, CancellationToken cancellationToken)
         {
             return await _repository.GetAsync(
-                includeClosed: request.IncludeClosed,
+                status: request.Status,
                 skip: request.Skip,
                 take: request.Take,
                 category: request.Category,

@@ -36,7 +36,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
 
         /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> GetAsync(
-            bool includeClosed = false,
+            IncidentStatus? status = null,
             int skip = 0,
             int take = 50,
             IncidentCategory? category = null,
@@ -46,13 +46,11 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             DateTime? reportedBefore = null,
             CancellationToken cancellationToken = default)
         {
-            IQueryable<IncidentReport> query = _context.IncidentReports;
+            IQueryable<IncidentReport> query = _context.IncidentReports.AsQueryable();
 
             // Filter out closed if not requested
-            if (!includeClosed)
-            {
-                query = query.Where(i => i.Status != IncidentStatus.Closed);
-            }
+            if (status.HasValue)
+                query = query.Where(r => r.Status == status.Value);
 
             // Filter by category
             if (category.HasValue)
@@ -93,6 +91,12 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
                 .Take(take)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.IncidentReports.ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>

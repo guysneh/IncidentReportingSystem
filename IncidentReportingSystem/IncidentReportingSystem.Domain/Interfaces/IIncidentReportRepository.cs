@@ -28,7 +28,7 @@ namespace IncidentReportingSystem.Domain.Interfaces
         /// <param name="reportedBefore">Filter incidents reported before this date.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         Task<IReadOnlyList<IncidentReport>> GetAsync(
-            bool includeClosed = false,
+            IncidentStatus? status = null,
             int skip = 0,
             int take = 50,
             IncidentCategory? category = null,
@@ -37,6 +37,12 @@ namespace IncidentReportingSystem.Domain.Interfaces
             DateTime? reportedAfter = null,
             DateTime? reportedBefore = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves all incident reports without filters (used for statistics).
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Saves or updates an incident.
