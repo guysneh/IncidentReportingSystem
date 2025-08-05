@@ -38,6 +38,7 @@ jobs:
           dotnet test IncidentReportingSystem.sln
           --configuration Release
           --no-build
+          --logger "trx;LogFileName=unit-tests.trx"
           --collect:"XPlat Code Coverage"
           --results-directory ./TestResults
 
@@ -49,6 +50,7 @@ jobs:
           path: IncidentReportingSystem/TestResults/**/*.trx
           reporter: dotnet-trx
           fail-on-empty: true
+
 
       - name: Install ReportGenerator tool
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
