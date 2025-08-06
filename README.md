@@ -27,14 +27,14 @@ A cleanly architected .NET 8 Web API for reporting and managing incidents.
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/IncidentReportingSystem.git
+git clone https://github.com/guysneh/IncidentReportingSystem.git
 cd IncidentReportingSystem
 ```
 
 ### 3. Environment Configuration
 
 Copy the example environment file and rename it:
-
+(in linux for example:)
 ```bash
 cp .env.example .env
 ```
