@@ -272,3 +272,5 @@ static void ApplyMigrations(WebApplication app)
     });
 }
 
+// Required for WebApplicationFactory<Program> to locate the entry point during integration testing
+public partial class Program { }
