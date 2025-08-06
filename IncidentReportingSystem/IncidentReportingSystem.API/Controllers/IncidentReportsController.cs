@@ -41,9 +41,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
-        public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command)
+        public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(command).ConfigureAwait(false);
+            var result = await _mediator.Send(command,cancellationToken).ConfigureAwait(false);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result.ToDto());
         }
 
