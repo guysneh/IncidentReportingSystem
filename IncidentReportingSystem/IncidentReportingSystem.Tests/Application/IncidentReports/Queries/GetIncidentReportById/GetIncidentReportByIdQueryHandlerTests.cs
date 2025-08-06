@@ -19,6 +19,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnIncidentReport_WhenReportExists()
         {
             // Arrange
@@ -41,6 +42,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldThrowKeyNotFoundException_WhenReportDoesNotExist()
         {
             // Arrange

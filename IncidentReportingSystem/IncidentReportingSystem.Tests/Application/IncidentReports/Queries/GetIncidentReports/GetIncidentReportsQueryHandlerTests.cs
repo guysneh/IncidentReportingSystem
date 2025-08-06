@@ -20,6 +20,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnReports_FromRepository()
         {
             // Arrange
@@ -54,6 +55,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldPassFiltersToRepository()
         {
             // Arrange
@@ -100,6 +102,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnEmptyList_WhenNoReportsFound()
         {
             // Arrange

@@ -16,6 +16,7 @@ public class UpdateIncidentStatusValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Have_Error_When_Id_Is_Empty()
     {
         // Arrange
@@ -29,6 +30,7 @@ public class UpdateIncidentStatusValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Have_Error_When_Status_Is_Not_Enum()
     {
         // Arrange
@@ -43,6 +45,7 @@ public class UpdateIncidentStatusValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Not_Have_Any_Errors_For_Valid_Command()
     {
         // Arrange

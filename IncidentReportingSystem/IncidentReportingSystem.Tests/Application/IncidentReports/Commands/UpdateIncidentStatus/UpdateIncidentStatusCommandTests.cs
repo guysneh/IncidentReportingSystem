@@ -7,6 +7,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.Upd
     public class UpdateIncidentStatusCommandTests
     {
         [Fact]
+        [Trait("Category", "Unit")]
         public void Constructor_Should_Set_Properties_Correctly()
         {
             // Arrange

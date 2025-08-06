@@ -13,6 +13,7 @@ public class CreateIncidentReportCommandValidatorTests
     private readonly CreateIncidentReportCommandValidator _validator = new();
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Have_Error_When_Description_Is_Empty()
     {
         var command = new CreateIncidentReportCommand(
@@ -30,6 +31,7 @@ public class CreateIncidentReportCommandValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Have_Error_When_Location_Is_Too_Long()
     {
         var longLocation = new string('A', 256);
@@ -49,6 +51,7 @@ public class CreateIncidentReportCommandValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Have_Error_When_ReporterId_Is_Empty()
     {
         var command = new CreateIncidentReportCommand(
@@ -66,6 +69,7 @@ public class CreateIncidentReportCommandValidatorTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void Should_Pass_When_All_Fields_Are_Valid()
     {
         var command = new CreateIncidentReportCommand(

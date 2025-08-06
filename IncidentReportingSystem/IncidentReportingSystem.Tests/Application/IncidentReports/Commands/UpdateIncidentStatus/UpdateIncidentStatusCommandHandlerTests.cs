@@ -21,6 +21,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_Should_Update_Incident_Status_And_Save()
         {
             // Arrange
@@ -40,6 +41,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_Should_Throw_When_Incident_Not_Found()
         {
             // Arrange
@@ -57,6 +59,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_Should_Respect_Cancellation()
         {
             // Arrange
