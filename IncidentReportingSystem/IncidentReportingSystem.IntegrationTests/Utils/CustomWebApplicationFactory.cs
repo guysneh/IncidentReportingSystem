@@ -19,7 +19,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             configBuilder
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true)
-                .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
         });
 

@@ -7,7 +7,8 @@ using Npgsql;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.DTOs;
-using IncidentReportingSystem.IntegrationTests.Utils; 
+using IncidentReportingSystem.IntegrationTests.Utils;
+using Microsoft.Extensions.Configuration;
 
 namespace IncidentReportingSystem.Tests.Integration;
 
@@ -29,8 +30,15 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
 
     private async Task CleanupDatabase()
     {
-        var connectionString = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
-            ?? "Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword";
+        var configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.Test.json")
+        .AddEnvironmentVariables()
+        .Build();
+
+        var connectionString = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION");
+
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Missing required environment variable: TEST_DB_CONNECTION");
 
         await using var conn = new NpgsqlConnection(connectionString);
         await conn.OpenAsync();
