@@ -81,6 +81,15 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddHealthChecks()
     .AddNpgSql(configuration.GetConnectionString("DefaultConnection"));
     // Add controllers and configure JSON serialization
+    services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    });
     services.AddControllers()
         .AddJsonOptions(options =>
         {
@@ -232,7 +241,7 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 static void ConfigureMiddleware(WebApplication app)
 {
     app.MapHealthChecks("/health");
-
+    app.UseCors("AllowAll");
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.GlobalExceptionHandlingMiddleware>();
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
