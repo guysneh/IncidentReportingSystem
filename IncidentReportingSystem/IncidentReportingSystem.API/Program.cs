@@ -2,6 +2,7 @@
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Swagger;
+using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Validators;
@@ -172,8 +173,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 
     // Register MediatR and FluentValidation
     services.AddMediatR(cfg =>
-        cfg.RegisterServicesFromAssembly(typeof(CreateIncidentReportCommandHandler).Assembly));
-    services.AddValidatorsFromAssembly(typeof(CreateIncidentReportCommandValidator).Assembly);
+        cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
+    services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
     // Register database context
