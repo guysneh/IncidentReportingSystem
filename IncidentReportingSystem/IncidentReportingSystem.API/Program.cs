@@ -4,8 +4,6 @@ using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Common.Behaviors;
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-using IncidentReportingSystem.Application.IncidentReports.Validators;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
@@ -20,6 +18,7 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Polly;
 using System.Text;
+using HealthChecks.NpgSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,7 +44,7 @@ ConfigureServices(builder.Services, builder.Configuration);
 
 var fullApp = builder.Build();
 
-ConfigureMiddleware(fullApp, builder.Services);
+ConfigureMiddleware(fullApp);
 fullApp.MapControllers();
 
 fullApp.Run();
@@ -79,6 +78,8 @@ static bool IsRunningInDocker()
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
+    services.AddHealthChecks()
+    .AddNpgSql(configuration.GetConnectionString("DefaultConnection"));
     // Add controllers and configure JSON serialization
     services.AddControllers()
         .AddJsonOptions(options =>
@@ -174,7 +175,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     // Register MediatR and FluentValidation
     services.AddMediatR(cfg =>
         cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
-    services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);
+    services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);;
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
     // Register database context
@@ -228,12 +229,14 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
     services.AddAuthorization();
 }
 
-static void ConfigureMiddleware(WebApplication app, IServiceCollection services)
+static void ConfigureMiddleware(WebApplication app)
 {
+    app.MapHealthChecks("/health");
+
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.GlobalExceptionHandlingMiddleware>();
-    var apiVersionDescriptionProvider = services.BuildServiceProvider()
-    .GetRequiredService<IApiVersionDescriptionProvider>();
+    var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
@@ -244,7 +247,6 @@ static void ConfigureMiddleware(WebApplication app, IServiceCollection services)
     });
 
     app.UseHttpsRedirection();
-
     app.UseAuthentication();
     app.UseAuthorization();
 }

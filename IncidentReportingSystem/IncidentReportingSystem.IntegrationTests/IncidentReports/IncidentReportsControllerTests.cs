@@ -9,7 +9,6 @@ using IncidentReportingSystem.Application.IncidentReports.Commands.CreateInciden
 using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.Extensions.Configuration;
-using FluentValidation;
 
 namespace IncidentReportingSystem.Tests.Integration;
 
