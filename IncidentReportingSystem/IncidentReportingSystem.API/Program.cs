@@ -20,6 +20,7 @@ using Polly;
 using System.Text;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using IncidentReportingSystem.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -254,6 +255,7 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
 static void ConfigureMiddleware(WebApplication app)
 {
+    app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseRateLimiter();
     app.MapHealthChecks("/health");
     app.UseCors("AllowAll");

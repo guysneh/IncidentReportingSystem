@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using FluentAssertions;
-using System.Net.Http.Json;
 using IncidentReportingSystem.IntegrationTests.Utils;
 
 namespace IncidentReportingSystem.Tests.Integration.CORS;
