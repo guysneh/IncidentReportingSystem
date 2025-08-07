@@ -18,7 +18,8 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Polly;
 using System.Text;
-using HealthChecks.NpgSql;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,14 @@ static bool IsRunningInDocker()
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
+    services.AddRateLimiter(_ => _
+    .AddFixedWindowLimiter("default", options =>
+    {
+        options.PermitLimit = 10;
+        options.Window = TimeSpan.FromSeconds(10);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 5;
+    }));
     services.AddHealthChecks()
     .AddNpgSql(configuration.GetConnectionString("DefaultConnection"));
     // Add controllers and configure JSON serialization
@@ -240,6 +249,7 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
 static void ConfigureMiddleware(WebApplication app)
 {
+    app.UseRateLimiter();
     app.MapHealthChecks("/health");
     app.UseCors("AllowAll");
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
