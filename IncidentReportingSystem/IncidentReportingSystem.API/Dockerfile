@@ -7,6 +7,7 @@ COPY IncidentReportingSystem.Application/IncidentReportingSystem.Application.csp
 COPY IncidentReportingSystem.Domain/IncidentReportingSystem.Domain.csproj IncidentReportingSystem.Domain/
 COPY IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj IncidentReportingSystem.Infrastructure/
 COPY IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj IncidentReportingSystem.Tests/
+COPY IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj IncidentReportingSystem.IntegrationTests/
 
 RUN dotnet restore IncidentReportingSystem.sln
 
