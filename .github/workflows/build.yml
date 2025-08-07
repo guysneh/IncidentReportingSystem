@@ -14,7 +14,8 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    env:
+      TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
     services:
       postgres:
         image: postgres:15-alpine
