@@ -79,14 +79,19 @@ static bool IsRunningInDocker()
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddRateLimiter(_ => _
-    .AddFixedWindowLimiter("default", options =>
+    services.AddRateLimiter(options =>
     {
-        options.PermitLimit = 10;
-        options.Window = TimeSpan.FromSeconds(10);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 5;
-    }));
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter("default", _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromSeconds(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 5,
+                AutoReplenishment = true
+            }));
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
     services.AddHealthChecks()
     .AddNpgSql(configuration.GetConnectionString("DefaultConnection"));
     // Add controllers and configure JSON serialization
@@ -255,7 +260,7 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
     app.UseMiddleware<IncidentReportingSystem.API.Middleware.GlobalExceptionHandlingMiddleware>();
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-    
+
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
