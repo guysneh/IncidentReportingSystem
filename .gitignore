@@ -417,3 +417,4 @@ FodyWeavers.xsd
 *.msm
 *.msp
 IncidentReportingSystem/coveragereport/
+IncidentReportingSystem/IncidentReportingSystem.API/appsettings.Development.json
