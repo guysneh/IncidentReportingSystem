@@ -178,7 +178,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
         var response = await _client.GetAsync("/api/v1/incidentreports?category=poweroutage");
         var content = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET response: {content}");
-        content.Should().Contain("technical").And.NotContain("security");
+        content.Should().Contain("PowerOutage").And.NotContain("Security");
     }
     [Fact(DisplayName = "POST /incidentreports returns 400 for invalid payload")]
     public async Task PostIncidentReport_ShouldReturnBadRequest_ForInvalidPayload()
