@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using FluentAssertions;
-using IncidentReportingSystem.IntegrationTests.TestUtils;
+using IncidentReportingSystem.IntegrationTests.Utils;
 
 namespace IncidentReportingSystem.IntegrationTests.Auth;
 

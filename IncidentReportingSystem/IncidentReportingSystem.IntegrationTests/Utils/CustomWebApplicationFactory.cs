@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using IncidentReportingSystem.Infrastructure.Persistence;
 
-namespace IncidentReportingSystem.IntegrationTests.TestUtils;
+namespace IncidentReportingSystem.IntegrationTests.Utils;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {

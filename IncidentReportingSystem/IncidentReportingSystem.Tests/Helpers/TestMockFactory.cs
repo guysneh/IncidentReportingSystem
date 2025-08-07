@@ -24,14 +24,14 @@ namespace IncidentReportingSystem.Tests.Helpers
         public static CreateIncidentReportCommand CreateValidCreateCommand()
         {
             return new CreateIncidentReportCommand(
-                Description: "Test incident",
-                Location: "Berlin",
-                ReporterId: Guid.NewGuid(),
-                Category: IncidentCategory.Infrastructure,
-                SystemAffected: "PowerGrid",
-                Severity: IncidentSeverity.Medium,
-                ReportedAt: DateTime.UtcNow
-            );
+            description: "Test incident",
+            location: "Berlin",
+            reporterId: Guid.NewGuid(),
+            category: IncidentCategory.ITSystems,
+            systemAffected: "System A",
+            severity: IncidentSeverity.Medium,
+            reportedAt: DateTime.UtcNow
+        );
         }
 
         public static Mock<IIncidentReportRepository> CreateIncidentReportRepositoryMock()
