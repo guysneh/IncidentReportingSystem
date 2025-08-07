@@ -14,6 +14,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
     public class GetIncidentStatisticsQueryHandlerTests
     {
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnCorrectStatistics()
         {
             // Arrange

@@ -2,19 +2,18 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
-using FluentValidation.Results;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
-using Xunit;
 
 namespace IncidentReportingSystem.Tests.Application.Common.Behaviors
 {
     public class ValidationBehaviorTests
     {
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Should_Invoke_ValidationBehavior()
         {
             // Arrange

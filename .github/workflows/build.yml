@@ -15,6 +15,21 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5444:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,7 +45,7 @@ jobs:
       - name: Build solution
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
-      - name: Run tests with coverage
+      - name: Run unit tests with coverage
         run: |
           dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
             --no-build \
@@ -39,14 +54,29 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory IncidentReportingSystem/TestResults
 
-      - name: List TestResults content (debug)
-        run: ls -R IncidentReportingSystem/TestResults
+      - name: Run integration tests with coverage
+        run: |
+          dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=integration-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory IncidentReportingSystem/TestResults
 
-      - name: Publish test results (GitHub Checks)
+      - name: Publish unit test results
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
-          path: IncidentReportingSystem/TestResults/**/*.trx
+          path: IncidentReportingSystem/TestResults/**/*unit-tests.trx
+          reporter: dotnet-trx
+          fail-on-error: true
+          fail-on-empty: false
+
+      - name: Publish integration test results
+        uses: dorny/test-reporter@v1
+        with:
+          name: Integration Tests
+          path: IncidentReportingSystem/TestResults/**/*integration-tests.trx
           reporter: dotnet-trx
           fail-on-error: true
           fail-on-empty: false
@@ -58,7 +88,7 @@ jobs:
           targetdir: IncidentReportingSystem/TestResults/CoverageReport
           reporttypes: Html
 
-      - name: Upload code coverage report (HTML)
+      - name: Upload code coverage report
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report

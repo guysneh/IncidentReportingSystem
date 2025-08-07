@@ -16,6 +16,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.Cre
     public class CreateIncidentReportCommandHandlerTests
     {
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldCreateIncidentReportSuccessfully()
         {
             // Arrange
@@ -34,6 +35,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.Cre
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldCallSaveAsyncOnce()
         {
             // Arrange
@@ -49,6 +51,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.Cre
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldRespectCancellationToken()
         {
             // Arrange
@@ -66,6 +69,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.Cre
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_ShouldThrow_WhenRepositoryFails()
         {
             // Arrange

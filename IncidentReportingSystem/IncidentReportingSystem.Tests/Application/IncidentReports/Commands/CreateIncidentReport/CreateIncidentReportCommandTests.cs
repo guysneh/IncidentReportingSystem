@@ -5,6 +5,7 @@ using FluentAssertions;
 public class CreateIncidentReportCommandTests
 {
     [Fact]
+    [Trait("Category", "Unit")]
     public void Constructor_Should_Set_All_Properties_Correctly()
     {
         // Arrange
