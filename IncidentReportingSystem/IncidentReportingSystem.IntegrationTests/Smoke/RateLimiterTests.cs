@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
 using IncidentReportingSystem.IntegrationTests.Utils;
 
