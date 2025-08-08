@@ -46,7 +46,7 @@ variable "budget_threshold_crit" {
 variable "notification_emails" {
   type        = list(string)
   description = "List of email addresses to notify on budget alerts"
-  default     = ["guysneh@gmail.com"] 
+  default     = ["guysneh@gmail.com"]
 }
 
 # --- PostgreSQL Access Credentials ---
@@ -60,4 +60,16 @@ variable "db_admin_password" {
   type        = string
   description = "Admin password for PostgreSQL Flexible Server"
   sensitive   = true
+}
+
+variable "postgres_connection_string" {
+  description = "Full PostgreSQL connection string to store in Key Vault"
+  type        = string
+  sensitive   = true
+}
+
+variable "app_service_name" {
+  description = "Web App name"
+  type        = string
+  default     = "incident-api"
 }

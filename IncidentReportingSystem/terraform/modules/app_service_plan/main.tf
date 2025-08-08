@@ -8,7 +8,7 @@ resource "azurerm_app_service_plan" "this" {
     size = "B1"
   }
 
-  kind = "Linux"
+  kind     = "Linux"
   reserved = true
 
   tags = var.tags

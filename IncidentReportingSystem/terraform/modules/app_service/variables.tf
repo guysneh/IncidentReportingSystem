@@ -22,3 +22,15 @@ variable "tags" {
   type        = map(string)
   description = "Common resource tags"
 }
+
+variable "app_settings" {
+  description = "App settings for the Web App"
+  type        = map(string)
+  default     = {}
+}
+
+variable "key_vault_id" {
+  type        = string
+  description = "Key Vault ID to grant the Web App identity access to secrets"
+  default     = null
+}
