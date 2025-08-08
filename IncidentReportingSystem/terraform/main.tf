@@ -15,3 +15,19 @@ module "postgres" {
   tags                   = var.default_tags
 }
 
+module "app_service_plan" {
+  source              = "./modules/app_service_plan"
+  name                = "incident-app-plan"
+  location            = var.location
+  resource_group_name = module.resource_group.name
+  tags                = var.default_tags
+}
+
+module "app_service" {
+  source              = "./modules/app_service"
+  name                = "incident-api"
+  location            = var.location
+  resource_group_name = module.resource_group.name
+  app_service_plan_id = module.app_service_plan.id
+  tags                = var.default_tags
+}

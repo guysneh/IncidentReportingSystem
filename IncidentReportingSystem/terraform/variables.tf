@@ -9,7 +9,7 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Azure location for all resources"
-  default     = "westeurope"
+  default     = "northeurope"
 }
 
 variable "default_tags" {
