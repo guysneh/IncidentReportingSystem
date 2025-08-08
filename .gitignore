@@ -418,3 +418,4 @@ FodyWeavers.xsd
 *.msp
 IncidentReportingSystem/coveragereport/
 IncidentReportingSystem/IncidentReportingSystem.API/appsettings.Development.json
+IncidentReportingSystem/terraform/.terraform/
