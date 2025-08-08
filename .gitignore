@@ -418,4 +418,13 @@ FodyWeavers.xsd
 *.msp
 IncidentReportingSystem/coveragereport/
 IncidentReportingSystem/IncidentReportingSystem.API/appsettings.Development.json
-IncidentReportingSystem/terraform/.terraform/
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+crash.log
+*.backup
+.tfplan
+.vscode/
+*.tfvars
