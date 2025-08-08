@@ -15,7 +15,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
+      TEST_DB_CONNECTION: Host=localhost;Port=5432;Database=testdb;Username=testuser;Password=testpassword
     services:
       postgres:
         image: postgres:15-alpine
@@ -24,7 +24,7 @@ jobs:
           POSTGRES_PASSWORD: testpassword
           POSTGRES_DB: testdb
         ports:
-          - 5444:5432
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
