@@ -23,7 +23,10 @@ module "postgres" {
   db_admin_username      = var.db_admin_username
   db_admin_password      = var.db_admin_password
   tags                   = var.default_tags
+
+  public_network_access_enabled = true
 }
+
 
 module "key_vault" {
   source              = "./modules/key_vault"

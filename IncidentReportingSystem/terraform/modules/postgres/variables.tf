@@ -28,3 +28,8 @@ variable "tags" {
   description = "Common resource tags"
   type        = map(string)
 }
+
+variable "public_network_access_enabled" {
+  type    = bool
+  default = true
+}
