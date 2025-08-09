@@ -26,8 +26,8 @@ jobs:
           dotnet-version: '8.0.x'
 
       - run: dotnet restore
-      - run: dotnet build "$PROJECT_PATH" --configuration Release --no-restore
-      - run: dotnet publish "$PROJECT_PATH" --configuration Release --output ./publish --no-build
+      - run: dotnet build "${PROJECT_PATH}" --configuration Release --no-restore
+      - run: dotnet publish "${PROJECT_PATH}" --configuration Release --output ./publish --no-build
 
       - run: |
           cd publish
