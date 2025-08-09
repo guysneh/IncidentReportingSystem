@@ -73,3 +73,9 @@ variable "app_service_name" {
   type        = string
   default     = "incident-api"
 }
+
+variable "app_service_plan_sku_name" {
+  description = "SKU name for the Service Plan (e.g., B1, P1v3)"
+  type        = string
+  default     = "B1"
+}

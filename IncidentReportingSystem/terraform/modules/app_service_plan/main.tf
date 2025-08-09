@@ -1,15 +1,18 @@
-resource "azurerm_app_service_plan" "this" {
-  name                = var.name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-
-  sku {
-    tier = "Basic"
-    size = "B1"
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.89.0"
+    }
   }
+}
 
-  kind     = "Linux"
-  reserved = true
-
-  tags = var.tags
+resource "azurerm_service_plan" "this" {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  os_type             = "Linux"
+  sku_name            = var.sku_name
+  worker_count        = var.worker_count
+  tags                = var.default_tags
 }

@@ -10,10 +10,13 @@ module "resource_group" {
 module "app_service_plan" {
   source              = "./modules/app_service_plan"
   name                = "incident-app-plan"
+  resource_group_name = var.resource_group_name
   location            = var.location
-  resource_group_name = module.resource_group.name
-  tags                = var.default_tags
+  sku_name            = var.app_service_plan_sku_name
+  worker_count        = 1
+  default_tags        = var.default_tags
 }
+
 
 # PostgreSQL Database
 module "postgres" {
@@ -64,16 +67,8 @@ data "azurerm_linux_web_app" "app_identity" {
   depends_on = [module.app_service]
 }
 
-
-# Allow the Web App's system-assigned identity to read secrets from Key Vault
-resource "azurerm_key_vault_access_policy" "app_can_read_secrets" {
-  key_vault_id       = module.key_vault.id
-  tenant_id          = data.azurerm_client_config.current.tenant_id # אל תכפיל את ה-data אם קיים בקובץ אחר
-  object_id          = data.azurerm_linux_web_app.app_identity.identity[0].principal_id
-  secret_permissions = ["Get", "List"]
-
-  depends_on = [
-    module.key_vault,
-    module.app_service
-  ]
+resource "azurerm_role_assignment" "me_kv_secrets_user" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

@@ -428,3 +428,4 @@ crash.log
 .tfplan
 .vscode/
 *.tfvars
+*.tfplan
