@@ -18,6 +18,7 @@ env:
   RESOURCE_GROUP: "incident-rg"
   WEBAPP_NAME: "incident-api"
   PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj"
+  DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
   KEY_VAULT_NAME: "incident-kv"
   SECRET_NAME: "PostgreSqlConnectionString"
 
@@ -62,12 +63,13 @@ jobs:
 
       - name: Run EF Core migrations
         env:
-          ASPNETCORE_ENVIRONMENT: Production
-          ConnectionStrings__Default: ${{ env.CONN }}
+            ASPNETCORE_ENVIRONMENT: Production
+            ConnectionStrings__Default: ${{ env.CONN }}
         run: |
           dotnet ef database update \
-            --project "${{ env.PROJECT_PATH }}" \
-            --startup-project "${{ env.PROJECT_PATH }}"
+            --project "${{ env.DB_PROJECT_PATH }}" \
+            --startup-project "${{ env.PROJECT_PATH }}" \
+            --connection "${{ env.CONN }}"
 
       - run: |
           az webapp deploy \
