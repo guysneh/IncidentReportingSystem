@@ -21,6 +21,8 @@ env:
   DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
   KEY_VAULT_NAME: "incident-kv"
   SECRET_NAME: "PostgreSqlConnectionString"
+  PG_SERVER_NAME: "incident-db"
+  TEMP_RULE_NAME: "gh-runner-temp"
 
 jobs:
   build-and-deploy:
@@ -47,6 +49,21 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Detect runner public IP
+        id: ip
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+
+      - name: Create temporary firewall rule for runner
+        run: |
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${RESOURCE_GROUP}" \
+            --server-name "${PG_SERVER_NAME}" \
+            --name "${TEMP_RULE_NAME}" \
+            --start-ip-address "${{ steps.ip.outputs.ip }}" \
+            --end-ip-address "${{ steps.ip.outputs.ip }}"
+
       - name: Install dotnet-ef
         run: |
           dotnet tool install -g dotnet-ef
@@ -63,13 +80,22 @@ jobs:
 
       - name: Run EF Core migrations
         env:
-            ASPNETCORE_ENVIRONMENT: Production
-            ConnectionStrings__Default: ${{ env.CONN }}
+          ASPNETCORE_ENVIRONMENT: Production
+          ConnectionStrings__Default: ${{ env.CONN }}
         run: |
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
             --connection "${{ env.CONN }}"
+
+      - name: Remove temporary firewall rule
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${RESOURCE_GROUP}" \
+            --server-name "${PG_SERVER_NAME}" \
+            --name "${TEMP_RULE_NAME}" \
+            --yes
 
       - run: |
           az webapp deploy \
