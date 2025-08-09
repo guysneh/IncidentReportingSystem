@@ -1,4 +1,3 @@
-# Resource Group
 module "resource_group" {
   source              = "./modules/resource_group"
   resource_group_name = var.resource_group_name
@@ -6,7 +5,6 @@ module "resource_group" {
   default_tags        = var.default_tags
 }
 
-# App Service Plan
 module "app_service_plan" {
   source              = "./modules/app_service_plan"
   name                = "incident-app-plan"
@@ -17,8 +15,6 @@ module "app_service_plan" {
   default_tags        = var.default_tags
 }
 
-
-# PostgreSQL Database
 module "postgres" {
   source                 = "./modules/postgres"
   postgresql_server_name = "incident-db"
@@ -29,8 +25,6 @@ module "postgres" {
   tags                   = var.default_tags
 }
 
-
-# Key Vault
 module "key_vault" {
   source              = "./modules/key_vault"
   name                = "incident-kv"
@@ -43,8 +37,6 @@ module "key_vault" {
   }
 }
 
-
-# App Service
 module "app_service" {
   source              = "./modules/app_service"
   name                = var.app_service_name
@@ -59,16 +51,20 @@ module "app_service" {
   }
 }
 
-# Lookup the created Web App to retrieve its managed identity principal
 data "azurerm_linux_web_app" "app_identity" {
   name                = var.app_service_name
   resource_group_name = module.resource_group.name
-
-  depends_on = [module.app_service]
+  depends_on          = [module.app_service]
 }
 
 resource "azurerm_role_assignment" "me_kv_secrets_user" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
   principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = data.azurerm_linux_web_app.app_identity.identity[0].principal_id
 }
