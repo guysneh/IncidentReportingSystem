@@ -1,8 +1,6 @@
 name: Deploy IncidentReportingSystem (.NET 8) to Azure Web App
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -29,7 +27,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore
+      - run: dotnet restore ${{ env.PROJECT_PATH }} 
       - run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
       - run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --output ./publish --no-build
       - run: |
