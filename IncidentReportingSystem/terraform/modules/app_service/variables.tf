@@ -34,3 +34,8 @@ variable "key_vault_id" {
   description = "Key Vault ID to grant the Web App identity access to secrets"
   default     = null
 }
+
+variable "always_on" {
+  type    = bool
+  default = true
+}

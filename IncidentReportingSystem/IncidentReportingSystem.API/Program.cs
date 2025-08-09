@@ -259,18 +259,22 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseRateLimiter();
     app.MapHealthChecks("/health");
     app.UseCors("AllowAll");
-    app.UseMiddleware<IncidentReportingSystem.API.Middleware.RequestLoggingMiddleware>();
-    app.UseMiddleware<IncidentReportingSystem.API.Middleware.GlobalExceptionHandlingMiddleware>();
+    app.UseMiddleware<RequestLoggingMiddleware>();
+    app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    var showSwagger = app.Configuration.GetValue<bool>("EnableSwagger", false);
+    if (showSwagger || app.Environment.IsDevelopment())
     {
-        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
         {
-            options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-        }
-    });
+            foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+            {
+                options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+            }
+        });
+    }
 
     app.UseHttpsRedirection();
     app.UseAuthentication();

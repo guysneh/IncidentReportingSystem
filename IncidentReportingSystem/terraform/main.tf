@@ -34,6 +34,10 @@ module "key_vault" {
 
   secrets = {
     PostgreSqlConnectionString = var.postgres_connection_string
+    jwt-issuer         = var.jwt_issuer
+    jwt-audience       = var.jwt_audience
+    jwt-secret         = random_password.jwt_secret.result
+    jwt-expiry-minutes = tostring(var.jwt_expiry_minutes)
   }
 }
 
@@ -48,19 +52,19 @@ module "app_service" {
   app_settings = {
     "ConnectionStrings__Default" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
     "ASPNETCORE_ENVIRONMENT"     = "Production"
+    "Jwt__Issuer"                = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
+    "Jwt__Audience"              = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
+    "Jwt__Secret"                = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
+    "Jwt__ExpiryMinutes"         = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-expiry-minutes/)"
+    "EnableSwagger"              = "true"
   }
+  always_on = true
 }
 
 data "azurerm_linux_web_app" "app_identity" {
   name                = var.app_service_name
   resource_group_name = module.resource_group.name
   depends_on          = [module.app_service]
-}
-
-resource "azurerm_role_assignment" "me_kv_secrets_user" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = data.azurerm_client_config.current.object_id
 }
 
 resource "azurerm_role_assignment" "webapp_kv_secrets_user" {

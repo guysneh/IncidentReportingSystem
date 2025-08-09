@@ -79,3 +79,18 @@ variable "app_service_plan_sku_name" {
   type        = string
   default     = "B1"
 }
+
+variable "jwt_issuer" { type = string }
+variable "jwt_audience" { type = string }
+variable "jwt_expiry_minutes" {
+  type    = number
+  default = 60
+}
+variable "jwt_secret_length" {
+  type    = number
+  default = 64
+}
+variable "always_on" {
+  type    = bool
+  default = true
+}

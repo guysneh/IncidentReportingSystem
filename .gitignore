@@ -429,3 +429,4 @@ crash.log
 .vscode/
 *.tfvars
 *.tfplan
+*.out

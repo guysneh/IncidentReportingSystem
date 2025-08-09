@@ -10,7 +10,7 @@ resource "azurerm_linux_web_app" "this" {
 
   site_config {
     application_stack { dotnet_version = "8.0" }
-    always_on = true
+    always_on = var.always_on
   }
 
   https_only   = true
