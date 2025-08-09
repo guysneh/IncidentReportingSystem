@@ -34,10 +34,10 @@ module "key_vault" {
 
   secrets = {
     PostgreSqlConnectionString = var.postgres_connection_string
-    jwt-issuer         = var.jwt_issuer
-    jwt-audience       = var.jwt_audience
-    jwt-secret         = random_password.jwt_secret.result
-    jwt-expiry-minutes = tostring(var.jwt_expiry_minutes)
+    jwt-issuer                 = var.jwt_issuer
+    jwt-audience               = var.jwt_audience
+    jwt-secret                 = random_password.jwt_secret.result
+    jwt-expiry-minutes         = tostring(var.jwt_expiry_minutes)
   }
 }
 
@@ -52,11 +52,13 @@ module "app_service" {
   app_settings = {
     "ConnectionStrings__Default" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
     "ASPNETCORE_ENVIRONMENT"     = "Production"
-    "Jwt__Issuer"                = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
-    "Jwt__Audience"              = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
-    "Jwt__Secret"                = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
-    "Jwt__ExpiryMinutes"         = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-expiry-minutes/)"
-    "EnableSwagger"              = "true"
+
+    "Jwt__Issuer"        = var.jwt_issuer
+    "Jwt__Audience"      = var.jwt_audience
+    "Jwt__ExpiryMinutes" = tostring(var.jwt_expiry_minutes)
+
+    "Jwt__Secret"   = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
+    "EnableSwagger" = "true"
   }
   always_on = true
 }
