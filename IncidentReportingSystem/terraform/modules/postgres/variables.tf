@@ -33,3 +33,8 @@ variable "public_network_access_enabled" {
   type    = bool
   default = true
 }
+
+variable "allow_all_azure" {
+  type    = bool
+  default = false
+}
