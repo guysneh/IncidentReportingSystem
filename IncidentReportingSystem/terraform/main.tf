@@ -76,9 +76,9 @@ locals {
 }
 
 resource "azurerm_postgresql_flexible_server_firewall_rule" "webapp_outbound" {
-  for_each            = local.webapp_outbound_ips
-  name                = "webapp-outbound-${replace(each.value, ".", "-")}"
+  for_each         = local.webapp_outbound_ips
+  name             = "webapp-outbound-${replace(each.value, ".", "-")}"
   server_id        = module.postgres.id
-  start_ip_address    = each.value
-  end_ip_address      = each.value
+  start_ip_address = each.value
+  end_ip_address   = each.value
 }

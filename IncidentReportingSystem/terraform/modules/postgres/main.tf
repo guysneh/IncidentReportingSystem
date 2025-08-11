@@ -16,9 +16,9 @@ resource "azurerm_postgresql_flexible_server" "this" {
 }
 
 resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all_azure" {
-  count               = var.allow_all_azure ? 1 : 0
-  name                = "AllowAllAzureIPs"
-  server_id           = azurerm_postgresql_flexible_server.this.id
-  start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
+  count            = var.allow_all_azure ? 1 : 0
+  name             = "AllowAllAzureIPs"
+  server_id        = azurerm_postgresql_flexible_server.this.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
 }
