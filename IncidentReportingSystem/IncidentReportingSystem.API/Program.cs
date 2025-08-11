@@ -16,9 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
-using Polly;
 using System.Text;
-using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using IncidentReportingSystem.API.Middleware;
 
@@ -26,30 +24,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Always configure configuration first
 ConfigureConfiguration(builder.Configuration, builder.Services);
-
-if (args.Contains("--migrate"))
-{
-    // Only load the minimum required services for migration
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    if (string.IsNullOrWhiteSpace(connectionString))
-        throw new InvalidOperationException("No valid connection string found.");
-
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(connectionString));
-
-    var app = builder.Build();
-    ApplyMigrations(app);
-    return;
-}
-
 ConfigureServices(builder.Services, builder.Configuration);
 
-var fullApp = builder.Build();
+var app = builder.Build();
 
-ConfigureMiddleware(fullApp);
-fullApp.MapControllers();
+ConfigureMiddleware(app);
+app.MapControllers();
 
-fullApp.Run();
+app.Run();
 
 
 // ------------------------------
@@ -94,7 +76,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
     services.AddHealthChecks()
-    .AddNpgSql(configuration.GetConnectionString("DefaultConnection"));
+    .AddNpgSql(configuration.GetConnectionString("ConnectionStrings:DefaultConnection"));
     // Add controllers and configure JSON serialization
     services.AddCors(options =>
     {
@@ -203,7 +185,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
     // Register database context
-    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    var connectionString = configuration.GetConnectionString("ConnectionStrings:DefaultConnection");
     if (string.IsNullOrWhiteSpace(connectionString))
     {
         throw new InvalidOperationException("No valid database connection string found.");
@@ -279,30 +261,6 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseHttpsRedirection();
     app.UseAuthentication();
     app.UseAuthorization();
-}
-
-static void ApplyMigrations(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    var policy = Policy
-        .Handle<Exception>()
-        .WaitAndRetry(
-            retryCount: 10,
-            sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)), 
-            onRetry: (exception, timespan, retryCount,context) =>
-            {
-                logger.LogWarning(exception, "Retry {RetryAttempt}: Failed to connect to DB. Waiting {Delay} before next try...", retryCount, timespan);
-            });
-
-    policy.Execute(() =>
-    {
-        logger.LogInformation("Attempting to apply migrations...");
-        dbContext.Database.Migrate();
-        logger.LogInformation("Migrations applied successfully.");
-    });
 }
 
 // Required for WebApplicationFactory<Program> to locate the entry point during integration testing
