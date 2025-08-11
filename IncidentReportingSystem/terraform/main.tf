@@ -47,29 +47,13 @@ module "key_vault" {
 
 module "app_service" {
   source              = "./modules/app_service"
-  name                = var.app_service_name
-  location            = var.location
-  resource_group_name = module.resource_group.name
+  name                = "${var.name_prefix}-api"
   app_service_plan_id = module.app_service_plan.id
-  tags                = var.default_tags
+  resource_group_name = module.resource_group.name
+  location            = var.location
 
-  app_settings = {
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
-    "ASPNETCORE_ENVIRONMENT"               = "Production"
-    "Jwt__Issuer"                          = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
-    "Jwt__Audience"                        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
-    "Jwt__Secret"                          = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
-    "Jwt__ExpiryMinutes"                   = tostring(var.jwt_expiry_minutes)
-    "EnableSwagger"                        = "true"
-  }
-  base_app_settings = {
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
-  }
-  extra_app_settings = {
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" = module.monitoring.connection_string
-  }
-
-  always_on = true
+  app_settings = local.app_settings
+  tags         = var.tags
 }
 
 resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
@@ -91,10 +75,37 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "webapp_outbound" {
 }
 
 module "monitoring" {
-  source                       = "./modules/monitoring"
-  resource_group_name          = module.resource_group.name
-  location                     = var.location
-  name_prefix                  = var.name_prefix
-  tags                         = var.tags
-  log_analytics_retention_days = var.log_analytics_retention_days
+  source = "./modules/monitoring"
+
+  name_prefix         = var.name_prefix
+  resource_group_name = module.resource_group.name
+  location            = var.location
+  tags                = var.tags
+  ai_retention_days   = var.ai_retention_days
+}
+locals {
+  # Base settings – single source of truth for the connection string
+  base_app_settings = {
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
+    "ASPNETCORE_ENVIRONMENT"               = "Production"
+    "EnableSwagger"                        = "true"
+  }
+
+  # Extra settings – Application Insights for example
+  extra_app_settings = {
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = module.monitoring.connection_string
+  }
+
+  # Final app settings passed into the module
+  app_settings = merge(
+    local.base_app_settings,
+    local.extra_app_settings,
+    {
+      # JWT from Key Vault (no duplication)
+      "Jwt__Issuer"        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
+      "Jwt__Audience"      = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
+      "Jwt__Secret"        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
+      "Jwt__ExpiryMinutes" = tostring(var.jwt_expiry_minutes)
+    }
+  )
 }

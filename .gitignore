@@ -438,3 +438,4 @@ crash.log
 # Terraform graphs (local diagnostics)
 IncidentReportingSystem/terraform/graph.dot
 IncidentReportingSystem/terraform/graph.png
+IncidentReportingSystem/terraform/tfplan

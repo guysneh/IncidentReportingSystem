@@ -76,10 +76,7 @@ variable "app_service_plan_sku_name" {
 
 variable "jwt_issuer" { type = string }
 variable "jwt_audience" { type = string }
-variable "jwt_expiry_minutes" {
-  type    = number
-  default = 60
-}
+
 variable "jwt_secret_length" {
   type    = number
   default = 64
@@ -101,4 +98,20 @@ variable "name_prefix" {
 variable "tags" {
   type    = map(string)
   default = {}
+}
+
+variable "ai_retention_days" {
+  type        = number
+  description = "Application Insights retention in days"
+  default     = 30
+}
+
+variable "jwt_expiry_minutes" {
+  type        = number
+  default     = 60
+  description = "JWT token expiry in minutes"
+  validation {
+    condition     = var.jwt_expiry_minutes >= 1 && var.jwt_expiry_minutes <= 1440
+    error_message = "jwt_expiry_minutes must be between 1 and 1440."
+  }
 }
