@@ -84,7 +84,7 @@ jobs:
       
       - name: Enable EF migrations flag and restart
         run: |
-          az webapp config appsettings set -g incident-rg -n incident-api --settings "EF:ApplyMigrations=true"
+          az webapp config appsettings set -g incident-rg -n incident-api --settings EF__ApplyMigrations=true
           az webapp restart -g incident-rg -n incident-api
       
       - name: Wait for migrations to complete (tail logs up to 120s)
@@ -96,6 +96,6 @@ jobs:
       - name: Disable EF migrations flag and restart
         if: always()
         run: |
-          az webapp config appsettings delete -g incident-rg -n incident-api --setting-names "EF:ApplyMigrations"
+          az webapp config appsettings delete -g incident-rg -n incident-api --setting-names EF__ApplyMigrations
           az webapp restart -g incident-rg -n incident-api
 
