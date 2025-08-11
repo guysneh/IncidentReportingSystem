@@ -54,7 +54,7 @@ module "app_service" {
   tags                = var.default_tags
 
   app_settings = {
-    "ConnectionStrings__DefaultConnection" = "Host=${module.postgres.fqdn};Database=postgres;Username=${var.db_admin_username};Password=${random_password.postgres_admin.result};Port=5432;Ssl Mode=Require;Trust Server Certificate=true"
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
     "ASPNETCORE_ENVIRONMENT"               = "Production"
     "Jwt__Issuer"                          = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
     "Jwt__Audience"                        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
