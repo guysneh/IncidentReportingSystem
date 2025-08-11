@@ -76,7 +76,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
     services.AddHealthChecks()
-    .AddNpgSql(configuration.GetConnectionString("ConnectionStrings:DefaultConnection"));
+        .AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
     // Add controllers and configure JSON serialization
     services.AddCors(options =>
     {
@@ -185,7 +185,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
     // Register database context
-    var connectionString = configuration.GetConnectionString("ConnectionStrings:DefaultConnection");
+    var connectionString = configuration["ConnectionStrings:DefaultConnection"];
     if (string.IsNullOrWhiteSpace(connectionString))
     {
         throw new InvalidOperationException("No valid database connection string found.");
