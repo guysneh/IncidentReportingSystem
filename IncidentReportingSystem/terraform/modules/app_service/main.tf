@@ -14,6 +14,6 @@ resource "azurerm_linux_web_app" "this" {
   }
 
   https_only   = true
-  app_settings = var.app_settings
+  app_settings = merge(var.base_app_settings, var.extra_app_settings)
   tags         = var.tags
 }

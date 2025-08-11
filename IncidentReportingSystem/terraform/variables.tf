@@ -88,3 +88,17 @@ variable "always_on" {
   type    = bool
   default = true
 }
+
+variable "log_analytics_retention_days" {
+  type    = number
+  default = 30
+}
+
+variable "name_prefix" {
+  type = string
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}

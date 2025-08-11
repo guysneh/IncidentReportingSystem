@@ -62,6 +62,13 @@ module "app_service" {
     "Jwt__ExpiryMinutes"                   = tostring(var.jwt_expiry_minutes)
     "EnableSwagger"                        = "true"
   }
+  base_app_settings = {
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
+  }
+  extra_app_settings = {
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = module.monitoring.connection_string
+  }
+
   always_on = true
 }
 
@@ -81,4 +88,13 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "webapp_outbound" {
   server_id        = module.postgres.id
   start_ip_address = each.value
   end_ip_address   = each.value
+}
+
+module "monitoring" {
+  source                       = "./modules/monitoring"
+  resource_group_name          = module.resource_group.name
+  location                     = var.location
+  name_prefix                  = var.name_prefix
+  tags                         = var.tags
+  log_analytics_retention_days = var.log_analytics_retention_days
 }

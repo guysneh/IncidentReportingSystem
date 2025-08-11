@@ -39,3 +39,13 @@ variable "always_on" {
   type    = bool
   default = true
 }
+
+variable "extra_app_settings" {
+  type    = map(string)
+  default = {}
+}
+
+variable "base_app_settings" {
+  type    = map(string)
+  default = {}
+}

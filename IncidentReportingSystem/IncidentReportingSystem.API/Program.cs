@@ -71,6 +71,7 @@ static bool IsRunningInDocker()
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
+    services.AddApplicationInsightsTelemetry();
     services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
