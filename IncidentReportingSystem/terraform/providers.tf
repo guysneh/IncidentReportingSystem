@@ -1,12 +1,24 @@
 terraform {
+  required_version = ">= 1.6, < 2.0"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.89.0"
+      version = ">= 4.30.0, < 5.0.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.13.0"
     }
   }
-
-  required_version = ">= 1.4.0"
 }
 
 variable "subscription_id" {
@@ -19,6 +31,4 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-
 provider "azuread" {}
-

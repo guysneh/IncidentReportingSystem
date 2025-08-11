@@ -430,3 +430,11 @@ crash.log
 *.tfvars
 *.tfplan
 *.out
+
+# Local dev env files
+.env.local
+*.env.local
+
+# Terraform graphs (local diagnostics)
+IncidentReportingSystem/terraform/graph.dot
+IncidentReportingSystem/terraform/graph.png

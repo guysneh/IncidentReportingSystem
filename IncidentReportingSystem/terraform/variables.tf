@@ -62,12 +62,6 @@ variable "db_admin_password" {
   sensitive   = true
 }
 
-variable "postgres_connection_string" {
-  description = "Full PostgreSQL connection string to store in Key Vault"
-  type        = string
-  sensitive   = true
-}
-
 variable "app_service_name" {
   description = "Web App name"
   type        = string

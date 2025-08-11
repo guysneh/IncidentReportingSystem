@@ -1,7 +1,6 @@
 ﻿using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
 
 namespace IncidentReportingSystem.Infrastructure
 {
@@ -9,9 +8,11 @@ namespace IncidentReportingSystem.Infrastructure
     {
         public ApplicationDbContext CreateDbContext(string[] args)
         {
-            var conn = Environment.GetEnvironmentVariable("ConnectionStrings__Default");
+            var conn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                      ?? Environment.GetEnvironmentVariable("ConnectionStrings__Default");
+
             if (string.IsNullOrWhiteSpace(conn))
-                throw new InvalidOperationException("ConnectionStrings__Default is not set.");
+                throw new InvalidOperationException("ConnectionStrings__DefaultConnection (or _Default) is not set.");
 
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseNpgsql(conn)

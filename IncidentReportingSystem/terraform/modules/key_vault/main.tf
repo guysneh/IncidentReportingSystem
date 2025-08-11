@@ -1,10 +1,3 @@
-terraform {
-  required_providers {
-    azurerm = { source = "hashicorp/azurerm" }
-    time    = { source = "hashicorp/time" }
-  }
-}
-
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "this" {
