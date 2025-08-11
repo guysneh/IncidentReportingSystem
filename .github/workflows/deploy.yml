@@ -69,20 +69,33 @@ jobs:
             echo EOF
           } >> $GITHUB_ENV
 
-      - name: Run EF Core migrations
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
-          TEST_DB_CONNECTION: ${{ env.CONN }}
-          ConnectionStrings__DefaultConnection: ${{ env.CONN }}
-        run: |
-          dotnet ef database update \
-            --project "${{ env.DB_PROJECT_PATH }}" \
-            --startup-project "${{ env.PROJECT_PATH }}" \
-            --connection "${{ env.CONN }}"
-
       - run: |
           az webapp deploy \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
             --type zip \
             --src-path "app.zip"
+            
+      - name: Enable application logs (once)
+        run: |
+          az webapp log config \
+            -g incident-rg -n incident-api \
+            --application-logging filesystem --level information
+      
+      - name: Enable EF migrations flag and restart
+        run: |
+          az webapp config appsettings set -g incident-rg -n incident-api --settings "EF:ApplyMigrations=true"
+          az webapp restart -g incident-rg -n incident-api
+      
+      - name: Wait for migrations to complete (tail logs up to 120s)
+        run: |
+          timeout 120 az webapp log tail -g incident-rg -n incident-api | tee app_logs.txt
+          if ! grep -q "EF migrations applied successfully." app_logs.txt; then
+            echo "Migrations marker not found in logs"; exit 1; fi
+      
+      - name: Disable EF migrations flag and restart
+        if: always()
+        run: |
+          az webapp config appsettings delete -g incident-rg -n incident-api --setting-names "EF:ApplyMigrations"
+          az webapp restart -g incident-rg -n incident-api
+
