@@ -9,3 +9,8 @@ output "id" {
 output "default_hostname" {
   value = azurerm_linux_web_app.this.default_hostname
 }
+
+output "outbound_ip_addresses" {
+  description = "Comma-separated list of outbound IP addresses of the Web App"
+  value       = azurerm_linux_web_app.this.outbound_ip_addresses
+}

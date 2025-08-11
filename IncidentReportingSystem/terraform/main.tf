@@ -70,3 +70,15 @@ resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
   role_definition_name = "Key Vault Secrets User"
   principal_id         = module.app_service.principal_id
 }
+
+locals {
+  webapp_outbound_ips = toset(split(",", module.app_service.outbound_ip_addresses))
+}
+
+resource "azurerm_postgresql_flexible_server_firewall_rule" "webapp_outbound" {
+  for_each            = local.webapp_outbound_ips
+  name                = "webapp-outbound-${replace(each.value, ".", "-")}"
+  server_id        = module.postgres.id
+  start_ip_address    = each.value
+  end_ip_address      = each.value
+}
