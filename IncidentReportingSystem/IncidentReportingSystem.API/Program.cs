@@ -76,10 +76,10 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     // --- Application Insights ---
     // Reads APPLICATIONINSIGHTS_CONNECTION_STRING from configuration (already wired via Key Vault / pipeline).
     services.AddApplicationInsightsTelemetry(); // ASP.NET AI registration (belongs in API layer)
-
     // Stamp a stable cloud role name for this service to enable clean filtering in KQL.
     services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
-
+    // Register telemetry processor to drop noisy 404s for "/" and robots*.txt
+    services.AddApplicationInsightsTelemetryProcessor<IgnoreNoiseTelemetryProcessor>();
     services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -279,6 +279,19 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseHttpsRedirection();
     app.UseAuthentication();
     app.UseAuthorization();
+    // Redirect root ("/") to Swagger UI to avoid 404 and improve discoverability
+    app.MapGet("/", () => Results.Redirect("/swagger"))
+       .WithName("RootRedirect")
+       .WithSummary("Redirects root to Swagger UI")
+       .WithDescription("Prevents 404s for '/' and improves discoverability.");
+
+    // Minimal robots.txt to stop noisy 404s from bots
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain"))
+       .WithName("RobotsTxt");
+
+    // Some platforms ping a random robots file; return OK to reduce AI noise
+    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain"))
+       .WithName("RobotsRandomTxt");
 }
 
 // Required for WebApplicationFactory<Program> to locate the entry point during integration testing
