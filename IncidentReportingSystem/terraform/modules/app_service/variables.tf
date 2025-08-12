@@ -49,3 +49,15 @@ variable "base_app_settings" {
   type    = map(string)
   default = {}
 }
+
+variable "health_check_path" {
+  description = "Health check endpoint path exposed by the Web App."
+  type        = string
+  default     = "/health"
+}
+
+variable "health_check_eviction_time_in_min" {
+  description = "Minutes before evicting an instance failing health checks."
+  type        = number
+  default     = 5
+}

@@ -16,6 +16,8 @@ resource "azurerm_linux_web_app" "this" {
   site_config {
     application_stack { dotnet_version = "8.0" }
     always_on = var.always_on
+    health_check_path = var.health_check_path
+    health_check_eviction_time_in_min  = var.health_check_eviction_time_in_min
   }
 
   https_only   = true

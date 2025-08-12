@@ -53,6 +53,8 @@ module "app_service" {
   app_service_plan_id = module.app_service_plan.id
   resource_group_name = module.resource_group.name
   location            = var.location
+  health_check_path = "/health"
+  health_check_eviction_time_in_min = 5
 
   app_settings = local.app_settings
   tags         = var.tags
