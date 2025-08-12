@@ -1,5 +1,4 @@
 name: "Terraform (manual)"
-
 on:
   workflow_dispatch:
     inputs:
@@ -11,15 +10,7 @@ on:
         description: "Terraform working directory (relative to repo root)"
         required: true
         default: IncidentReportingSystem/terraform
-      db_admin_username:
-        description: "DB admin username (non-sensitive)"
-        required: true
-        default: incident_admin
-      name_prefix:
-        description: "Naming prefix for resources"
-        required: true
-        default: incident
-        
+
 permissions:
   id-token: write
   contents: read
@@ -34,23 +25,13 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Normalize TF dir"
+      - name: "Set TF working dir"
         shell: bash
         run: |
           DIR='${{ inputs.directory }}'
-          # הסרת מירכאות אם הוקלדו בשדה ה-UI
           DIR="${DIR%\"}"; DIR="${DIR#\"}"
           echo "TF_WORKING_DIR=$DIR" >> $GITHUB_ENV
           echo "Using TF_WORKING_DIR='$DIR'"
-
-      - name: "Debug - list root & TF dir"
-        shell: bash
-        run: |
-          pwd
-          echo "== list root =="
-          ls -la
-          echo "== check TF dir =="
-          ls -la "$TF_WORKING_DIR" || true
 
       - name: "Setup Terraform 1.9.5"
         uses: hashicorp/setup-terraform@v3
@@ -64,7 +45,8 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: "Export ARM_* env for Terraform OIDC"
+      # OIDC -> Terraform provider/backend (AAD/RBAC, no account keys)
+      - name: "Export ARM_* env"
         shell: bash
         run: |
           echo "ARM_USE_OIDC=true" >> $GITHUB_ENV
@@ -73,35 +55,17 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
           echo "ARM_OIDC_TOKEN_FILE_PATH=${AZURE_FEDERATED_TOKEN_FILE}" >> $GITHUB_ENV
 
-      - name: "Export TF_VAR_* (sensitive vars)"
+      # - name: "Export TF_VAR for jwt (optional)"
+      #   shell: bash
+      #   run: |
+      #     echo "TF_VAR_jwt_issuer=${{ secrets.JWT_ISSUER }}" >> $GITHUB_ENV
+      #     echo "TF_VAR_jwt_audience=${{ secrets.JWT_AUDIENCE }}" >> $GITHUB_ENV
+
+      - name: "Export TF_VAR_action_group_email"
         shell: bash
-        run: |
-          echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
+        run: echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
 
-      - name: "Debug - show backend.hcl"
-        shell: bash
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          echo "=== backend.hcl ==="
-          sed -n '1,200p' backend.hcl || true
-
-      - name: "Export TF_VAR_* (vars for root module)"
-        shell: bash
-        run: |
-          echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
-          echo "TF_VAR_db_admin_username=${{ inputs.db_admin_username }}" >> $GITHUB_ENV
-          echo "TF_VAR_name_prefix=${{ inputs.name_prefix }}" >> $GITHUB_ENV
-          echo "TF_VAR_jwt_issuer=${{ secrets.JWT_ISSUER }}" >> $GITHUB_ENV
-          echo "TF_VAR_jwt_audience=${{ secrets.JWT_AUDIENCE }}" >> $GITHUB_ENV
-
-      - name: "Debug - show TF_VAR_* names"
-        shell: bash
-        run: |
-          echo "TF_VAR_* visible to this job:"
-          env | sort | grep '^TF_VAR_' || true
-
-
-      - name: "Terraform Init"
+      - name: "Terraform Init (AAD backend)"
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -backend-config="backend.hcl" -input=false
 
@@ -112,20 +76,9 @@ jobs:
       - name: "Terraform Plan"
         if: ${{ inputs.action == 'plan' }}
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform plan -no-color -input=false \
-            -var "db_admin_username=${{ inputs.db_admin_username }}" \
-            -var "name_prefix=${{ inputs.name_prefix }}" \
-            -var "jwt_issuer=${{ secrets.JWT_ISSUER }}" \
-            -var "jwt_audience=${{ secrets.JWT_AUDIENCE }}"
-      
+        run: terraform plan -no-color -input=false
+
       - name: "Terraform Apply"
         if: ${{ inputs.action == 'apply' }}
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform apply -auto-approve -input=false \
-            -var "db_admin_username=${{ inputs.db_admin_username }}" \
-            -var "name_prefix=${{ inputs.name_prefix }}" \
-            -var "jwt_issuer=${{ secrets.JWT_ISSUER }}" \
-            -var "jwt_audience=${{ secrets.JWT_AUDIENCE }}"
-
+        run: terraform apply -auto-approve -input=false
