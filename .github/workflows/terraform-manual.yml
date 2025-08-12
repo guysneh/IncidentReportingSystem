@@ -4,14 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'What to run'
-        type: choice
+        description: "What to run (plan or apply)"
         required: true
         default: plan
-        options: [plan, apply]
       directory:
-        description: 'Terraform working directory (relative to repo root)'
-        type: string
+        description: "Terraform working directory (relative to repo root)"
         required: true
         default: IncidentReportingSystem/terraform
 
