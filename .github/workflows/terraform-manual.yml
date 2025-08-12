@@ -21,24 +21,30 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: terraform-manual
-    env:
-      TF_WORKING_DIR: ${{ inputs.directory }}
 
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Debug - show tree"
+      - name: "Normalize TF dir"
+        shell: bash
+        run: |
+          DIR='${{ inputs.directory }}'
+          # הסרת מירכאות אם הוקלדו בשדה ה-UI
+          DIR="${DIR%\"}"; DIR="${DIR#\"}"
+          echo "TF_WORKING_DIR=$DIR" >> $GITHUB_ENV
+          echo "Using TF_WORKING_DIR='$DIR'"
+
+      - name: "Debug - list root & TF dir"
+        shell: bash
         run: |
           pwd
           echo "== list root =="
           ls -la
           echo "== check TF dir =="
-          ls -la "${{ env.TF_WORKING_DIR }}" || true
-          echo "== backend.hcl =="
-          ls -la "${{ env.TF_WORKING_DIR }}/backend.hcl" || true
+          ls -la "$TF_WORKING_DIR" || true
 
-      - name: "Setup Terraform"
+      - name: "Setup Terraform 1.9.5"
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.5
@@ -51,6 +57,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: "Export ARM_* env for Terraform OIDC"
+        shell: bash
         run: |
           echo "ARM_USE_OIDC=true" >> $GITHUB_ENV
           echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
@@ -59,24 +66,31 @@ jobs:
           echo "ARM_OIDC_TOKEN_FILE_PATH=${AZURE_FEDERATED_TOKEN_FILE}" >> $GITHUB_ENV
 
       - name: "Export TF_VAR_* (sensitive vars)"
+        shell: bash
         run: |
           echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
 
       - name: "Debug - show backend.hcl"
+        shell: bash
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           echo "=== backend.hcl ==="
-          cat "${{ env.TF_WORKING_DIR }}/backend.hcl
+          sed -n '1,200p' backend.hcl || true
 
       - name: "Terraform Init"
-        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="backend.hcl" -input=false
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -backend-config="backend.hcl" -input=false
 
       - name: "Terraform Validate"
-        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
 
       - name: "Terraform Plan"
         if: ${{ inputs.action == 'plan' }}
-        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" plan -no-color -input=false
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -no-color -input=false
 
       - name: "Terraform Apply"
         if: ${{ inputs.action == 'apply' }}
-        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" apply -auto-approve -input=false
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
