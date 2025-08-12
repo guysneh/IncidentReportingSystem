@@ -19,16 +19,12 @@ terraform {
       version = "~> 0.13.0"
     }
   }
-}
 
-variable "subscription_id" {
-  type        = string
-  description = "Azure subscription ID"
+  backend "azurerm" {}
 }
 
 provider "azurerm" {
   features {}
-  subscription_id = var.subscription_id
 }
 
 provider "azuread" {}

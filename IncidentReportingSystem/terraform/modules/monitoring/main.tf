@@ -51,8 +51,8 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "error_rate" {
   enabled             = true
 
   # NOTE: for this provider version, use minutes as integers:
-  frequency   = 5        # evaluate every 5 minutes
-  time_window = 5        # look back 5 minutes
+  frequency   = 5 # evaluate every 5 minutes
+  time_window = 5 # look back 5 minutes
 
   # NOTE: in this schema we pass a single data source, not 'scopes'
   data_source_id = azurerm_application_insights.appi.id

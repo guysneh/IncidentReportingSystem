@@ -56,12 +56,6 @@ variable "db_admin_username" {
   description = "Admin username for PostgreSQL Flexible Server"
 }
 
-variable "db_admin_password" {
-  type        = string
-  description = "Admin password for PostgreSQL Flexible Server"
-  sensitive   = true
-}
-
 variable "app_service_name" {
   description = "Web App name"
   type        = string

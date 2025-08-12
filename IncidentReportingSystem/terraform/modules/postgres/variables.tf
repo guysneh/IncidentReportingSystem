@@ -1,40 +1,49 @@
 variable "postgresql_server_name" {
-  description = "The name of the PostgreSQL server"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region"
-  type        = string
+  type = string
 }
 
 variable "resource_group_name" {
-  description = "The name of the resource group"
-  type        = string
+  type = string
+}
+
+variable "location" {
+  type = string
 }
 
 variable "db_admin_username" {
-  description = "Admin username for the PostgreSQL server"
+  description = "Admin username for PostgreSQL"
   type        = string
 }
 
+# Optional override; leave null in normal cases (we auto-generate)
 variable "db_admin_password" {
-  description = "Admin password for the PostgreSQL server"
+  description = "Override admin password (null = auto-generate)"
   type        = string
   sensitive   = true
-}
-
-variable "tags" {
-  description = "Common resource tags"
-  type        = map(string)
+  default     = null
 }
 
 variable "public_network_access_enabled" {
-  type    = bool
-  default = true
+  type = bool
 }
 
 variable "allow_all_azure" {
   type    = bool
   default = false
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+
+variable "key_vault_id" {
+  description = "Key Vault resource ID to store the admin password"
+  type        = string
+}
+
+variable "admin_password_secret_name" {
+  description = "Secret name for the admin password in Key Vault"
+  type        = string
+  default     = "PostgresAdminPassword"
 }

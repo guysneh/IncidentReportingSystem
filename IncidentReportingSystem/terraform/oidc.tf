@@ -55,6 +55,11 @@ resource "azurerm_role_assignment" "gha_kv_secrets_user" {
 
 output "gha_client_id" { value = azuread_application.gha.client_id }
 output "tenant_id" { value = data.azurerm_client_config.current.tenant_id }
-output "subscription_id" { value = var.subscription_id }
+output "subscription_id" {
+  value = data.azurerm_client_config.current.subscription_id
+}
 output "resource_group_name" { value = data.azurerm_resource_group.rg.name }
 output "webapp_name" { value = data.azurerm_linux_web_app.app.name }
+output "object_id" {
+  value = data.azurerm_client_config.current.object_id
+}

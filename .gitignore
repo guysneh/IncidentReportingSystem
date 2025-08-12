@@ -446,3 +446,11 @@ terraform/*.tfvars
 *.tfstate
 *.tfstate.backup
 .terraform/
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# local secrets
+terraform/secrets.auto.tfvars
+*.auto.tfvars.json

@@ -18,15 +18,14 @@ module "app_service_plan" {
 module "postgres" {
   source                        = "./modules/postgres"
   postgresql_server_name        = "incident-db"
-  location                      = var.location
   resource_group_name           = module.resource_group.name
+  location                      = module.resource_group.location
   db_admin_username             = var.db_admin_username
-  db_admin_password             = random_password.postgres_admin.result
-  tags                          = var.default_tags
   public_network_access_enabled = true
+  allow_all_azure               = true
+  key_vault_id                  = module.key_vault.id
+  tags                          = var.default_tags
 }
-
-
 
 module "key_vault" {
   source              = "./modules/key_vault"
