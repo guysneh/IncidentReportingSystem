@@ -79,8 +79,9 @@ jobs:
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
-            --connection "$CONN" \
-            --no-build
+            --configuration Release \
+            --connection "$CONN"
+
 
       # --- Deploy ZIP ---
       - name: Deploy ZIP to Web App
