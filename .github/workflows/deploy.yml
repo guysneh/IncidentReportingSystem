@@ -92,9 +92,29 @@ jobs:
           timeout 120 az webapp log tail -g incident-rg -n incident-api | tee app_logs.txt || true
 
       
-      - name: Disable EF migrations flag and restart
+       - name: Disable EF migrations flag and restart
         if: always()
         run: |
           az webapp config appsettings delete -g incident-rg -n incident-api --setting-names EF__ApplyMigrations
           az webapp restart -g incident-rg -n incident-api
+
+      - name: Smoke test (GET /health with retries)
+        run: |
+          URL="https://${{ env.WEBAPP_NAME }}.azurewebsites.net/health"
+          echo "Probing $URL ..."
+          for i in {1..24}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            if [ "$code" -eq 200 ]; then
+              echo "OK (200)"; exit 0
+            fi
+            echo "Attempt $i: got $code; waiting 5s..."
+            sleep 5
+          done
+          echo "Health check failed after 120s"
+          exit 1
+
+      - name: Dump last logs on failure
+        if: failure()
+        run: |
+          timeout 60 az webapp log tail -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
 
