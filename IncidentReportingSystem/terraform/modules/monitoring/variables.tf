@@ -31,3 +31,10 @@ variable "ai_retention_days" {
     error_message = "ai_retention_days must be between 30 and 730."
   }
 }
+
+variable "action_group_name" {
+  type = string
+}
+variable "action_group_email" {
+  type = string
+}

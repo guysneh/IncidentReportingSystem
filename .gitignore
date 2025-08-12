@@ -439,3 +439,10 @@ crash.log
 IncidentReportingSystem/terraform/graph.dot
 IncidentReportingSystem/terraform/graph.png
 IncidentReportingSystem/terraform/tfplan
+
+# Terraform local secrets
+terraform/secrets.auto.tfvars
+terraform/*.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform/

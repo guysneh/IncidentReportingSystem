@@ -115,3 +115,9 @@ variable "jwt_expiry_minutes" {
     error_message = "jwt_expiry_minutes must be between 1 and 1440."
   }
 }
+
+variable "action_group_email" {
+  description = "Primary email address to receive Azure Monitor alerts"
+  type        = string
+  sensitive   = true
+}

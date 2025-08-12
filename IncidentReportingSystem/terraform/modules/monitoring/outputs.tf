@@ -1,9 +1,11 @@
 output "connection_string" {
-  value       = azurerm_application_insights.this.connection_string
-  description = "Application Insights connection string"
+  value = azurerm_application_insights.appi.connection_string
 }
 
 output "instrumentation_key" {
-  value       = azurerm_application_insights.this.instrumentation_key
-  description = "Legacy instrumentation key"
+  value = azurerm_application_insights.appi.instrumentation_key
+}
+
+output "action_group_id" {
+  value = azurerm_monitor_action_group.this.id
 }

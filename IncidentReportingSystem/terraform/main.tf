@@ -82,6 +82,8 @@ module "monitoring" {
   location            = var.location
   tags                = var.tags
   ai_retention_days   = var.ai_retention_days
+  action_group_name   = "incident-action-group"
+  action_group_email  = var.action_group_email
 }
 locals {
   # Base settings – single source of truth for the connection string
