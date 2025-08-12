@@ -18,6 +18,9 @@ env:
   RESOURCE_GROUP: "incident-rg"
   WEBAPP_NAME: "incident-api"
   PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj"
+  DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
+  KEY_VAULT_NAME: "incident-kv"
+  SECRET_NAME: "PostgreSqlConnectionString"
   BASE_URL: "https://incident-api.azurewebsites.net"
 
 jobs:
@@ -54,6 +57,32 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      # --- Run EF migrations against Azure Postgres BEFORE deploying (no app restart needed) ---
+      - name: Install dotnet-ef
+        run: |
+          dotnet tool install -g dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Fetch connection string from Key Vault
+        run: |
+          CONN=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$SECRET_NAME" --query value -o tsv)
+          {
+            echo 'CONN<<EOF'
+            echo "$CONN"
+            echo EOF
+          } >> $GITHUB_ENV
+
+      - name: Apply EF migrations (out-of-band)
+        env:
+          DOTNET_NOLOGO: true
+        run: |
+          dotnet ef database update \
+            --project "${{ env.DB_PROJECT_PATH }}" \
+            --startup-project "${{ env.PROJECT_PATH }}" \
+            --connection "$CONN" \
+            --no-build
+
+      # --- Deploy ZIP ---
       - name: Deploy ZIP to Web App
         run: |
           az webapp deploy \
@@ -68,12 +97,7 @@ jobs:
             -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" \
             --application-logging filesystem --level information
 
-      - name: Turn ON EF__ApplyMigrations and restart
-        run: |
-          set -e
-          az webapp config appsettings set -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" --settings EF__ApplyMigrations=true
-          az webapp restart -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}"
-
+      # --- Post-deploy checks ---
       - name: Wait for /health 200 (max 120s, backoff)
         run: |
           set -e
@@ -105,33 +129,6 @@ jobs:
             exit 1
           fi
           echo "DB smoke OK"
-
-      - name: Turn OFF EF__ApplyMigrations and restart
-        if: always()
-        run: |
-          az webapp config appsettings delete -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" --setting-names EF__ApplyMigrations || true
-          az webapp restart -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}"
-
-      - name: Final /health check (max 120s, backoff)
-        if: always()
-        run: |
-          URL="${{ env.BASE_URL }}/health"
-          DEADLINE=$(( $(date +%s) + 120 ))
-          SLEEP=2
-          while true; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
-            if [ "$CODE" = "200" ]; then
-              echo "Health OK after cleanup"
-              break
-            fi
-            if [ $(date +%s) -ge $DEADLINE ]; then
-              echo "Final health failed: last HTTP $CODE"
-              exit 1
-            fi
-            echo "Waiting (HTTP $CODE)..."
-            sleep $SLEEP
-            if [ $SLEEP -lt 10 ]; then SLEEP=$((SLEEP+2)); fi
-          done
 
       - name: Dump last logs on failure
         if: failure()
