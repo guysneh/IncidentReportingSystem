@@ -28,7 +28,7 @@ variable "default_tags" {
 variable "budget_amount" {
   type        = number
   description = "Monthly budget limit in USD"
-  default     = 20
+  default     = 100
 }
 
 variable "budget_threshold_warn" {
