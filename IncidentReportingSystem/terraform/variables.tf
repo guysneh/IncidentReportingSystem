@@ -116,6 +116,12 @@ variable "action_group_email" {
   sensitive   = true
 }
 
+variable "postgres_database" {
+  type        = string
+  default     = "incidentdb"
+  description = "Logical database name in the Postgres server"
+}
+
 variable "postgres_port" {
   type        = number
   description = "Port for PostgreSQL connections (Azure Flexible uses 5432 and it's not configurable)."
