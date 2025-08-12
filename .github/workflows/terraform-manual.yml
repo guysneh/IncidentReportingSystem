@@ -1,4 +1,4 @@
-name: Terraform (manual)
+name: "Terraform (manual)"
 
 on:
   workflow_dispatch:
@@ -21,16 +21,24 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: terraform-manual
-      cancel-in-progress: false
-
     env:
       TF_WORKING_DIR: ${{ inputs.directory }}
 
     steps:
-      - name: Checkout
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: "Debug - show tree"
+        run: |
+          pwd
+          echo "== list root =="
+          ls -la
+          echo "== check TF dir =="
+          ls -la "${{ env.TF_WORKING_DIR }}" || true
+          echo "== backend.hcl =="
+          ls -la "${{ env.TF_WORKING_DIR }}/backend.hcl" || true
+
+      - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v3
 
       - name: "Azure login (OIDC)"
@@ -41,12 +49,16 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: "Export ARM_* env for Terraform OIDC"
-              run: |
-                echo "ARM_USE_OIDC=true" >> $GITHUB_ENV
-                echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-                echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-                echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
-                echo "ARM_OIDC_TOKEN_FILE_PATH=${AZURE_FEDERATED_TOKEN_FILE}" >> $GITHUB_ENV
+        run: |
+          echo "ARM_USE_OIDC=true" >> $GITHUB_ENV
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "ARM_OIDC_TOKEN_FILE_PATH=${AZURE_FEDERATED_TOKEN_FILE}" >> $GITHUB_ENV
+
+      - name: "Export TF_VAR_* (sensitive vars)"
+        run: |
+          echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
 
       - name: "Terraform Init"
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="backend.hcl" -input=false
