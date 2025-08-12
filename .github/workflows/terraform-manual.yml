@@ -40,6 +40,8 @@ jobs:
 
       - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
 
       - name: "Azure login (OIDC)"
         uses: azure/login@v2
@@ -59,6 +61,11 @@ jobs:
       - name: "Export TF_VAR_* (sensitive vars)"
         run: |
           echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
+
+      - name: "Debug - show backend.hcl"
+        run: |
+          echo "=== backend.hcl ==="
+          cat "${{ env.TF_WORKING_DIR }}/backend.hcl
 
       - name: "Terraform Init"
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="backend.hcl" -input=false
