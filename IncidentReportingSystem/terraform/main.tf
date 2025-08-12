@@ -34,14 +34,17 @@ module "key_vault" {
   resource_group_name = module.resource_group.name
   tags                = var.default_tags
 
+  ci_principal_object_id  = azuread_service_principal.gha.object_id
+  ci_role_assignment_name = var.ci_role_assignment_name
+
   secrets = {
-    PostgreSqlConnectionString = "Host=${module.postgres.fqdn};Database=postgres;Username=${var.db_admin_username};Password=${random_password.postgres_admin.result};Port=5432;Ssl Mode=Require;Trust Server Certificate=true"
-    jwt-issuer                 = var.jwt_issuer
-    jwt-audience               = var.jwt_audience
-    jwt-secret                 = random_password.jwt_secret.result
-    jwt-expiry-minutes         = tostring(var.jwt_expiry_minutes)
+    jwt-issuer         = var.jwt_issuer
+    jwt-audience       = var.jwt_audience
+    jwt-secret         = random_password.jwt_secret.result
+    jwt-expiry-minutes = tostring(var.jwt_expiry_minutes)
   }
 }
+
 
 
 module "app_service" {
@@ -68,7 +71,7 @@ locals {
 resource "azurerm_postgresql_flexible_server_firewall_rule" "webapp_outbound" {
   for_each         = local.webapp_outbound_ips
   name             = "webapp-outbound-${replace(each.value, ".", "-")}"
-  server_id        = module.postgres.id
+  server_id        = module.postgres.server_id
   start_ip_address = each.value
   end_ip_address   = each.value
 }

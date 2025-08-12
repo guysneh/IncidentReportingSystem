@@ -1,7 +1,8 @@
 # Generate password when not provided
 resource "random_password" "pg_admin" {
-  length  = 24
-  special = true
+  length           = 24
+  special          = true
+  override_special = "_%@"
 }
 
 # Choose provided password if any; otherwise the random one
@@ -10,12 +11,11 @@ locals {
 }
 
 resource "azurerm_postgresql_flexible_server" "this" {
-  name                = var.postgresql_server_name
-  resource_group_name = var.resource_group_name
-  location            = var.location
-
+  name                   = var.postgresql_server_name
+  resource_group_name    = var.resource_group_name
+  location               = var.location
   administrator_login    = var.db_admin_username
-  administrator_password = local.admin_password
+  administrator_password = random_password.pg_admin.result
   version                = "13"
 
   sku_name   = "B_Standard_B1ms"

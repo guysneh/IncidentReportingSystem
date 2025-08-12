@@ -115,3 +115,14 @@ variable "action_group_email" {
   type        = string
   sensitive   = true
 }
+
+variable "postgres_port" {
+  type        = number
+  description = "Port for PostgreSQL connections (Azure Flexible uses 5432 and it's not configurable)."
+  default     = 5432
+}
+
+variable "ci_role_assignment_name" {
+  type        = string
+  description = "Existing RBAC assignment GUID for CI on Key Vault"
+}

@@ -47,3 +47,9 @@ variable "admin_password_secret_name" {
   type        = string
   default     = "PostgresAdminPassword"
 }
+
+variable "database_name" {
+  type        = string
+  description = "PostgreSQL database name"
+  default     = "incidentdb"
+}

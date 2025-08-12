@@ -20,11 +20,13 @@ data "azurerm_resource_group" "rg" {
 data "azurerm_linux_web_app" "app" {
   name                = var.app_service_name
   resource_group_name = var.resource_group_name
+  depends_on          = [module.app_service]
 }
 
 data "azurerm_key_vault" "kv" {
   name                = var.key_vault_name
   resource_group_name = var.resource_group_name
+  depends_on          = [module.key_vault]
 }
 
 resource "azuread_application" "gha" {
