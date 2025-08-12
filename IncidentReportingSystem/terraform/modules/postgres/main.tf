@@ -18,7 +18,7 @@ resource "azurerm_postgresql_flexible_server" "this" {
   administrator_password = local.admin_password
   version                = "13"
 
-  sku_name   = "GP_Standard_D2ds_v4"
+  sku_name   = "B_Standard_B1ms"
   storage_mb = 32768
 
   backup_retention_days         = 7
