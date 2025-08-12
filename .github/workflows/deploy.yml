@@ -92,7 +92,7 @@ jobs:
           timeout 120 az webapp log tail -g incident-rg -n incident-api | tee app_logs.txt || true
 
       
-       - name: Disable EF migrations flag and restart
+      - name: Disable EF migrations flag and restart
         if: always()
         run: |
           az webapp config appsettings delete -g incident-rg -n incident-api --setting-names EF__ApplyMigrations
