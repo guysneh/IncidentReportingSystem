@@ -19,6 +19,8 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
 using IncidentReportingSystem.API.Middleware;
+using Microsoft.ApplicationInsights.Extensibility;
+using IncidentReportingSystem.Infrastructure.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 // Always configure configuration first
@@ -71,7 +73,13 @@ static bool IsRunningInDocker()
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddApplicationInsightsTelemetry();
+    // --- Application Insights ---
+    // Reads APPLICATIONINSIGHTS_CONNECTION_STRING from configuration (already wired via Key Vault / pipeline).
+    services.AddApplicationInsightsTelemetry(); // ASP.NET AI registration (belongs in API layer)
+
+    // Stamp a stable cloud role name for this service to enable clean filtering in KQL.
+    services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
+
     services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
