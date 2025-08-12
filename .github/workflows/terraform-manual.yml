@@ -10,10 +10,10 @@ on:
         default: plan
         options: [plan, apply]
       directory:
-        description: 'Terraform working directory'
+        description: 'Terraform working directory (relative to repo root)'
         type: string
         required: true
-        default: terraform
+        default: IncidentReportingSystem/terraform
 
 permissions:
   id-token: write
@@ -32,18 +32,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Debug: show repo tree
+
+      - name: Debug: show tree
         run: |
           pwd
-          echo "== ls -la =="
+          echo "== list root =="
           ls -la
-          echo "== find terraform dirs (depth<=3) =="
-          find . -maxdepth 3 -type d -name terraform -print || true
-          echo "== show backend.hcl if exists at root and under terraform =="
-          ls -la backend.hcl || true
-          ls -la terraform/backend.hcl || true     
-          
+          echo "== check TF dir =="
+          ls -la "${{ env.TF_WORKING_DIR }}" || true
+          echo "== backend.hcl =="
+          ls -la "${{ env.TF_WORKING_DIR }}/backend.hcl" || true
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -57,7 +56,7 @@ jobs:
       - name: Export sensitive tfvars via env
         run: echo "TF_VAR_action_group_email=${{ secrets.ALERT_EMAIL }}" >> $GITHUB_ENV
 
-      - name: Terraform Init (remote backend)
+      - name: Terraform Init
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="backend.hcl" -input=false
 
       - name: Terraform Validate
