@@ -76,11 +76,16 @@ jobs:
         env:
           DOTNET_NOLOGO: true
         run: |
+          # Supply the connection string via environment variable so the design-time factory picks it up
+          export ConnectionStrings__DefaultConnection="$CONN"
+          export ASPNETCORE_ENVIRONMENT=Production
+          export DOTNET_ENVIRONMENT=Production
+      
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
-            --configuration Release \
-            --connection "$CONN"
+            --configuration Release
+
 
 
       # --- Deploy ZIP ---
