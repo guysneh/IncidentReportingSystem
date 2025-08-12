@@ -18,103 +18,122 @@ env:
   RESOURCE_GROUP: "incident-rg"
   WEBAPP_NAME: "incident-api"
   PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj"
-  DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
-  KEY_VAULT_NAME: "incident-kv"
-  SECRET_NAME: "PostgreSqlConnectionString"
-  PG_SERVER_NAME: "incident-db"
-  TEMP_RULE_NAME: "gh-runner-temp"
+  BASE_URL: "https://incident-api.azurewebsites.net"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - run: dotnet restore "${{ env.PROJECT_PATH }}"
-      - run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
-      - run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --output ./publish --no-build
+      - name: Restore
+        run: dotnet restore "${{ env.PROJECT_PATH }}"
 
-      - run: |
+      - name: Build
+        run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --output ./publish --no-build
+
+      - name: Zip artifact
+        run: |
           cd publish
           zip -r ../app.zip .
           cd ..
 
-      - uses: azure/login@v2
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Detect runner public IP
-        id: ip
+      - name: Deploy ZIP to Web App
         run: |
-          RUNNER_IP=$(curl -s https://api.ipify.org)
-          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
-
-      - name: Install dotnet-ef
-        run: |
-          dotnet tool install -g dotnet-ef
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Fetch connection string from Key Vault
-        run: |
-          CONN=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$SECRET_NAME" --query value -o tsv)
-          {
-            echo 'CONN<<EOF'
-            echo "$CONN"
-            echo EOF
-          } >> $GITHUB_ENV
-
-      - run: |
           az webapp deploy \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
             --type zip \
             --src-path "app.zip"
-            
-      - name: Enable application logs (once)
+
+      - name: Enable application logs
         run: |
           az webapp log config \
-            -g incident-rg -n incident-api \
+            -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" \
             --application-logging filesystem --level information
-      
-      - name: Enable EF migrations flag and restart
-        run: |
-          az webapp config appsettings set -g incident-rg -n incident-api --settings EF__ApplyMigrations=true
-          az webapp restart -g incident-rg -n incident-api
-      
-      - name: Tail app logs for 2 minutes (non-blocking)
-        run: |
-          timeout 120 az webapp log tail -g incident-rg -n incident-api | tee app_logs.txt || true
 
-      
-      - name: Disable EF migrations flag and restart
+      - name: Turn ON EF__ApplyMigrations and restart
+        run: |
+          set -e
+          az webapp config appsettings set -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" --settings EF__ApplyMigrations=true
+          az webapp restart -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}"
+
+      - name: Wait for /health 200 (max 120s, backoff)
+        run: |
+          set -e
+          URL="${{ env.BASE_URL }}/health"
+          DEADLINE=$(( $(date +%s) + 120 ))
+          SLEEP=2
+          while true; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            if [ "$CODE" = "200" ]; then
+              echo "Health OK"
+              break
+            fi
+            if [ $(date +%s) -ge $DEADLINE ]; then
+              echo "Health failed: last HTTP $CODE"
+              exit 1
+            fi
+            echo "Health not ready (HTTP $CODE), retrying in ${SLEEP}s..."
+            sleep $SLEEP
+            if [ $SLEEP -lt 10 ]; then SLEEP=$((SLEEP+2)); fi
+          done
+
+      - name: DB smoke (GET IncidentReports must be 200)
+        run: |
+          set -e
+          TOKEN=$(curl -s "${{ env.BASE_URL }}/api/v1/Auth/token?userId=ci-smoke&role=Reader")
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "${{ env.BASE_URL }}/api/v1/IncidentReports?skip=0&take=1" || true)
+          if [ "$CODE" != "200" ]; then
+            echo "DB smoke failed. HTTP $CODE"
+            exit 1
+          fi
+          echo "DB smoke OK"
+
+      - name: Turn OFF EF__ApplyMigrations and restart
         if: always()
         run: |
-          az webapp config appsettings delete -g incident-rg -n incident-api --setting-names EF__ApplyMigrations
-          az webapp restart -g incident-rg -n incident-api
+          az webapp config appsettings delete -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" --setting-names EF__ApplyMigrations || true
+          az webapp restart -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}"
 
-      - name: Smoke test (GET /health with retries)
+      - name: Final /health check (max 120s, backoff)
+        if: always()
         run: |
-          URL="https://${{ env.WEBAPP_NAME }}.azurewebsites.net/health"
-          echo "Probing $URL ..."
-          for i in {1..24}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
-            if [ "$code" -eq 200 ]; then
-              echo "OK (200)"; exit 0
+          URL="${{ env.BASE_URL }}/health"
+          DEADLINE=$(( $(date +%s) + 120 ))
+          SLEEP=2
+          while true; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            if [ "$CODE" = "200" ]; then
+              echo "Health OK after cleanup"
+              break
             fi
-            echo "Attempt $i: got $code; waiting 5s..."
-            sleep 5
+            if [ $(date +%s) -ge $DEADLINE ]; then
+              echo "Final health failed: last HTTP $CODE"
+              exit 1
+            fi
+            echo "Waiting (HTTP $CODE)..."
+            sleep $SLEEP
+            if [ $SLEEP -lt 10 ]; then SLEEP=$((SLEEP+2)); fi
           done
-          echo "Health check failed after 120s"
-          exit 1
 
       - name: Dump last logs on failure
         if: failure()
         run: |
           timeout 60 az webapp log tail -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
-
