@@ -1,10 +1,10 @@
 %% docs/diagrams/cicd-flow.mmd
-%% CI/CD flow (manual deploy) - flowchart, no HTML tags
+%% CI/CD flow (safe labels)
 flowchart TD
-  A["Build & Publish .NET 8"] --> B["Run EF Core Migrations (Key Vault connection)"]
+  A["Build and Publish dotnet"] --> B["Run EF Core migrations"]
   B --> C["Zip Deploy to App Service"]
-  C --> D["Wait for /health 200 (backoff up to 120s)"]
-  D --> E["DB Smoke Test (GET /IncidentReports)"]
-  E -->|OK| F["Done"]
-  D -->|Fail| X["Dump Logs and Fail"]
-  E -->|Fail| X
+  C --> D["Wait for health 200 backoff 120s"]
+  D --> E["DB Smoke Test GET IncidentReports"]
+  E -->|ok| F["Done"]
+  D -->|fail| X["Dump Logs and Fail"]
+  E -->|fail| X
