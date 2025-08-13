@@ -27,10 +27,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnType("text[]");
 
         b.Property(u => u.PasswordHash)
-            .IsRequired();
+                  .HasColumnType("bytea")
+                  .IsRequired();
 
         b.Property(u => u.PasswordSalt)
-            .IsRequired();
+               .HasColumnType("bytea")
+               .IsRequired();
 
         b.Property(u => u.CreatedAtUtc)
             .IsRequired();
