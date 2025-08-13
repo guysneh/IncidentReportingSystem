@@ -1,0 +1,10 @@
+%% docs/diagrams/cicd-flow.mmd
+%% CI/CD flow (manual deploy)
+flowchart TD
+  A[Build & Publish .NET 8] --> B[Run EF Core Migrations<br/>(Key Vault connection)]
+  B --> C[Zip Deploy to App Service]
+  C --> D[Wait for /health 200<br/>(backoff ≤120s)]
+  D --> E[DB Smoke Test<br/>GET /IncidentReports]
+  E -->|OK| F[Done]
+  D -->|Fail| X[Dump Logs & Fail]
+  E -->|Fail| X

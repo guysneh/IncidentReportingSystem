@@ -1,0 +1,31 @@
+%% docs/diagrams/azure-architecture.mmd
+%% High-level Azure architecture
+graph LR
+  subgraph GitHub["GitHub Actions (OIDC)"]
+    GH[Deploy Workflow<br/>(manual)]
+  end
+
+  subgraph RG["Azure Resource Group: incident-rg"]
+    ASP["App Service Plan<br/>(Linux, Basic)"]
+    API["Web App: incident-api<br/>(Managed Identity, Always On, /health)"]
+    KV["Key Vault: incident-kv<br/>(RBAC)"]
+    DB["PostgreSQL Flexible: incident-db<br/>DB: incidentdb"]
+    LAW["Log Analytics Workspace"]
+    AI["Application Insights<br/>(workspace-based)"]
+    BUD["Budget: $100/month"]
+  end
+
+  GH -->|zip deploy| API
+  GH -->|EF Core migrations<br/>(admin connection)| DB
+  GH -->|create/update secrets| KV
+
+  API -->|Key Vault references| KV
+  API -->|Telemetry| AI
+  AI --> LAW
+  API -->|SSL Require| DB
+
+  style API fill:#e8f5ff,stroke:#5aa2e6,stroke-width:1px
+  style DB fill:#e9ffe8,stroke:#6ac26a,stroke-width:1px
+  style KV fill:#fff6e5,stroke:#f4a623,stroke-width:1px
+  style AI fill:#ffffff,stroke:#888,stroke-width:1px
+  style LAW fill:#ffffff,stroke:#888,stroke-width:1px
