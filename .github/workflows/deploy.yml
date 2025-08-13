@@ -15,18 +15,29 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
   RESOURCE_GROUP: "incident-rg"
   WEBAPP_NAME: "incident-api"
   PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.API/IncidentReportingSystem.API.csproj"
   DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
   KEY_VAULT_NAME: "incident-kv"
-  SECRET_NAME: "PostgreSqlConnectionString"
+
+  # Azure PostgreSQL Flexible Server name (resource name)
+  PG_SERVER_NAME: "incident-db"
+  # Temporary firewall rule name
+  TEMP_RULE_NAME: "gh-runner-temp"
+
+  # Admin connection string secret (existing)
+  ADMIN_CONN_SECRET: "PostgreSqlConnectionString"
+
+  # Base URL of the deployed app
   BASE_URL: "https://incident-api.azurewebsites.net"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # ----- Build artifacts -----
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -50,6 +61,7 @@ jobs:
           zip -r ../app.zip .
           cd ..
 
+      # ----- Azure login -----
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -57,38 +69,59 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      # --- Run EF migrations against Azure Postgres BEFORE deploying (no app restart needed) ---
+      # ----- Open temporary firewall for runner IP (Postgres) -----
+      - name: Detect runner public IP
+        id: ip
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+          echo "Runner IP: $RUNNER_IP"
+
+      - name: Add temporary Postgres firewall rule
+        run: |
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.PG_SERVER_NAME }}" \
+            --rule-name "${{ env.TEMP_RULE_NAME }}" \
+            --start-ip-address "${{ steps.ip.outputs.ip }}" \
+            --end-ip-address "${{ steps.ip.outputs.ip }}" \
+            --only-show-errors --output none
+
+      # ----- EF Core migrations out-of-band (admin connection) -----
       - name: Install dotnet-ef
         run: |
           dotnet tool install -g dotnet-ef
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: Fetch connection string from Key Vault
+      - name: Fetch ADMIN connection string from Key Vault
+        id: adminconn
         run: |
-          CONN=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$SECRET_NAME" --query value -o tsv)
+          CONN=$(az keyvault secret show \
+            --vault-name "${{ env.KEY_VAULT_NAME }}" \
+            --name "${{ env.ADMIN_CONN_SECRET }}" \
+            --query value -o tsv)
+          echo "::add-mask::$CONN"
           {
             echo 'CONN<<EOF'
             echo "$CONN"
             echo EOF
           } >> $GITHUB_ENV
 
-      - name: Apply EF migrations (out-of-band)
+      - name: Apply EF migrations (admin connection; design-time)
         env:
           DOTNET_NOLOGO: true
         run: |
-          # Supply the connection string via environment variable so the design-time factory picks it up
+          # EF will read the connection string from this env var (Npgsql format is fine)
           export ConnectionStrings__DefaultConnection="$CONN"
           export ASPNETCORE_ENVIRONMENT=Production
           export DOTNET_ENVIRONMENT=Production
-      
+
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
             --configuration Release
 
-
-
-      # --- Deploy ZIP ---
+      # ----- Deploy ZIP to Web App -----
       - name: Deploy ZIP to Web App
         run: |
           az webapp deploy \
@@ -97,13 +130,13 @@ jobs:
             --type zip \
             --src-path "app.zip"
 
-      - name: Enable application logs
+      - name: Enable application logs (once)
         run: |
           az webapp log config \
             -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" \
             --application-logging filesystem --level information
 
-      # --- Post-deploy checks ---
+      # ----- Post-deploy checks -----
       - name: Wait for /health 200 (max 120s, backoff)
         run: |
           set -e
@@ -129,7 +162,9 @@ jobs:
         run: |
           set -e
           TOKEN=$(curl -s "${{ env.BASE_URL }}/api/v1/Auth/token?userId=ci-smoke&role=Reader")
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "${{ env.BASE_URL }}/api/v1/IncidentReports?skip=0&take=1" || true)
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" \
+            "${{ env.BASE_URL }}/api/v1/IncidentReports?skip=0&take=1" || true)
           if [ "$CODE" != "200" ]; then
             echo "DB smoke failed. HTTP $CODE"
             exit 1
@@ -139,4 +174,14 @@ jobs:
       - name: Dump last logs on failure
         if: failure()
         run: |
-          timeout 60 az webapp log tail -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
+          timeout 60 az webapp log tail \
+            -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
+
+      # ----- Always cleanup temporary firewall rule -----
+      - name: Remove temporary Postgres firewall rule
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.PG_SERVER_NAME }}" \
+            --rule-name "${{ env.TEMP_RULE_NAME }}" -y
