@@ -45,8 +45,6 @@ module "key_vault" {
   }
 }
 
-
-
 module "app_service" {
   source              = "./modules/app_service"
   name                = "${var.name_prefix}-api"
