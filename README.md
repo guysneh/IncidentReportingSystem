@@ -1,7 +1,6 @@
 # IncidentReportingSystem — .NET 8 API on Azure (Terraform) + Upcoming UI
 
-[![Deploy IncidentReportingSystem (.NET 8) to Azure Web App](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml))
-[![Coverage](<YOUR_COVERAGE_BADGE_URL>)](<YOUR_COVERAGE_REPORT_URL>)
+[![Deploy IncidentReportingSystem (.NET 8) to Azure Web App](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml)
 
 A compact, production‑minded **.NET 8 Web API** showcasing clean architecture, JWT security, **observability by default**, and **Terraform‑first** Azure infrastructure.  
 A lightweight **UI** is planned and tracked in the *Roadmap* section below.
@@ -69,9 +68,6 @@ repo-root/
 
 ### Diagram
 ![Architecture](docs/images/architecture.png)
-
-> **Where to put images:** save your existing diagrams/screenshots into `docs/images` with the exact names above.  
-> If you create new ones, add them to this folder and reference them like `![Title](docs/images/<file>.png)`.
 
 ---
 
@@ -172,9 +168,6 @@ terraform apply
 - Jobs: build → test (unit + integration) → publish → deploy to App Service.
 - EF Core migrations can be toggled during deploy as needed.
 
-Add a build badge at the top of this README:  
-GitHub → Actions → your workflow → ⋯ → **Create status badge** and replace the placeholders.
-
 ---
 
 ## API Quick Demo (curl)
@@ -227,8 +220,6 @@ curl -X PUT "https://incident-api.azurewebsites.net/api/v1/IncidentReports/{id}/
 - Idempotency keys for create.
 - Rate limiting & circuit breaker guards.
 - More KQL dashboards.
-
-> **Changelog cadence:** README is updated **weekly** or after every significant milestone (UI views, new endpoints, infra changes).
 
 ---
 
