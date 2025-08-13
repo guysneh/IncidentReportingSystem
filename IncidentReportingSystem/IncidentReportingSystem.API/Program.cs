@@ -35,8 +35,13 @@ var app = builder.Build();
 // Middleware pipeline
 ConfigureMiddleware(app);
 
-// Map controllers last so all middleware (incl. CORS) is in place
-app.MapControllers();
+// Map controllers and attach CORS policy if configured
+var controllers = app.MapControllers();
+var allowedOrigins = GetCorsAllowedOrigins(app.Configuration);
+if (!string.IsNullOrWhiteSpace(allowedOrigins))
+{
+    controllers.RequireCors("Default");
+}
 
 app.Run();
 

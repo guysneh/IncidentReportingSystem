@@ -21,6 +21,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
+            builder.ConfigureAppConfiguration((ctx, cfg) =>
+            {
+                var dict = new Dictionary<string, string?>
+                {
+                    // Enable CORS for integration tests against a known origin
+                    ["Cors:AllowedOrigins"] = "http://example.com"
+                };
+
+                cfg.AddInMemoryCollection(dict);
+            });
         });
 
         builder.ConfigureServices((context, services) =>
@@ -42,5 +52,5 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             db.Database.Migrate();
         });
-    }
+    }        
 }
