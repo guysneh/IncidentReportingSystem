@@ -53,9 +53,12 @@ jobs:
       - name: Add temporary Postgres firewall rule
         run: |
           az postgres flexible-server firewall-rule create \
-            -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.PG_SERVER_NAME }}" \
-            -n "${{ env.TEMP_RULE_NAME }}" --start-ip-address "${{ steps.ip.outputs.ip }}" --end-ip-address "${{ steps.ip.outputs.ip }}" \
-            --output none
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --server-name "${{ env.PG_SERVER_NAME }}" \
+            --name "${{ env.TEMP_RULE_NAME }}" \
+            --start-ip-address "${{ steps.ip.outputs.ip }}" \
+            --end-ip-address "${{ steps.ip.outputs.ip }}" \
+            --only-show-errors --output none
 
       - name: Fetch admin connection string from Key Vault
         id: adminconn
@@ -136,4 +139,7 @@ jobs:
         if: always()
         run: |
           az postgres flexible-server firewall-rule delete \
-            -g "
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --server-name "${{ env.PG_SERVER_NAME }}" \
+            --name "${{ env.TEMP_RULE_NAME }}" -y
+

@@ -89,10 +89,11 @@ module "monitoring" {
   action_group_name   = "incident-action-group"
   action_group_email  = var.action_group_email
 }
+
 locals {
   # Base settings – single source of truth for the connection string
   base_app_settings = {
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlConnectionString/)"
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlRuntimeConnectionString/)"
     "ASPNETCORE_ENVIRONMENT"               = "Production"
     "EnableSwagger"                        = "true"
   }
