@@ -51,12 +51,6 @@ resource "azurerm_role_assignment" "gha_rg_contributor" {
   principal_id         = azuread_service_principal.gha.object_id
 }
 
-resource "azurerm_role_assignment" "gha_kv_secrets_user" {
-  scope                = data.azurerm_key_vault.kv.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azuread_service_principal.gha.object_id
-}
-
 resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
   scope                = data.azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets User"
