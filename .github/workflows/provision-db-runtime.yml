@@ -54,8 +54,8 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --server-name "${{ env.PG_SERVER_NAME }}" \
-            --name "${{ env.TEMP_RULE_NAME }}" \
+            --name "${{ env.PG_SERVER_NAME }}" \
+            --rule-name "${{ env.TEMP_RULE_NAME }}" \
             --start-ip-address "${{ steps.ip.outputs.ip }}" \
             --end-ip-address "${{ steps.ip.outputs.ip }}" \
             --only-show-errors --output none
@@ -140,6 +140,7 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule delete \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --server-name "${{ env.PG_SERVER_NAME }}" \
-            --name "${{ env.TEMP_RULE_NAME }}" -y
+            --name "${{ env.PG_SERVER_NAME }}" \
+            --rule-name "${{ env.TEMP_RULE_NAME }}" -y
+
 
