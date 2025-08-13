@@ -74,10 +74,20 @@ jobs:
       - name: Parse admin connection
         id: parse
         run: |
-          host=$(echo "$ADMIN_CONN" | sed -n 's/.*Host=\([^;]*\).*/\1/p')
-          db=$(echo "$ADMIN_CONN"   | sed -n 's/.*Database=\([^;]*\).*/\1/p')
+          # Extract parts from the semicolon-separated Npgsql connection string
+          host=$(echo "$ADMIN_CONN" | sed -n 's/.*[Hh]ost=\([^;]*\).*/\1/p')
+          db=$(echo "$ADMIN_CONN"   | sed -n 's/.*[Dd]atabase=\([^;]*\).*/\1/p')
+          user=$(echo "$ADMIN_CONN" | sed -n 's/.*[Uu]sername=\([^;]*\).*/\1/p')
+          pwd=$(echo "$ADMIN_CONN"  | sed -n 's/.*[Pp]assword=\([^;]*\).*/\1/p')
+          port=$(echo "$ADMIN_CONN" | sed -n 's/.*[Pp]ort=\([^;]*\).*/\1/p'); port=${port:-5432}
+
           echo "host=$host" >> $GITHUB_OUTPUT
-          echo "db=$db"     >> $GITHUB_OUTPUT
+          echo "db=$db" >> $GITHUB_OUTPUT
+          echo "user=$user" >> $GITHUB_OUTPUT
+          echo "port=$port" >> $GITHUB_OUTPUT
+          echo "::add-mask::$pwd"
+          echo "pwd=$pwd" >> $GITHUB_OUTPUT
+
 
       - name: Ensure runtime password secret exists
         id: runtimepwd
@@ -94,21 +104,27 @@ jobs:
 
       - name: Create/alter runtime user and grants (psql via Docker)
         env:
-          ADMIN_CONN: ${{ env.ADMIN_CONN }}
+          # pass parsed admin connection parts into the step env
+          ADMIN_HOST: ${{ steps.parse.outputs.host }}
+          ADMIN_DB:   ${{ steps.parse.outputs.db }}
+          ADMIN_USER: ${{ steps.parse.outputs.user }}
+          ADMIN_PWD:  ${{ steps.parse.outputs.pwd }}
+          ADMIN_PORT: ${{ steps.parse.outputs.port }}
+
+          # runtime user info
           RUNTIME_DB_USER: ${{ env.RUNTIME_DB_USER }}
-          RUNTIME_PWD: ${{ steps.runtimepwd.outputs.pwd }}
-          DB_NAME: ${{ steps.parse.outputs.db }}
+          RUNTIME_PWD:     ${{ steps.runtimepwd.outputs.pwd }}
         run: |
           docker run --rm -i \
-            -e ADMIN_CONN \
-            -e RUNTIME_DB_USER \
-            -e RUNTIME_PWD \
-            -e DB_NAME \
+            -e ADMIN_HOST -e ADMIN_DB -e ADMIN_USER -e ADMIN_PWD -e ADMIN_PORT \
+            -e RUNTIME_DB_USER -e RUNTIME_PWD \
             postgres:15 bash <<'BASH'
           set -euo pipefail
 
-          ADMIN_URI="$ADMIN_CONN"
+          # Build a libpq-style connection string for psql (spaces, not semicolons)
+          ADMIN_PSQL="host=$ADMIN_HOST port=$ADMIN_PORT dbname=$ADMIN_DB user=$ADMIN_USER password=$ADMIN_PWD sslmode=require"
 
+          # 1) Ensure role exists and password is set (idempotent)
           cat > /tmp/step1.sql <<SQL
           DO \$do\$
           BEGIN
@@ -121,10 +137,12 @@ jobs:
           \$do\$;
           SQL
 
-          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
+          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
 
-          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$DB_NAME\" TO ${RUNTIME_DB_USER};"
+          # 2) DB-level CONNECT
+          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$ADMIN_DB\" TO ${RUNTIME_DB_USER};"
 
+          # 3) Schema-level grants and default privileges (in target DB)
           cat > /tmp/step3.sql <<SQL
           GRANT USAGE ON SCHEMA public TO ${RUNTIME_DB_USER};
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${RUNTIME_DB_USER};
@@ -134,8 +152,9 @@ jobs:
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${RUNTIME_DB_USER};
           SQL
 
-          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -d "$DB_NAME" -f /tmp/step3.sql
+          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -d "$ADMIN_DB" -f /tmp/step3.sql
           BASH
+
 
       - name: Upsert runtime connection string secret
         run: |
