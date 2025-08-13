@@ -93,31 +93,39 @@ jobs:
           echo "pwd=$pwd" >> $GITHUB_OUTPUT
 
       - name: Create/alter runtime user and grants (psql via Docker)
+        env:
+          ADMIN_CONN: ${{ env.ADMIN_CONN }}
+          RUNTIME_DB_USER: ${{ env.RUNTIME_DB_USER }}
+          RUNTIME_PWD: ${{ steps.runtimepwd.outputs.pwd }}
+          DB_NAME: ${{ steps.parse.outputs.db }}
         run: |
-          docker run --rm -i postgres:15 bash <<'BASH'
+          docker run --rm -i \
+            -e ADMIN_CONN \
+            -e RUNTIME_DB_USER \
+            -e RUNTIME_PWD \
+            -e DB_NAME \
+            postgres:15 bash <<'BASH'
           set -euo pipefail
-          ADMIN_URI="${ADMIN_CONN}"
 
-          # 1) Ensure role exists and password is set (idempotent)
-          cat > /tmp/step1.sql <<'SQL'
-          DO $do$
+          ADMIN_URI="$ADMIN_CONN"
+
+          cat > /tmp/step1.sql <<SQL
+          DO \$do\$
           BEGIN
             IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${RUNTIME_DB_USER}') THEN
-              EXECUTE format('CREATE ROLE ${RUNTIME_DB_USER} LOGIN PASSWORD %L', '${{ steps.runtimepwd.outputs.pwd }}');
+              EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', '${RUNTIME_DB_USER}', '${RUNTIME_PWD}');
             ELSE
-              EXECUTE format('ALTER ROLE ${RUNTIME_DB_USER} WITH PASSWORD %L', '${{ steps.runtimepwd.outputs.pwd }}');
+              EXECUTE format('ALTER ROLE %I WITH PASSWORD %L', '${RUNTIME_DB_USER}', '${RUNTIME_PWD}');
             END IF;
           END
-          $do$;
+          \$do\$;
           SQL
 
-          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
+          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
 
-          # 2) DB-level CONNECT
-          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"${{ steps.parse.outputs.db }}\" TO ${RUNTIME_DB_USER};"
+          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$DB_NAME\" TO ${RUNTIME_DB_USER};"
 
-          # 3) Schema-level grants and defaults (in target DB)
-          cat > /tmp/step3.sql <<'SQL'
+          cat > /tmp/step3.sql <<SQL
           GRANT USAGE ON SCHEMA public TO ${RUNTIME_DB_USER};
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${RUNTIME_DB_USER};
           GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${RUNTIME_DB_USER};
@@ -126,7 +134,7 @@ jobs:
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${RUNTIME_DB_USER};
           SQL
 
-          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -d "${{ steps.parse.outputs.db }}" -f /tmp/step3.sql
+          psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -d "$DB_NAME" -f /tmp/step3.sql
           BASH
 
       - name: Upsert runtime connection string secret
