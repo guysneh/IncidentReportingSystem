@@ -104,14 +104,11 @@ jobs:
 
       - name: Create/alter runtime user and grants (psql via Docker)
         env:
-          # pass parsed admin connection parts into the step env
           ADMIN_HOST: ${{ steps.parse.outputs.host }}
           ADMIN_DB:   ${{ steps.parse.outputs.db }}
           ADMIN_USER: ${{ steps.parse.outputs.user }}
           ADMIN_PWD:  ${{ steps.parse.outputs.pwd }}
           ADMIN_PORT: ${{ steps.parse.outputs.port }}
-
-          # runtime user info
           RUNTIME_DB_USER: ${{ env.RUNTIME_DB_USER }}
           RUNTIME_PWD:     ${{ steps.runtimepwd.outputs.pwd }}
         run: |
@@ -121,8 +118,9 @@ jobs:
             postgres:15 bash <<'BASH'
           set -euo pipefail
 
-          # Build a libpq-style connection string for psql (spaces, not semicolons)
-          ADMIN_PSQL="host=$ADMIN_HOST port=$ADMIN_PORT dbname=$ADMIN_DB user=$ADMIN_USER password=$ADMIN_PWD sslmode=require"
+          # Build libpq-style conninfo (spaces, not semicolons)
+          ADMIN_PSQL_BASE="host=$ADMIN_HOST port=$ADMIN_PORT user=$ADMIN_USER password=$ADMIN_PWD sslmode=require"
+          ADMIN_PSQL_DB="$ADMIN_PSQL_BASE dbname=$ADMIN_DB"
 
           # 1) Ensure role exists and password is set (idempotent)
           cat > /tmp/step1.sql <<SQL
@@ -137,12 +135,12 @@ jobs:
           \$do\$;
           SQL
 
-          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
+          psql "$ADMIN_PSQL_DB" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
 
-          # 2) DB-level CONNECT
-          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$ADMIN_DB\" TO ${RUNTIME_DB_USER};"
+          # 2) DB-level CONNECT (may run against any db; use ADMIN_DB for simplicity)
+          psql "$ADMIN_PSQL_DB" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$ADMIN_DB\" TO ${RUNTIME_DB_USER};"
 
-          # 3) Schema-level grants and default privileges (in target DB)
+          # 3) Schema-level grants and default privileges (must target the app DB)
           cat > /tmp/step3.sql <<SQL
           GRANT USAGE ON SCHEMA public TO ${RUNTIME_DB_USER};
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${RUNTIME_DB_USER};
@@ -152,8 +150,9 @@ jobs:
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${RUNTIME_DB_USER};
           SQL
 
-          psql "$ADMIN_PSQL" -v ON_ERROR_STOP=1 -d "$ADMIN_DB" -f /tmp/step3.sql
+          psql "$ADMIN_PSQL_DB" -v ON_ERROR_STOP=1 -f /tmp/step3.sql
           BASH
+
 
 
       - name: Upsert runtime connection string secret
