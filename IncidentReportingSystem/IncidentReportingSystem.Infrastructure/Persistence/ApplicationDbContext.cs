@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using IncidentReportingSystem.Domain.Entities;
-using Microsoft.EntityFrameworkCore.Migrations;
+using IncidentReportingSystem.Domain.Users;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence
 {
@@ -16,6 +16,11 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
         /// Table for incident reports.
         /// </summary>
         public DbSet<IncidentReport> IncidentReports => Set<IncidentReport>();
+
+        /// <summary>
+        /// Table for application users (multi-role).
+        /// </summary>
+        public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

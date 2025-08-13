@@ -236,34 +236,40 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
     if (string.IsNullOrWhiteSpace(jwtSecret))
         throw new InvalidOperationException("Missing Jwt:Secret in configuration.");
 
-    services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        var jwtSettings = configuration.GetSection("Jwt");
-        options.TokenValidationParameters = new TokenValidationParameters
+    services
+        .AddAuthentication(options =>
         {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings["Issuer"],
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            var jwtSettings = configuration.GetSection("Jwt");
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidateAudience = true,
+                ValidAudience = jwtSettings["Audience"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(5),
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
+                ),
 
-            ValidateAudience = true,
-            ValidAudience = jwtSettings["Audience"],
+                RoleClaimType = "role"
+            };
+        });
 
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(5),
-
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
-            )
-        };
+    services.AddAuthorization(options =>
+    {
+        options.AddPolicy("CanReadIncidents", p => p.RequireRole("User", "Admin"));
+        options.AddPolicy("CanCreateIncident", p => p.RequireRole("User", "Admin"));
+        options.AddPolicy("CanManageIncidents", p => p.RequireRole("Admin"));
     });
-
-    services.AddAuthorization();
 }
+
 
 static void ConfigureMiddleware(WebApplication app)
 {
