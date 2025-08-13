@@ -26,29 +26,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Always configure configuration first
 ConfigureConfiguration(builder.Configuration, builder.Services);
 ConfigureServices(builder.Services, builder.Configuration);
-
 var app = builder.Build();
-ApplyMigrationsIfRequested(app);
 ConfigureMiddleware(app);
 app.MapControllers();
-
 app.Run();
-
 
 // ------------------------------
 // METHODS
 // ------------------------------
-static void ApplyMigrationsIfRequested(WebApplication app)
-{
-    var apply = app.Configuration.GetValue<bool>("EF:ApplyMigrations", false);
-    if (!apply) return;
-
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
-    app.Logger.LogInformation("EF migrations applied successfully.");
-}
-
 static void ConfigureConfiguration(ConfigurationManager configuration, IServiceCollection services)
 {
     var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
