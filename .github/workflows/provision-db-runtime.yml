@@ -1,0 +1,139 @@
+name: Provision DB Runtime User & Secret
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  RESOURCE_GROUP: "incident-rg"
+  KEY_VAULT_NAME: "incident-kv"
+  PG_SERVER_NAME: "incident-db"
+
+  # Existing admin secret (already in KV)
+  ADMIN_CONN_SECRET: "PostgreSqlConnectionString"
+
+  # New runtime artifacts to manage
+  RUNTIME_DB_USER: "incident_user"
+  RUNTIME_PWD_SECRET: "PostgresRuntimePassword"
+  RUNTIME_CONN_SECRET: "PostgreSqlRuntimeConnectionString"
+
+  TEMP_RULE_NAME: "gh-runner-temp"
+
+jobs:
+  provision-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Detect runner public IP
+        id: ip
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+
+      - name: Add temporary Postgres firewall rule
+        run: |
+          az postgres flexible-server firewall-rule create \
+            -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.PG_SERVER_NAME }}" \
+            -n "${{ env.TEMP_RULE_NAME }}" --start-ip-address "${{ steps.ip.outputs.ip }}" --end-ip-address "${{ steps.ip.outputs.ip }}" \
+            --output none
+
+      - name: Fetch admin connection string from Key Vault
+        id: adminconn
+        run: |
+          CONN=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$ADMIN_CONN_SECRET" --query value -o tsv)
+          echo "::add-mask::$CONN"
+          {
+            echo 'ADMIN_CONN<<EOF'
+            echo "$CONN"
+            echo EOF
+          } >> $GITHUB_ENV
+
+      - name: Parse admin connection
+        id: parse
+        run: |
+          host=$(echo "$ADMIN_CONN" | sed -n 's/.*Host=\([^;]*\).*/\1/p')
+          db=$(echo "$ADMIN_CONN"   | sed -n 's/.*Database=\([^;]*\).*/\1/p')
+          echo "host=$host" >> $GITHUB_OUTPUT
+          echo "db=$db"     >> $GITHUB_OUTPUT
+
+      - name: Ensure runtime password secret exists
+        id: runtimepwd
+        run: |
+          set -e
+          if az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$RUNTIME_PWD_SECRET" &>/dev/null; then
+            pwd=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$RUNTIME_PWD_SECRET" --query value -o tsv)
+          else
+            pwd=$(openssl rand -base64 32 | tr -d '\n' | sed 's/[^a-zA-Z0-9]/x/g')
+            az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "$RUNTIME_PWD_SECRET" --value "$pwd" --output none
+          fi
+          echo "::add-mask::$pwd"
+          echo "pwd=$pwd" >> $GITHUB_OUTPUT
+
+      - name: Create/alter runtime user and grants (psql via Docker)
+        run: |
+          docker run --rm -i postgres:15 bash <<'BASH'
+          set -euo pipefail
+          ADMIN_URI="${ADMIN_CONN}"
+
+          # 1) Ensure role exists and password is set (idempotent)
+          cat > /tmp/step1.sql <<'SQL'
+          DO $do$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${RUNTIME_DB_USER}') THEN
+              EXECUTE format('CREATE ROLE ${RUNTIME_DB_USER} LOGIN PASSWORD %L', '${{ steps.runtimepwd.outputs.pwd }}');
+            ELSE
+              EXECUTE format('ALTER ROLE ${RUNTIME_DB_USER} WITH PASSWORD %L', '${{ steps.runtimepwd.outputs.pwd }}');
+            END IF;
+          END
+          $do$;
+          SQL
+
+          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -f /tmp/step1.sql
+
+          # 2) DB-level CONNECT
+          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"${{ steps.parse.outputs.db }}\" TO ${RUNTIME_DB_USER};"
+
+          # 3) Schema-level grants and defaults (in target DB)
+          cat > /tmp/step3.sql <<'SQL'
+          GRANT USAGE ON SCHEMA public TO ${RUNTIME_DB_USER};
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${RUNTIME_DB_USER};
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${RUNTIME_DB_USER};
+
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${RUNTIME_DB_USER};
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${RUNTIME_DB_USER};
+          SQL
+
+          psql "${ADMIN_URI}" -v ON_ERROR_STOP=1 -d "${{ steps.parse.outputs.db }}" -f /tmp/step3.sql
+          BASH
+
+      - name: Upsert runtime connection string secret
+        run: |
+          RUNTIME_CONN="Host=${{ steps.parse.outputs.host }};Database=${{ steps.parse.outputs.db }};Username=${{ env.RUNTIME_DB_USER }};Password=${{ steps.runtimepwd.outputs.pwd }};Ssl Mode=Require;"
+          echo "::add-mask::$RUNTIME_CONN"
+          az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "$RUNTIME_CONN_SECRET" --value "$RUNTIME_CONN" --output none
+
+      - name: Remove temporary Postgres firewall rule
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            -g "
