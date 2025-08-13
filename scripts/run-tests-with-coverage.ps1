@@ -1,3 +1,5 @@
+cd ..
+cd .\IncidentReportingSystem\
 # Step 1: Clean and Build
 dotnet clean
 dotnet build --no-incremental
