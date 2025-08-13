@@ -1,6 +1,6 @@
 # IncidentReportingSystem — .NET 8 API on Azure (Terraform) + Upcoming UI
 
-[![Build Status](<YOUR_BUILD_BADGE_URL>)](<YOUR_WORKFLOW_URL>)
+[![Deploy IncidentReportingSystem (.NET 8) to Azure Web App](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/guysneh/IncidentReportingSystem/actions/workflows/deploy.yml))
 [![Coverage](<YOUR_COVERAGE_BADGE_URL>)](<YOUR_COVERAGE_REPORT_URL>)
 
 A compact, production‑minded **.NET 8 Web API** showcasing clean architecture, JWT security, **observability by default**, and **Terraform‑first** Azure infrastructure.  
