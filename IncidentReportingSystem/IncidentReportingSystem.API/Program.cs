@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Converters;
+using IncidentReportingSystem.API.Middleware;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Common.Behaviors;
@@ -8,7 +9,9 @@ using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
+using IncidentReportingSystem.Infrastructure.Telemetry;
 using MediatR;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -18,43 +21,33 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
-using IncidentReportingSystem.API.Middleware;
-using Microsoft.ApplicationInsights.Extensibility;
-using IncidentReportingSystem.Infrastructure.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Always configure configuration first
+// 1) Configuration (keep first)
 ConfigureConfiguration(builder.Configuration, builder.Services);
 
-// Services & DI
-ConfigureServices(builder.Services, builder.Configuration);
+// 2) Services & DI
+ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
+// 3) Build
 var app = builder.Build();
 
-// Middleware pipeline
+// 4) Middleware pipeline
 ConfigureMiddleware(app);
-
-// Map controllers and attach CORS policy if configured
-var controllers = app.MapControllers();
-var allowedOrigins = GetCorsAllowedOrigins(app.Configuration);
-if (!string.IsNullOrWhiteSpace(allowedOrigins))
-{
-    controllers.RequireCors("Default");
-}
 
 app.Run();
 
 
-// ------------------------------
-// METHODS
-// ------------------------------
+// =======================
+// Helpers (local methods)
+// =======================
 static void ConfigureConfiguration(ConfigurationManager configuration, IServiceCollection services)
 {
     var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-
     configuration.SetBasePath(Directory.GetCurrentDirectory());
 
+    // Avoid trying to read non-mounted files in container
     if (!IsRunningInDocker())
     {
         configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -62,26 +55,20 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
     }
 
     configuration.AddEnvironmentVariables();
-
     services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
 }
 
-static bool IsRunningInDocker()
-{
-    return File.Exists("/.dockerenv") || Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-}
+static bool IsRunningInDocker() =>
+    File.Exists("/.dockerenv") || Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
-static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+static void ConfigureServices(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
 {
-    // --- Application Insights ---
-    // Reads APPLICATIONINSIGHTS_CONNECTION_STRING from configuration (already wired via Key Vault / pipeline).
-    services.AddApplicationInsightsTelemetry(); // ASP.NET AI registration (belongs in API layer)
-    // Stamp a stable cloud role name for this service to enable clean filtering in KQL.
+    // Application Insights
+    services.AddApplicationInsightsTelemetry();
     services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
-    // Drop noisy 404s for "/" and robots*.txt
     services.AddApplicationInsightsTelemetryProcessor<IgnoreNoiseTelemetryProcessor>();
 
-    // --- Rate limiting (global) ---
+    // Rate limiting
     services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
@@ -96,11 +83,11 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
-    // --- Health checks ---
+    // Health checks
     services.AddHealthChecks()
         .AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
 
-    // --- Controllers & JSON ---
+    // Controllers + JSON
     services.AddControllers()
         .AddJsonOptions(options =>
         {
@@ -108,7 +95,6 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         })
         .ConfigureApiBehaviorOptions(options =>
         {
-            // Customize validation error response
             options.InvalidModelStateResponseFactory = context =>
             {
                 var errors = context.ModelState
@@ -128,7 +114,10 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
             };
         });
 
-    // --- API Versioning & Explorer ---
+    // CORS
+    ConfigureCors(services, configuration, env);
+
+    // API versioning
     services.AddApiVersioning(options =>
     {
         options.AssumeDefaultVersionWhenUnspecified = true;
@@ -142,7 +131,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.SubstituteApiVersionInUrl = true;
     });
 
-    // --- Swagger (+ JWT support) ---
+    // Swagger
     services.AddEndpointsApiExplorer();
     services.ConfigureOptions<ConfigureSwaggerOptions>();
     services.AddSwaggerGen(c =>
@@ -154,16 +143,16 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         {
             Type = "string",
             Enum = Enum.GetNames(typeof(IncidentSeverity))
-                .Select(v => (IOpenApiAny)new OpenApiString(v))
-                .ToList()
+                       .Select(v => (IOpenApiAny)new OpenApiString(v))
+                       .ToList()
         });
 
         c.MapType<IncidentCategory>(() => new OpenApiSchema
         {
             Type = "string",
             Enum = Enum.GetNames(typeof(IncidentCategory))
-                .Select(v => (IOpenApiAny)new OpenApiString(v))
-                .ToList()
+                       .Select(v => (IOpenApiAny)new OpenApiString(v))
+                       .ToList()
         });
 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -181,70 +170,65 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
             {
                 new OpenApiSecurityScheme
                 {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                 },
                 Array.Empty<string>()
             }
         });
     });
 
-    // --- MediatR + Validation pipeline ---
-    services.AddMediatR(cfg =>
-        cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
+    // MediatR + FluentValidation
+    services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
     services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-    // --- Database (EF Core / Npgsql) ---
+    // DbContext
     var connectionString = configuration["ConnectionStrings:DefaultConnection"];
     if (string.IsNullOrWhiteSpace(connectionString))
-    {
         throw new InvalidOperationException("No valid database connection string found.");
-    }
 
-    services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(connectionString));
-
+    services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
 
-    // --- AuthN/Z (JWT) ---
+    // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);
-
-    // --- CORS (opt-in) ---
-    ConfigureCors(services, configuration);
 }
+// helper to read and split origins from config
+static string[] GetAllowedOrigins(IConfiguration config) =>
+    (config["Cors:AllowedOrigins"] ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-static void ConfigureCors(IServiceCollection services, IConfiguration configuration)
+// register CORS exactly once, no default policy elsewhere
+static void ConfigureCors(IServiceCollection services, IConfiguration config, IHostEnvironment env)
 {
-    // Accept both notations. In Azure App Settings: "Cors__AllowedOrigins" maps to "Cors:AllowedOrigins".
-    var allowedOrigins = GetCorsAllowedOrigins(configuration);
-    if (string.IsNullOrWhiteSpace(allowedOrigins))
-        return;
-
-    var origins = allowedOrigins
-        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    if (origins.Length == 0)
-        return;
+    var origins = GetAllowedOrigins(config);
 
     services.AddCors(options =>
     {
-        options.AddPolicy("Default", policy =>
+        options.AddPolicy("Default", b =>
         {
-            policy
-                .WithOrigins(origins)
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-            // Do not call .AllowCredentials() unless cookies are truly required with specific origins.
+            if (origins.Length > 0)
+            {
+                b.WithOrigins(origins)
+                 .AllowAnyHeader()
+                 .AllowAnyMethod()
+                 .AllowCredentials();
+            }
+            else if (env.IsDevelopment())
+            {
+                b.AllowAnyOrigin()
+                 .AllowAnyHeader()
+                 .AllowAnyMethod();
+            }
+            else
+            {
+                b.SetIsOriginAllowed(_ => false)
+                 .AllowAnyHeader()
+                 .AllowAnyMethod();
+            }
         });
     });
 }
-
-static string? GetCorsAllowedOrigins(IConfiguration configuration) =>
-    configuration["Cors:AllowedOrigins"] ?? configuration["Cors__AllowedOrigins"];
 
 static void ConfigureJwtAuthentication(IServiceCollection services, IConfiguration configuration)
 {
@@ -283,18 +267,14 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
 static void ConfigureMiddleware(WebApplication app)
 {
-    // Cross-cutting middleware
     app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseRouting();
+    app.UseCors("Default");
     app.UseRateLimiter();
-
-    // Health endpoint (simple) – CORS not required here
     app.MapHealthChecks("/health");
-
-    // Logging & global error handling
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-    // Swagger (enabled in Dev or via EnableSwagger=true)
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
     var showSwagger = app.Configuration.GetValue<bool>("EnableSwagger", false);
     if (showSwagger || app.Environment.IsDevelopment())
@@ -304,39 +284,27 @@ static void ConfigureMiddleware(WebApplication app)
         {
             foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
             {
-                options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json",
+                                        description.GroupName.ToUpperInvariant());
             }
         });
     }
 
     app.UseHttpsRedirection();
 
-    // CORS: enable only if configured. Must be before MapControllers.
-    var allowedOrigins = GetCorsAllowedOrigins(app.Configuration);
-    if (!string.IsNullOrWhiteSpace(allowedOrigins))
-    {
-        app.UseCors("Default");
-    }
-
-    // AuthN/Z
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Convenience endpoints
-    // Redirect root ("/") to Swagger UI to avoid 404 and improve discoverability
-    app.MapGet("/", () => Results.Redirect("/swagger"))
-       .WithName("RootRedirect")
-       .WithSummary("Redirects root to Swagger UI")
-       .WithDescription("Prevents 404s for '/' and improves discoverability.");
+    app.MapControllers().RequireCors("Default");
 
-    // Minimal robots.txt to stop noisy 404s from bots
-    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain"))
-       .WithName("RobotsTxt");
+    app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
+       .RequireCors("Default");
 
-    // Some platforms ping a random robots file; return OK to reduce AI noise
-    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain"))
-       .WithName("RobotsRandomTxt");
+    app.MapGet("/", () => Results.Redirect("/swagger")).WithName("RootRedirect");
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain")).WithName("RobotsTxt");
+    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain")).WithName("RobotsRandomTxt");
 }
+
 
 // Required for WebApplicationFactory<Program> to locate the entry point during integration testing
 public partial class Program { }
