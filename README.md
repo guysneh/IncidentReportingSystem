@@ -104,12 +104,12 @@ Swagger is enabled to help you explore and test the API.
 ```plaintext
 IncidentReportingSystem
 ├── .env.example                            → Sample environment variables
-├── docker-compose.yml                     → Main Docker Compose setup
-├── IncidentReportingSystem.API            → Controllers, Middleware, Program.cs
-├── IncidentReportingSystem.Application    → CQRS Handlers, Validators, Behaviors
-├── IncidentReportingSystem.Domain         → Domain models and Enums
-├── IncidentReportingSystem.Infrastructure → EF Core, Repositories, DB context
-├── IncidentReportingSystem.Tests          → Unit & Integration tests
+├── docker-compose.yml                      → Main Docker Compose setup
+├── IncidentReportingSystem.API             → Controllers, Middleware, Program.cs
+├── IncidentReportingSystem.Application     → CQRS Handlers, Validators, Behaviors
+├── IncidentReportingSystem.Domain          → Domain models and Enums
+├── IncidentReportingSystem.Infrastructure  → EF Core, Repositories, DB context
+├── IncidentReportingSystem.Tests           → Unit & Integration tests
 ```
 
 ---
@@ -161,8 +161,59 @@ graph TD
 
 ## 🛰️ Observability & Tracing
 
-- Each incoming request is automatically assigned a `X-Correlation-ID` header (generated if not provided)
-- This ID is logged throughout the request lifecycle and helps with debugging and tracing distributed requests
+- Each incoming request is automatically assigned a `X-Correlation-ID` header (generated if not provided), logged end-to-end.
+- **Cloud:** Application Insights (workspace-based) + Log Analytics with KQL queries for `requests` and `exceptions`.
+- **Alerts (cloud):** log-based alerts for **any 5xx** and **/health non-200** in a 5-minute window.
+- **Email notifications:** delivered via **Azure Monitor Action Group** connected to those alerts.
+
+---
+
+## ☁️ Cloud Deployment on Azure
+
+> This repository includes Terraform and CI/CD to deploy the API on Azure: **App Service (Linux)**, **Azure PostgreSQL Flexible Server**, **Azure Key Vault (RBAC)**, **Application Insights (workspace-based)**, and a **$100/month budget guardrail**. CI/CD is **manual-only** via GitHub Actions (OIDC).
+
+### High-level Azure Architecture
+![Azure Architecture](docs/diagrams/azure-architecture.png)
+
+### CI/CD Flow (manual-only)
+![CI/CD Flow](docs/diagrams/cicd-flow.png)
+
+### Key Points
+- **Compute:** Azure App Service (Linux, .NET 8), `Always On` enabled, health check path **`/health`** (pinned via Terraform).
+- **Data:** Azure PostgreSQL Flexible Server → database `incidentdb` (B1ms, 32 GB). Public access enabled; firewall allows App Service outbound IPs + “AllowAllAzure”.
+- **Secrets:** Azure Key Vault (RBAC). App consumes secrets via **Key Vault references**.
+- **Observability:** Application Insights (workspace-based) + Log Analytics; log-based alerts for 5xx and `/health` non-200.
+- **Cost:** Monthly budget guardrail at **$100**.
+- **IaC:** Terraform (remote backend in Azure Storage); modules: RG, App Service Plan, App Service, Postgres, Key Vault, Monitoring, Budget.
+- **CI/CD:** Manual GitHub Actions (OIDC) with **EF Core migrations out-of-band (before deploy)**, zip deploy, health wait, and DB smoke test.
+
+### Cloud Resources
+- `incident-rg` — Resource Group (tagged)
+- `incident-app-plan` — App Service Plan (Linux, Basic)
+- `incident-api` — Web App (System-assigned managed identity)
+- `incident-db` — PostgreSQL Flexible Server + DB `incidentdb`
+- `incident-kv` — Key Vault (RBAC)
+- `incident-rg-law` — Log Analytics Workspace
+- `incident-rg-appi` — Application Insights (workspace-based)
+- `incident-rg-budget` — Subscription budget
+
+### Secrets & RBAC
+- **Key Vault secrets** (consumed via references):
+  - `PostgreSqlConnectionString` → mapped to `ConnectionStrings__DefaultConnection`
+  - `jwt-issuer`, `jwt-audience`, `jwt-secret`, `jwt-expiry-minutes`
+- **RBAC:**
+  - App Service **Managed Identity** → `Key Vault Secrets User` (read-only)
+  - GitHub OIDC SP → `Key Vault Secrets Officer` (manage secrets)
+
+> Secret rotation: update secret in Key Vault → wait 1–2 minutes → restart Web App.
+
+### Operations Runbook (Cloud)
+- **Deploy:** run the manual GitHub workflow → migrations (out-of-band), deploy, `/health` wait, DB smoke test.
+- **Investigate errors:** App Insights Logs (KQL: `requests`, `exceptions`), App Service **Log stream**.
+- **Common issues:**
+  - `42P01 (relation does not exist)` → migrations didn’t run against `incidentdb` → re-run deploy.
+  - Key Vault reference unresolved → ensure App MI has `Key Vault Secrets User`.
+  - Connection issues → ensure App Service outbound IPs in Postgres firewall and `Ssl Mode=Require`.
 
 ---
 
@@ -179,13 +230,11 @@ graph TD
 
 ## 🎯 Potential Improvements
 
-This project focuses on demonstrating Clean Architecture and real-world concerns. Potential future upgrades:
-
 - Replace mock auth with Identity Provider (e.g., Azure AD, Auth0)
-- Add OpenTelemetry tracing integration
-- Add email notifications (e.g. via SMTP or third-party provider)
+- **OpenTelemetry tracing integration** (export to Application Insights)
 - Apply soft-deletion and audit logging
 - Introduce background processing (e.g. using Hosted Services or Hangfire)
+- **Cloud hardening:** split DB users (runtime least-privilege vs admin for migrations), SAS-based blob uploads (private container), additional dashboards and alerts
 
 ---
 
