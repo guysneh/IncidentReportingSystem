@@ -6,8 +6,10 @@ using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Application.Common.Behaviors;
+using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
+using IncidentReportingSystem.Domain.Security;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
@@ -264,17 +266,22 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
                 ),
-
-                RoleClaimType = "role",
-                NameClaimType = "sub"
+               
+                RoleClaimType = ClaimTypesConst.Role,
+                NameClaimType = ClaimTypesConst.Name
             };
         });
 
     services.AddAuthorization(options =>
     {
-        options.AddPolicy("CanReadIncidents", p => p.RequireRole("User", "Admin"));
-        options.AddPolicy("CanCreateIncident", p => p.RequireRole("User", "Admin"));
-        options.AddPolicy("CanManageIncidents", p => p.RequireRole("Admin"));
+        options.AddPolicy(PolicyNames.CanReadIncidents,
+            p => p.RequireRole(Roles.User, Roles.Admin));
+
+        options.AddPolicy(PolicyNames.CanCreateIncident,
+            p => p.RequireRole(Roles.User, Roles.Admin));
+
+        options.AddPolicy(PolicyNames.CanManageIncidents,
+            p => p.RequireRole(Roles.Admin));
     });
 }
 
