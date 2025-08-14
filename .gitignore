@@ -454,3 +454,6 @@ crash.log
 # local secrets
 terraform/secrets.auto.tfvars
 *.auto.tfvars.json
+scripts/.sonartoken
+IncidentReportingSystem/.sonarqube/
+scripts/.sonarqube/
