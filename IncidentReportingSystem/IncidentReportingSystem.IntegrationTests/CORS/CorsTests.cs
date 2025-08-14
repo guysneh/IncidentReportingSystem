@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using FluentAssertions;
+using IncidentReportingSystem.IntegrationTests.Infrastructure;
 using IncidentReportingSystem.IntegrationTests.Utils;
 
 namespace IncidentReportingSystem.Tests.Integration.CORS;
@@ -10,9 +11,7 @@ public class CORSTests : IClassFixture<CustomWebApplicationFactory>
 
     public CORSTests(CustomWebApplicationFactory factory)
     {
-        _client = AuthenticatedHttpClientFactory.CreateClientWithTokenAsync(factory)
-            .GetAwaiter()
-            .GetResult();
+        _client = AuthenticatedHttpClientFactory.CreateClientWithToken(factory);
     }
 
     private static string? GetHeader(HttpResponseMessage response, string headerName)

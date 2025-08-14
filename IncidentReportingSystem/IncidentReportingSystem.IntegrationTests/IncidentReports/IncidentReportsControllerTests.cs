@@ -19,7 +19,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
 
     public IncidentReportsControllerTests(CustomWebApplicationFactory factory)
     {
-        _client = AuthenticatedHttpClientFactory.CreateClientWithTokenAsync(factory).GetAwaiter().GetResult();
+        _client = AuthenticatedHttpClientFactory.CreateClientWithToken(factory);
         CleanupDatabase().Wait();
         _jsonOptions = new JsonSerializerOptions
         {

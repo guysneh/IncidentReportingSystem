@@ -10,7 +10,7 @@ public class CorrelationIdTests : IClassFixture<CustomWebApplicationFactory>
 
     public CorrelationIdTests(CustomWebApplicationFactory factory)
     {
-        _client = AuthenticatedHttpClientFactory.CreateClientWithTokenAsync(factory).GetAwaiter().GetResult();
+        _client = AuthenticatedHttpClientFactory.CreateClientWithToken(factory);
     }
 
     [Fact]

@@ -4,9 +4,11 @@ using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Middleware;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
+using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
+using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using IncidentReportingSystem.Infrastructure.Telemetry;
@@ -56,6 +58,7 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
 
     configuration.AddEnvironmentVariables();
     services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+    services.Configure<PasswordHashingOptions>(configuration.GetSection("Auth:PasswordHashing"));
 }
 
 static bool IsRunningInDocker() =>
@@ -189,6 +192,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 
     services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
+    services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
 
     // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);
@@ -245,6 +249,9 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
         .AddJwtBearer(options =>
         {
             var jwtSettings = configuration.GetSection("Jwt");
+
+            options.MapInboundClaims = false;
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -258,7 +265,8 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
                     Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
                 ),
 
-                RoleClaimType = "role"
+                RoleClaimType = "role",
+                NameClaimType = "sub"
             };
         });
 
@@ -269,7 +277,6 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
         options.AddPolicy("CanManageIncidents", p => p.RequireRole("Admin"));
     });
 }
-
 
 static void ConfigureMiddleware(WebApplication app)
 {
