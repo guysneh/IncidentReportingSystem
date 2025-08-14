@@ -29,7 +29,7 @@ public class AuthController : ControllerBase
     [HttpGet("token")]
     public ActionResult<string> GetToken([FromQuery] string userId = "demo", [FromQuery] string role = "Admin")
     {
-        var token = JwtTokenGenerator.GenerateToken(_jwtOptions, userId, role);
+        var token = JwtTokenGenerator.GenerateToken(_jwtOptions, userId, new[] { role });
         return Ok(token);
     }
 }
