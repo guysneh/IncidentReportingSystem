@@ -457,3 +457,4 @@ terraform/secrets.auto.tfvars
 scripts/.sonartoken
 IncidentReportingSystem/.sonarqube/
 scripts/.sonarqube/
+INTERNAL_PLAN.md

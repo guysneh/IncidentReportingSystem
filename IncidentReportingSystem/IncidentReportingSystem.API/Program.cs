@@ -274,6 +274,11 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
     services.AddAuthorization(options =>
     {
+        //  Global default: require authenticated user unless [AllowAnonymous] is present
+        options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+
         options.AddPolicy(PolicyNames.CanReadIncidents,
             p => p.RequireRole(Roles.User, Roles.Admin));
 
@@ -291,7 +296,7 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseRouting();
     app.UseCors("Default");
     app.UseRateLimiter();
-    app.MapHealthChecks("/health");
+    app.MapHealthChecks("/health").AllowAnonymous(); ;
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
@@ -311,6 +316,15 @@ static void ConfigureMiddleware(WebApplication app)
     }
 
     app.UseHttpsRedirection();
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api/v1/Auth/token"))
+        {
+            ctx.Response.Headers.CacheControl = "no-store";
+            ctx.Response.Headers.Pragma = "no-cache";
+        }
+        await next();
+    });
 
     app.UseAuthentication();
     app.UseAuthorization();
@@ -320,9 +334,9 @@ static void ConfigureMiddleware(WebApplication app)
     app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
        .RequireCors("Default");
 
-    app.MapGet("/", () => Results.Redirect("/swagger")).WithName("RootRedirect");
-    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain")).WithName("RobotsTxt");
-    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain")).WithName("RobotsRandomTxt");
+    app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain")).AllowAnonymous();
+    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain")).AllowAnonymous();
 }
 
 

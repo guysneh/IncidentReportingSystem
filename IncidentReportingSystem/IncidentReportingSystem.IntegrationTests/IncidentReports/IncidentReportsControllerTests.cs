@@ -14,12 +14,12 @@ namespace IncidentReportingSystem.Tests.Integration;
 
 public class IncidentReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public IncidentReportsControllerTests(CustomWebApplicationFactory factory)
     {
-        _client = AuthenticatedHttpClientFactory.CreateClientWithToken(factory);
+        _factory = factory;
         CleanupDatabase().Wait();
         _jsonOptions = new JsonSerializerOptions
         {
@@ -67,7 +67,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task PostIncidentReport_ShouldCreateReport()
     {
         var command = GenerateValidCommand();
-
+        using var _client = _factory.AsAdmin();
         var response = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"Response body: {body}");
@@ -78,7 +78,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReportById_ShouldReturnReport()
     {
         var command = GenerateValidCommand();
-
+        using var _client = _factory.AsUser();
         var postResponse = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         postResponse.IsSuccessStatusCode.Should().BeTrue($"POST failed. Status: {postResponse.StatusCode}, Body: {await postResponse.Content.ReadAsStringAsync()}");
         var created = await postResponse.Content.ReadFromJsonAsync<IncidentReportDto>(_jsonOptions);
@@ -93,7 +93,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReports_ShouldReturnList()
     {
         await PostIncidentReport_ShouldCreateReport();
-
+        using var _client = _factory.AsUser();
         var response = await _client.GetAsync("/api/v1/incidentreports");
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"Response body: {body}");
@@ -101,10 +101,10 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
 
     [Fact(DisplayName = "PUT /incidentreports/{id}/status updates status")]
     [Trait("Category", "Integration")]
-    public async Task UpdateIncidentStatus_ShouldSucceed()
+    public async Task UpdateIncidentStatus_AdminShouldSucceed()
     {
         var command = GenerateValidCommand();
-
+        using var _client = _factory.AsAdmin();
         var postResponse = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         postResponse.IsSuccessStatusCode.Should().BeTrue($"POST failed. Status: {postResponse.StatusCode}, Body: {await postResponse.Content.ReadAsStringAsync()}");
         var created = await postResponse.Content.ReadFromJsonAsync<IncidentReportDto>(_jsonOptions);
@@ -121,7 +121,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     {
         var command = GenerateValidCommand();
         command.Description = ""; // Invalid
-
+        using var _client = _factory.AsAdmin();
         var response = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -131,6 +131,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReportById_ShouldReturnNotFound()
     {
         var nonExistentId = Guid.NewGuid();
+        using var _client = _factory.AsUser();
         var response = await _client.GetAsync($"/api/v1/incidentreports/{nonExistentId}");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -140,6 +141,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task UpdateIncidentStatus_ShouldFail_ForInvalidStatus()
     {
         var command = GenerateValidCommand();
+        using var _client = _factory.AsAdmin();
         var postResponse = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         postResponse.IsSuccessStatusCode.Should().BeTrue();
         var created = await postResponse.Content.ReadFromJsonAsync<IncidentReportDto>(_jsonOptions);
@@ -156,7 +158,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     {
         var nonExistentId = Guid.NewGuid();
         var updatePayload = JsonContent.Create(IncidentStatus.Closed.ToCamelCase(), options: _jsonOptions);
-
+        using var _client = _factory.AsAdmin();
         var updateResponse = await _client.PutAsync($"/api/v1/incidentreports/{nonExistentId}/status", updatePayload);
         updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -170,7 +172,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
 
         var command2 = GenerateValidCommand();
         command2.Category = IncidentCategory.PowerOutage;
-
+        using var _client = _factory.AsUser();
         await _client.PostAsJsonAsync("/api/v1/incidentreports", command1, _jsonOptions);
         await _client.PostAsJsonAsync("/api/v1/incidentreports", command2, _jsonOptions);
 
@@ -179,10 +181,12 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET response: {content}");
         content.Should().Contain("PowerOutage").And.NotContain("Security");
     }
+
     [Fact(DisplayName = "POST /incidentreports returns 400 for invalid payload")]
     public async Task PostIncidentReport_ShouldReturnBadRequest_ForInvalidPayload()
     {
         var command = new { }; // Invalid payload (missing required fields)
+        using var _client = _factory.AsAdmin();
         var response = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -191,6 +195,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task UpdateIncidentStatus_ShouldReturnBadRequest_ForInvalidStatus()
     {
         var command = GenerateValidCommand();
+        using var _client = _factory.AsAdmin();
         var postResponse = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
         var created = await postResponse.Content.ReadFromJsonAsync<IncidentReportDto>(_jsonOptions);
 
@@ -203,6 +208,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task UpdateIncidentStatus_ShouldReturnNotFound_ForUnknownId()
     {
         var unknownId = Guid.NewGuid();
+        using var _client = _factory.AsAdmin();
         var response = await _client.PutAsJsonAsync($"/api/v1/incidentreports/{unknownId}/status", IncidentStatus.Closed.ToCamelCase(), _jsonOptions);
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -211,6 +217,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReportById_ShouldReturnNotFound_ForUnknownId()
     {
         var unknownId = Guid.NewGuid();
+        using var _client = _factory.AsUser();
         var response = await _client.GetAsync($"/api/v1/incidentreports/{unknownId}");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -219,6 +226,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReports_ShouldSupportStatusFilter()
     {
         var command = GenerateValidCommand();
+        using var _client = _factory.AsUser();
         await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
 
         var response = await _client.GetAsync("/api/v1/incidentreports?status=Open");
@@ -231,6 +239,7 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     {
         var command = GenerateValidCommand();
         command.Severity = IncidentSeverity.Medium;
+        using var _client = _factory.AsUser();
         await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
 
         var response = await _client.GetAsync("/api/v1/incidentreports?severity=medium");
@@ -242,11 +251,35 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
     public async Task GetIncidentReports_ShouldSupportSearchText()
     {
         var command = GenerateValidCommand(description :"custom search term");
+        using var _client = _factory.AsUser();
         await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
 
         var response = await _client.GetAsync("/api/v1/incidentreports?searchText=custom");
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"Response body: {body}");
+    }
+
+    [Fact]
+    public async Task Anonymous_Should_Get_401_On_Protected_Endpoint()
+    {
+        using var anon = _factory.AsAnonymous();
+        var res = await anon.GetAsync("/api/v1/incidentreports");
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task User_Can_Create_But_Cannot_Update_Status()
+    {
+        var command = GenerateValidCommand();
+        using var _client = _factory.AsUser();
+        var postResponse = await _client.PostAsJsonAsync("/api/v1/incidentreports", command, _jsonOptions);
+        postResponse.IsSuccessStatusCode.Should().BeTrue($"POST failed. Status: {postResponse.StatusCode}, Body: {await postResponse.Content.ReadAsStringAsync()}");
+        var created = await postResponse.Content.ReadFromJsonAsync<IncidentReportDto>(_jsonOptions);
+
+        var updatePayload = JsonContent.Create(IncidentStatus.Closed.ToCamelCase(), options: _jsonOptions);
+        var updateResponse = await _client.PutAsync($"/api/v1/incidentreports/{created.Id}/status", updatePayload);
+        var updateBody = await updateResponse.Content.ReadAsStringAsync();
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden, $"Update body: {updateBody}");
     }
 }
 internal static class EnumExtensions

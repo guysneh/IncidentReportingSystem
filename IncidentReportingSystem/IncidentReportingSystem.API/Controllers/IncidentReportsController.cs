@@ -4,6 +4,7 @@ using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Application.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
+using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
@@ -19,7 +20,6 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
-    [Authorize]
     public class IncidentReportsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -38,7 +38,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// </summary>
         /// <param name="command">Details of the incident to report.</param>
         /// <returns>The created incident report as DTO including its ID and metadata.</returns>
-        [Authorize]
+        [Authorize(Policy = PolicyNames.CanCreateIncident)]
         [HttpPost]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command, CancellationToken cancellationToken)
@@ -53,7 +53,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="id">The incident ID.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The incident report as DTO if found.</returns>
-        [Authorize]
+        [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -83,6 +83,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="reportedBefore">Optional filter to include only incidents reported before this date.</param>
         /// <param name="cancellationToken">Cancellation token for aborting the request.</param>
         /// <returns>A list of matching incident reports.</returns>
+        [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<IncidentReport>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
@@ -119,7 +120,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="newStatus">New status to apply.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
-        [Authorize]
+        [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -1,5 +1,6 @@
 ﻿using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentStatistics;
+using IncidentReportingSystem.Domain.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,6 @@ namespace IncidentReportingSystem.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize]
 [ApiVersion("1.0")]
 public class IncidentStatisticsController : ControllerBase
 {
@@ -26,6 +26,7 @@ public class IncidentStatisticsController : ControllerBase
     /// Retrieves high-level incident statistics (e.g., counts per severity).
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = PolicyNames.CanReadIncidents)]
     public async Task<ActionResult<IncidentStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetIncidentStatisticsQuery(), cancellationToken).ConfigureAwait(false);

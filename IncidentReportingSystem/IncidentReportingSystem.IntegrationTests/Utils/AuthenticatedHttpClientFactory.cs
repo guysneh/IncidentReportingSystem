@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using IncidentReportingSystem.Domain.Auth;      
+using IncidentReportingSystem.Domain.Security; 
 
 namespace IncidentReportingSystem.IntegrationTests.Utils
 {
@@ -43,9 +45,9 @@ namespace IncidentReportingSystem.IntegrationTests.Utils
             {
                 if (string.IsNullOrWhiteSpace(role)) continue;
 
-                // 🔑 Emit both types to satisfy RoleClaimType="role" and any code that reads ClaimTypes.Role
-                claims.Add(new Claim("role", role));                 // matches TokenValidationParameters.RoleClaimType
-                claims.Add(new Claim(ClaimTypes.Role, role));        // compatibility
+                //  Emit both types to satisfy RoleClaimType="role" and any code that reads ClaimTypes.Role
+                claims.Add(new Claim(ClaimTypesConst.Role, role));
+                claims.Add(new Claim(ClaimTypes.Role, role));       
             }
 
             var exp = expires ?? DateTime.UtcNow.AddHours(1);
