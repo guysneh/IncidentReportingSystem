@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Converters;
+using IncidentReportingSystem.API.Extensions;
 using IncidentReportingSystem.API.Middleware;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
@@ -26,6 +27,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1) Configuration (keep first)
@@ -33,6 +35,9 @@ ConfigureConfiguration(builder.Configuration, builder.Services);
 
 // 2) Services & DI
 ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
+
+// Add OpenTelemetry + Azure Monitor
+builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
 
 // 3) Build
 var app = builder.Build();
@@ -68,10 +73,7 @@ static bool IsRunningInDocker() =>
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
 {
-    // Application Insights
-    services.AddApplicationInsightsTelemetry();
     services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
-    services.AddApplicationInsightsTelemetryProcessor<IgnoreNoiseTelemetryProcessor>();
 
     // Rate limiting
     services.AddRateLimiter(options =>
