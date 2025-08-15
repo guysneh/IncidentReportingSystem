@@ -161,7 +161,7 @@ jobs:
       - name: DB smoke (GET IncidentReports must be 200)
         run: |
           set -e
-          TOKEN=$(curl -s "${{ env.BASE_URL }}/api/v1/Auth/token?userId=ci-smoke&role=Reader")
+          TOKEN=$(curl -s "${{ env.BASE_URL }}/api/v1/Auth/token?userId=ci-smoke&role=User")
           CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer $TOKEN" \
             "${{ env.BASE_URL }}/api/v1/IncidentReports?skip=0&take=1" || true)
