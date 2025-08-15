@@ -8,13 +8,14 @@ using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Domain.Auth;
+using IncidentReportingSystem.Domain.Common.Interfaces;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
-using IncidentReportingSystem.Domain.Security;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using IncidentReportingSystem.Infrastructure.Telemetry;
+using IncidentReportingSystem.Infrastructure.Users.Repositories;
 using MediatR;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -197,6 +198,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
     services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
+    services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IUnitOfWork, UnitOfWork>();
 
     // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);

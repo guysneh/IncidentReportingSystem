@@ -1,6 +1,6 @@
-﻿using IncidentReportingSystem.Domain.Security;
-using IncidentReportingSystem.IntegrationTests.Utils;
+﻿using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.AspNetCore.Mvc.Testing;
+using IncidentReportingSystem.Domain.Auth;
 
 public static class TestClientRoles
 {

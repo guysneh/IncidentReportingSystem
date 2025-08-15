@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using IncidentReportingSystem.Domain.Auth;      
-using IncidentReportingSystem.Domain.Security; 
 
 namespace IncidentReportingSystem.IntegrationTests.Utils
 {

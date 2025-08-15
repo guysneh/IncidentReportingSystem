@@ -2,42 +2,41 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace IncidentReportingSystem.Infrastructure.Persistence.Configurations;
-
-/// <summary>
-/// EF Core mapping configuration for User entity.
-/// </summary>
-public class UserConfiguration : IEntityTypeConfiguration<User>
+namespace IncidentReportingSystem.Infrastructure.Persistence.Configurations
 {
-    public void Configure(EntityTypeBuilder<User> b)
+    public sealed class UserConfiguration : IEntityTypeConfiguration<User>
     {
-        b.HasKey(u => u.Id);
+        public void Configure(EntityTypeBuilder<User> b)
+        {
+            b.ToTable("users");
+            b.HasKey(x => x.Id);
 
-        b.Property(u => u.Email)
-            .IsRequired()
-            .HasMaxLength(256);
+            b.Property(x => x.Email)
+                .IsRequired()
+                .HasMaxLength(320);
 
-        b.Property(u => u.NormalizedEmail)
-            .IsRequired()
-            .HasMaxLength(256);
+            b.Property(x => x.NormalizedEmail)
+                .IsRequired()
+                .HasMaxLength(320);
 
-        // PostgreSQL text[] for multi-role support via Npgsql
-        b.Property(u => u.Roles)
-            .IsRequired()
-            .HasColumnType("text[]");
+            b.HasIndex(x => x.NormalizedEmail).IsUnique();
 
-        b.Property(u => u.PasswordHash)
-                  .HasColumnType("bytea")
-                  .IsRequired();
+            // PostgreSQL text[]
+            b.Property(x => x.Roles)
+                .HasColumnType("text[]")
+                .IsRequired();
 
-        b.Property(u => u.PasswordSalt)
-               .HasColumnType("bytea")
-               .IsRequired();
+            // bytea for hash/salt
+            b.Property(x => x.PasswordHash)
+                .HasColumnType("bytea")
+                .IsRequired();
 
-        b.Property(u => u.CreatedAtUtc)
-            .IsRequired();
+            b.Property(x => x.PasswordSalt)
+                .HasColumnType("bytea")
+                .IsRequired();
 
-        b.HasIndex(u => u.NormalizedEmail)
-            .IsUnique();
+            b.Property(x => x.CreatedAtUtc)
+                .HasColumnType("timestamp with time zone");
+        }
     }
 }
