@@ -1,4 +1,4 @@
-﻿namespace IncidentReportingSystem.Domain.Common.Interfaces
+﻿namespace IncidentReportingSystem.Domain.Interfaces
 {
     /// <summary>
     /// Abstraction for committing changes to the persistence store.

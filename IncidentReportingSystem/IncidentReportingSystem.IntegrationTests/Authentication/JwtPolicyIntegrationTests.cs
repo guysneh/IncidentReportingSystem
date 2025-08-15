@@ -7,6 +7,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
     public sealed class JwtPolicyIntegrationTests
     {
         [Fact]
+        [Trait("Category", "Integration")]
         public async Task SecureEndpoint_WithoutToken_Returns401()
         {
             using var factory = new SecureEndpointFactory();
@@ -17,6 +18,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public async Task SecureEndpoint_WithUserRole_Returns200()
         {
             using var factory = new SecureEndpointFactory();
@@ -27,6 +29,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public async Task SecureEndpoint_WithWrongRole_Returns403()
         {
             using var factory = new SecureEndpointFactory();

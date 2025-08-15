@@ -22,7 +22,7 @@ public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory>
         var role = "User";
 
         // Act
-        var response = await _client.GetAsync($"/api/v1/auth/token?userId={userId}&role={role}");
+        var response = await _client.GetAsync($"/api/{TestConstants.ApiVersion}/auth/token?userId={userId}&role={role}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

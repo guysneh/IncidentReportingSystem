@@ -1,5 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
+using IncidentReportingSystem.Application.Common.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace IncidentReportingSystem.API.Middleware;
 
@@ -69,18 +71,25 @@ public class GlobalExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred.");
-
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            var result = new
+            var (status, title) = ex switch
             {
-                error = "An unexpected error occurred"
-                // intentionally omitting 'message = ex.Message' to avoid information disclosure
+                EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
+                ArgumentException => (StatusCodes.Status400BadRequest, "Invalid argument"),
+                _ => (StatusCodes.Status500InternalServerError, "Unexpected error")
             };
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
+            context.Response.StatusCode = status;
+            context.Response.ContentType = "application/problem+json";
+
+            var problem = new ProblemDetails
+            {
+                Status = status,
+                Title = title,
+                Detail = ex.Message,
+                Instance = context.Request.Path
+            };
+
+            await context.Response.WriteAsJsonAsync(problem).ConfigureAwait(false);
         }
     }
 

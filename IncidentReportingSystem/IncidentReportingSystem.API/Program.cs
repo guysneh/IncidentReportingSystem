@@ -8,7 +8,6 @@ using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Domain.Auth;
-using IncidentReportingSystem.Domain.Common.Interfaces;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.Authentication;

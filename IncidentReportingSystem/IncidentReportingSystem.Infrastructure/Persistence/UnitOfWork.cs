@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Domain.Common.Interfaces;
+﻿using IncidentReportingSystem.Domain.Interfaces;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence
 {

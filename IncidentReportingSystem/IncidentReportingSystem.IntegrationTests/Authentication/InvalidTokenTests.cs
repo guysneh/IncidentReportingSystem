@@ -2,7 +2,7 @@
 using System.Net.Http.Headers;
 using FluentAssertions;
 using IncidentReportingSystem.IntegrationTests.Utils;
-using Xunit;
+using IncidentReportingSystem.IntegrationTests;
 
 namespace IncidentReportingSystem.Tests.Integration.Auth;
 
@@ -18,9 +18,10 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
     [Theory]
     [InlineData("Bearer invalid.token.value")]
     [InlineData("invalid-token-without-bearer")]
+    [Trait("Category", "Integration")]
     public async Task Should_Return_401_For_Invalid_Token(string token)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/incidentreports");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/{TestConstants.ApiVersion}/incidentreports");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Replace("Bearer ", ""));
 
         var response = await _client.SendAsync(request);
@@ -29,9 +30,10 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task Should_Return_401_When_Missing_Token()
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/incidentreports");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/{TestConstants.ApiVersion}/incidentreports");
 
         var response = await _client.SendAsync(request);
 

@@ -15,6 +15,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public void DI_Resolves_IPasswordHasher_And_Hash_Verify_Works()
         {
             using var scope = _factory.Services.CreateScope();
@@ -32,6 +33,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public void Options_Bind_From_Environment_Variables()
         {
             // Arrange env vars (double underscore => nested keys)
@@ -54,6 +56,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public void Root_Redirects_To_Swagger_In_Development()
         {
             var client = _factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions

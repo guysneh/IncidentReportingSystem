@@ -1,6 +1,6 @@
 ﻿using IncidentReportingSystem.Application.Authentication;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Domain.Auth;
-using IncidentReportingSystem.Domain.Common.Interfaces;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Domain.Users;
 using MediatR;
@@ -32,7 +32,7 @@ namespace IncidentReportingSystem.Application.Users.Commands.RegisterUser
             var normalized = request.Email.Trim().ToUpperInvariant();
 
             if (await _users.ExistsByNormalizedEmailAsync(normalized, cancellationToken).ConfigureAwait(false))
-                throw new InvalidOperationException("Email already registered.");
+                throw new EmailAlreadyExistsException(request.Email);
 
             if (!request.Roles.All(r => Roles.Allowed.Contains(r)))
                 throw new ArgumentException("One or more roles are invalid.", nameof(request.Roles));
