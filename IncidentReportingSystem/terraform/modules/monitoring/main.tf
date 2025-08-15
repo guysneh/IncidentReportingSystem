@@ -46,36 +46,33 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "error_rate" {
   name                = "incident-error-rate-alert"
   location            = var.location
   resource_group_name = var.resource_group_name
-  description         = "Alert when error rate exceeds 5% in 5 minutes"
+  description         = "Alert when 5xx error rate exceeds 2% over 10 minutes with min volume (>=100 requests)"
   severity            = 2
   enabled             = true
 
-  # NOTE: for this provider version, use minutes as integers:
-  frequency   = 5 # evaluate every 5 minutes
-  time_window = 5 # look back 5 minutes
+  # Evaluate every 5 minutes over a 10-minute window
+  frequency   = 5   # minutes
+  time_window = 10  # minutes
 
-  # NOTE: in this schema we pass a single data source, not 'scopes'
+  # Use the Application Insights component as the data source (workspace-based AI is fine)
   data_source_id = azurerm_application_insights.appi.id
 
+  # Fire only when both min volume AND error rate threshold are exceeded.
   query = <<-KQL
-    let Window = 5m;
-    let Err = toscalar(requests
-        | where timestamp > ago(Window)
-        | summarize err_count = countif(success == false));
-    let All = toscalar(requests
-        | where timestamp > ago(Window)
-        | summarize total = count());
-    print error_rate = todouble(Err) / todouble(All)
-    | where error_rate > 0.05
+    let Window = 10m;
+    requests
+    | where timestamp > ago(Window)
+    | extend code = toint(resultCode)
+    | summarize total = count(), server_errors = countif(code between (500 .. 599))
+    | extend error_rate = todouble(server_errors) / todouble(total)
+    | project AggregatedValue = iff(total >= 100 and error_rate > 0.02, 1, 0)
   KQL
 
-  # For this schema, 'trigger' is mandatory; we trigger on "any result row"
   trigger {
     operator  = "GreaterThan"
     threshold = 0
   }
 
-  # For this schema, the 'action' block expects 'action_group' as a LIST
   action {
     action_group = [azurerm_monitor_action_group.this.id]
   }

@@ -46,12 +46,12 @@ module "key_vault" {
 }
 
 module "app_service" {
-  source              = "./modules/app_service"
-  name                = "${var.name_prefix}-api"
-  app_service_plan_id = module.app_service_plan.id
-  resource_group_name = module.resource_group.name
-  location            = var.location
-  health_check_path = "/health"
+  source                            = "./modules/app_service"
+  name                              = "${var.name_prefix}-api"
+  app_service_plan_id               = module.app_service_plan.id
+  resource_group_name               = module.resource_group.name
+  location                          = var.location
+  health_check_path                 = "/health"
   health_check_eviction_time_in_min = 5
 
   app_settings = local.app_settings
