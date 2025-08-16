@@ -7,8 +7,9 @@
     public static class ClaimTypesConst
     {
         public const string Role = "role"; 
-        public const string Name = "sub";  
+        public const string Name = "name";  
         public const string Email = "email";
+        public const string UserId = "sub";
     }
 
     /// <summary>
