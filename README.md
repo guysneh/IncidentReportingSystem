@@ -67,7 +67,7 @@ repo-root/
 ```
 
 ### Diagram
-![Architecture](docs/images/cloud_architectur.png)
+![Architecture](docs/images/cloud_architecture.png)
 
 ---
 
