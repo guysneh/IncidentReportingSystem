@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using FluentValidation;
 using IncidentReportingSystem.Application.Common.Exceptions;
@@ -69,6 +70,14 @@ public class GlobalExceptionHandlingMiddleware
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(result)).ConfigureAwait(false);
         }
+        catch (InvalidCredentialsException ex)
+        {
+            await WriteProblem(context, (int)HttpStatusCode.Unauthorized, ex.Message);
+        }
+        catch (UnauthorizedAccessException ex) 
+        {
+            await WriteProblem(context, (int)HttpStatusCode.Unauthorized, ex.Message);
+        }
         catch (Exception ex)
         {
             var (status, title) = ex switch
@@ -107,5 +116,13 @@ public class GlobalExceptionHandlingMiddleware
             return message.Substring(startIndex + marker.Length).Trim();
 
         return message.Substring(startIndex + marker.Length, endIndex - startIndex - marker.Length).Trim();
+    }
+
+    private static Task WriteProblem(HttpContext ctx, int status, string detail)
+    {
+        ctx.Response.ContentType = "application/problem+json";
+        ctx.Response.StatusCode = status;
+        var pd = new ProblemDetails { Status = status, Title = "Authentication failed", Detail = detail };
+        return ctx.Response.WriteAsJsonAsync(pd);
     }
 }
