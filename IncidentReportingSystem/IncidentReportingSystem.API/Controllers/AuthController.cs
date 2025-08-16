@@ -1,9 +1,9 @@
+using IncidentReportingSystem.API.Contracts.Authentication;
+using IncidentReportingSystem.Application.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Users.Commands.RegisterUser;
-using IncidentReportingSystem.API.Auth; 
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace IncidentReportingSystem.API.Controllers
 {
@@ -13,12 +13,10 @@ namespace IncidentReportingSystem.API.Controllers
     public sealed class AuthController : ControllerBase
     {
         private readonly ISender _sender;
-        private readonly IOptions<JwtSettings> _jwtOptions;
 
-        public AuthController(ISender sender, IOptions<JwtSettings> jwtOptions)
+        public AuthController(ISender sender)
         {
             _sender = sender ?? throw new ArgumentNullException(nameof(sender));
-            _jwtOptions = jwtOptions ?? throw new ArgumentNullException(nameof(jwtOptions));
         }
 
         /// <summary>Registers a new user with roles. Anonymous for demo.</summary>
@@ -26,26 +24,32 @@ namespace IncidentReportingSystem.API.Controllers
         [AllowAnonymous]
         [ProducesResponseType(typeof(RegisterUserResult), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken ct)
         {
             if (command is null) return BadRequest("Invalid payload.");
 
-            var result = await _sender.Send(command, cancellationToken).ConfigureAwait(false);
+            var result = await _sender.Send(command, ct).ConfigureAwait(false);
             return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
         }
 
-        /// <summary>
-        /// Generates a demo JWT token for testing authenticated endpoints.
-        /// </summary>
-        /// <param name="userId">User ID to embed in token</param>
-        /// <param name="role">User role (e.g., Admin, User)</param>
-        /// <returns>JWT token as plain string</returns>
-        [HttpGet("token")]
+        /// <summary>Authenticate with email + password and receive a JWT.</summary>
+        [HttpPost("login")]
         [AllowAnonymous]
-        public ActionResult<string> GetToken([FromQuery] string userId = "demo", [FromQuery] string role = "Admin")
+        [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest body, CancellationToken ct)
         {
-            var token = JwtTokenGenerator.GenerateToken(_jwtOptions, userId, new[] { role });
-            return Ok(token);
+            if (body is null) return BadRequest();
+
+            var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), ct)
+                                      .ConfigureAwait(false);
+
+            return Ok(new LoginResponse
+            {
+                AccessToken = result.AccessToken,
+                ExpiresAtUtc = result.ExpiresAtUtc
+            });
         }
     }
 }

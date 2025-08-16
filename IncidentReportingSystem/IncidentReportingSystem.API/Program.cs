@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using IncidentReportingSystem.API.Auth;
+using IncidentReportingSystem.API.Authentication;
 using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Extensions;
 using IncidentReportingSystem.API.Middleware;
@@ -10,6 +10,7 @@ using IncidentReportingSystem.Application.Common.Behaviors;
 using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
+using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
@@ -196,9 +197,11 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 
     services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
-    services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
+    services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+    services.AddScoped<IJwtTokenService, JwtTokenService>(); 
     services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
+    services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
 
     // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);
