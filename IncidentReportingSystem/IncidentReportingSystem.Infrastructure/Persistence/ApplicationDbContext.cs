@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Users;
+using IncidentReportingSystem.Infrastructure.Persistence.Idempotency;
+using IncidentReportingSystem.Infrastructure.Persistence.Configurations;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence
 {
@@ -22,10 +24,13 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
         /// </summary>
         public DbSet<User> Users => Set<User>();
 
+        public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             ArgumentNullException.ThrowIfNull(modelBuilder, nameof(modelBuilder));
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());
         }
     }
 }

@@ -1,31 +1,20 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Interfaces;
 using MediatR;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports
 {
-    /// <summary>
-    /// Handles retrieval of incident reports from repository.
-    /// </summary>
-    public class GetIncidentReportsQueryHandler : IRequestHandler<GetIncidentReportsQuery, IReadOnlyList<IncidentReport>>
+    /// <summary>Delegates retrieval to the repository, forwarding sort enums.</summary>
+    public sealed class GetIncidentReportsQueryHandler : IRequestHandler<GetIncidentReportsQuery, IReadOnlyList<IncidentReport>>
     {
         private readonly IIncidentReportRepository _repository;
+        public GetIncidentReportsQueryHandler(IIncidentReportRepository repository) => _repository = repository;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GetIncidentReportsQueryHandler"/> class.
-        /// </summary>
-        /// <param name="repository">Incident report repository.</param>
-        public GetIncidentReportsQueryHandler(IIncidentReportRepository repository)
-        {
-            _repository = repository;
-        }
-
-        /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> Handle(GetIncidentReportsQuery request, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(request, nameof(request));
-            return await _repository.GetAsync(
+            ArgumentNullException.ThrowIfNull(request);
+
+            var result = await _repository.GetAsync(
                 status: request.Status,
                 skip: request.Skip,
                 take: request.Take,
@@ -34,8 +23,12 @@ namespace IncidentReportingSystem.Application.IncidentReports.Queries.GetInciden
                 searchText: request.SearchText,
                 reportedAfter: request.ReportedAfter,
                 reportedBefore: request.ReportedBefore,
+                sortBy: request.SortBy,
+                direction: request.Direction,
                 cancellationToken: cancellationToken
             ).ConfigureAwait(false);
+
+            return result ?? Array.Empty<IncidentReport>(); 
         }
     }
 }

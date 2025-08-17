@@ -7,6 +7,7 @@ using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Application.Common.Behaviors;
+using IncidentReportingSystem.Application.Common.Idempotency;
 using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
@@ -14,6 +15,7 @@ using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
+using IncidentReportingSystem.Infrastructure.Services.Idempotency;
 using IncidentReportingSystem.Infrastructure.Telemetry;
 using IncidentReportingSystem.Infrastructure.Users.Repositories;
 using MediatR;
@@ -202,6 +204,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
     services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
+    services.AddScoped<IIdempotencyStore, IdempotencyStoreEf>();
 
     // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);
