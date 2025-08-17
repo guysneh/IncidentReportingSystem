@@ -22,15 +22,11 @@ env:
   DB_PROJECT_PATH: "IncidentReportingSystem/IncidentReportingSystem.Infrastructure/IncidentReportingSystem.Infrastructure.csproj"
   KEY_VAULT_NAME: "incident-kv"
 
-  # Azure PostgreSQL Flexible Server name (resource name)
   PG_SERVER_NAME: "incident-db"
-  # Temporary firewall rule name
   TEMP_RULE_NAME: "gh-runner-temp"
 
-  # Admin connection string secret (existing)
   ADMIN_CONN_SECRET: "PostgreSqlConnectionString"
 
-  # Base URL of the deployed app
   BASE_URL: "https://incident-api.azurewebsites.net"
 
 jobs:
@@ -97,13 +93,13 @@ jobs:
         id: adminconn
         run: |
           set -e
-          NAME="${{ env.ADMIN_CONN_SECRET }}"   
+          NAME="${{ env.ADMIN_CONN_SECRET }}"
           CONN=$(az keyvault secret show \
             --vault-name "${{ env.KEY_VAULT_NAME }}" \
             --name "$NAME" \
             --query value -o tsv)
           if [ -z "$CONN" ]; then
-            echo "Secret $NAME is empty or missing in Key Vault ${ { env.KEY_VAULT_NAME } }"
+            echo "Secret $NAME is empty or missing in Key Vault ${{ env.KEY_VAULT_NAME }}"
             exit 1
           fi
           if [[ "$CONN" == *"__PORT__"* || "$CONN" == *"__HOST__"* || "$CONN" == *"__DB__"* ]]; then
@@ -119,15 +115,38 @@ jobs:
         env:
           DOTNET_NOLOGO: true
         run: |
-          dotnet tool install -g dotnet-ef
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
             --configuration Release \
             --connection "$CONN"
 
+      # ----- Ensure minimal app settings (only if missing) -----
+      - name: Ensure minimal app settings
+        run: |
+          set -e
+          # get current settings
+          CURRENT=$(az webapp config appsettings list \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --query "[].{name:name,value:value}" -o json)
+
+          need_conn=$(echo "$CURRENT" | jq -r 'map(select(.name=="ConnectionStrings__DefaultConnection")) | length == 0')
+          need_swgr=$(echo "$CURRENT" | jq -r 'map(select(.name=="EnableSwagger")) | length == 0')
+
+          if [ "$need_conn" = "true" ] || [ "$need_swgr" = "true" ]; then
+            echo "Setting missing app settings..."
+            ARGS=()
+            if [ "$need_conn" = "true" ]; then ARGS+=("ConnectionStrings__DefaultConnection=$CONN"); fi
+            if [ "$need_swgr" = "true" ]; then ARGS+=("EnableSwagger=true"); fi
+
+            az webapp config appsettings set \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "${{ env.WEBAPP_NAME }}" \
+              --settings "${ARGS[@]}"
+          else
+            echo "App settings already contain ConnectionStrings__DefaultConnection and EnableSwagger. Skipping."
+          fi
 
       # ----- Deploy ZIP to Web App -----
       - name: Deploy ZIP to Web App

@@ -1,4 +1,6 @@
-﻿using FluentValidation;
+﻿using Azure.Core;
+using Azure.Identity;
+using FluentValidation;
 using IncidentReportingSystem.API.Authentication;
 using IncidentReportingSystem.API.Converters;
 using IncidentReportingSystem.API.Extensions;
@@ -24,22 +26,22 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-// 1) Configuration (keep first)
+// 1) Configuration (first)
 ConfigureConfiguration(builder.Configuration, builder.Services);
 
 // 2) Services & DI
 ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
-// Add OpenTelemetry + Azure Monitor
+// Telemetry (OpenTelemetry + Azure Monitor)
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
 
 // 3) Build
@@ -59,7 +61,6 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
     var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
     configuration.SetBasePath(Directory.GetCurrentDirectory());
 
-    // Avoid trying to read non-mounted files in container
     if (!IsRunningInDocker())
     {
         configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -67,6 +68,10 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
     }
 
     configuration.AddEnvironmentVariables();
+
+    // Azure App Configuration (only if explicitly enabled and endpoint is provided)
+    TryAddAzureAppConfiguration(configuration);
+
     services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
     services.Configure<PasswordHashingOptions>(configuration.GetSection("Auth:PasswordHashing"));
 }
@@ -78,7 +83,9 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 {
     services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
 
-    // Rate limiting
+    services.AddAzureAppConfiguration();
+    services.AddFeatureManagement();
+
     services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
@@ -93,11 +100,9 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
-    // Health checks
     services.AddHealthChecks()
         .AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
 
-    // Controllers + JSON
     services.AddControllers()
         .AddJsonOptions(options =>
         {
@@ -124,10 +129,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
             };
         });
 
-    // CORS
     ConfigureCors(services, configuration, env);
 
-    // API versioning
     services.AddApiVersioning(options =>
     {
         options.AssumeDefaultVersionWhenUnspecified = true;
@@ -141,7 +144,6 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.SubstituteApiVersionInUrl = true;
     });
 
-    // Swagger
     services.AddEndpointsApiExplorer();
     services.ConfigureOptions<ConfigureSwaggerOptions>();
     services.AddSwaggerGen(c =>
@@ -187,34 +189,29 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         });
     });
 
-    // MediatR + FluentValidation
     services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
     services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);
     services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-    // DbContext
     var connectionString = configuration["ConnectionStrings:DefaultConnection"];
     if (string.IsNullOrWhiteSpace(connectionString))
         throw new InvalidOperationException("No valid database connection string found.");
 
     services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
-    services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
-    services.AddScoped<IJwtTokenService, JwtTokenService>(); 
+    services.AddScoped<IJwtTokenService, JwtTokenService>();
     services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
     services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
     services.AddScoped<IIdempotencyStore, IdempotencyStoreEf>();
 
-    // AuthN/AuthZ
     ConfigureJwtAuthentication(services, configuration);
 }
-// helper to read and split origins from config
+
 static string[] GetAllowedOrigins(IConfiguration config) =>
     (config["Cors:AllowedOrigins"] ?? string.Empty)
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-// register CORS exactly once, no default policy elsewhere
 static void ConfigureCors(IServiceCollection services, IConfiguration config, IHostEnvironment env)
 {
     var origins = GetAllowedOrigins(config);
@@ -276,7 +273,6 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
                 ),
-               
                 RoleClaimType = ClaimTypesConst.Role,
                 NameClaimType = ClaimTypesConst.Name
             };
@@ -284,7 +280,6 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
     services.AddAuthorization(options =>
     {
-        //  Global default: require authenticated user unless [AllowAnonymous] is present
         options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
@@ -303,13 +298,21 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 static void ConfigureMiddleware(WebApplication app)
 {
     app.UseMiddleware<CorrelationIdMiddleware>();
-    app.UseRouting();
-    app.UseCors("Default");
-    app.UseRateLimiter();
-    app.MapHealthChecks("/health").AllowAnonymous(); ;
-    app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
+    app.UseHttpsRedirection();
+    app.UseRouting();
+
+    // Enable App Configuration only if provider was wired successfully
+    if (app.Configuration.GetValue<bool>("AppConfig:__Active"))
+    {
+        app.UseAzureAppConfiguration();
+    }
+
+    app.UseCors("Default");
+    app.UseRateLimiter();
+
+    // ---- Swagger before Authentication/Authorization (prevents 401 on swagger.json) ----
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
     var showSwagger = app.Configuration.GetValue<bool>("EnableSwagger", false);
     if (showSwagger || app.Environment.IsDevelopment())
@@ -325,30 +328,88 @@ static void ConfigureMiddleware(WebApplication app)
         });
     }
 
-    app.UseHttpsRedirection();
-    app.Use(async (ctx, next) =>
-    {
-        if (ctx.Request.Path.StartsWithSegments("/api/v1/Auth/token"))
-        {
-            ctx.Response.Headers.CacheControl = "no-store";
-            ctx.Response.Headers.Pragma = "no-cache";
-        }
-        await next();
-    });
+    app.UseMiddleware<RequestLoggingMiddleware>();
 
     app.UseAuthentication();
     app.UseAuthorization();
 
-    app.MapControllers().RequireCors("Default");
+    // Liveness: always OK, independent of dependencies
+    app.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+    // Readiness (existing): may fail if dependencies are down (e.g., DB)
+    app.MapHealthChecks("/health").AllowAnonymous();
 
-    app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
-       .RequireCors("Default");
+    app.MapControllers().RequireCors("Default");
+    app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent()).RequireCors("Default");
 
     app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
     app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain")).AllowAnonymous();
     app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain")).AllowAnonymous();
+
+    var apiBase = app.Configuration.GetValue<string>("Api:BasePath") ?? "/api";
+    var apiVersion = app.Configuration.GetValue<string>("Api:Version") ?? "v1";
+    var api = app.MapGroup($"{apiBase}/{apiVersion}");
+    // Development-only diagnostic endpoint (open)
+    if (app.Environment.IsDevelopment())
+    {
+        api.MapGet("config-demo", async (IConfiguration cfg, IFeatureManager fm) => new
+        {
+            AppName = cfg["App:Name"],
+            NewReporting = await fm.IsEnabledAsync("NewReporting")
+        }).AllowAnonymous();
+    }
+
+    // Production/Demo: expose the same endpoint only if explicitly enabled, and require admin policy
+    var enableProbe = app.Configuration.GetValue<bool>("Demo:EnableConfigProbe");
+    if (!app.Environment.IsDevelopment() && enableProbe)
+    {
+        api.MapGet("config-demo", async (IConfiguration cfg, IFeatureManager fm) => new
+        {
+            AppName = cfg["App:Name"],
+            NewReporting = await fm.IsEnabledAsync("NewReporting")
+        }).RequireAuthorization(PolicyNames.CanManageIncidents);
+    }
 }
 
+static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
+{
+    // Feature gate: only try if explicitly enabled
+    var enabled = configuration.GetValue<bool>("AppConfig:Enabled");
+    if (!enabled) { configuration["AppConfig:__Active"] = "false"; return; }
+
+    var endpointValue = configuration["AppConfig:Endpoint"];
+    if (string.IsNullOrWhiteSpace(endpointValue) || !Uri.TryCreate(endpointValue, UriKind.Absolute, out var endpoint))
+    {
+        configuration["AppConfig:__Active"] = "false";
+        return;
+    }
+
+    const string sentinelKey = "AppConfig:Sentinel";
+
+    try
+    {
+        // Non-interactive credentials chain: Env -> Managed Identity -> Azure CLI
+        TokenCredential cred = new ChainedTokenCredential(
+            new EnvironmentCredential(),
+            new ManagedIdentityCredential(),
+            new AzureCliCredential()
+        );
+
+        configuration.AddAzureAppConfiguration(options =>
+            options.Connect(endpoint, cred)
+                   .ConfigureRefresh(refresh =>
+                       refresh.Register(sentinelKey, refreshAll: true)
+                              .SetCacheExpiration(TimeSpan.FromSeconds(30)))
+                   .UseFeatureFlags(ff => ff.CacheExpirationInterval = TimeSpan.FromSeconds(15))
+        );
+
+        configuration["AppConfig:__Active"] = "true";
+    }
+    catch
+    {
+        // Do not fail startup in dev/test; simply mark as inactive
+        configuration["AppConfig:__Active"] = "false";
+    }
+}
 
 // Required for WebApplicationFactory<Program> to locate the entry point during integration testing
 public partial class Program { }
