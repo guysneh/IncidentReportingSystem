@@ -157,6 +157,56 @@ jobs:
       
           echo "App Service appsettings ensured for AppConfig bootstrap."
 
+      - name: Diagnose App Settings 400 (deep debug)
+        run: |
+          set -euo pipefail
+          RG="${{ env.RESOURCE_GROUP }}"
+          APP="${{ env.WEBAPP_NAME }}"
+          EP_RAW="${{ steps.appcfg.outputs.endpoint }}"
+          # נרמול וקצת אינפו
+          EP="$(printf "%s" "$EP_RAW" | tr -d '\r' | xargs)"
+          echo "RG=$RG"
+          echo "APP=$APP"
+          printf 'EP_RAW bytes: '; printf "%s" "$EP_RAW" | od -An -t x1
+          printf 'EP norm : %s\n' "$EP"
+      
+          echo "== az version =="
+          az version
+      
+          echo "== whoami/subscription =="
+          az account show -o jsonc
+      
+          echo "== can we list current settings? =="
+          az webapp config appsettings list -g "$RG" -n "$APP" -o table || true
+      
+          echo "== minimal set (dummy key) with --debug =="
+          set +e
+          az webapp config appsettings set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --settings _DiagDummyKey=123 \
+            --debug
+          RC=$?
+          set -e
+          echo "Return code (dummy set) = $RC"
+      
+          echo "== cleanup dummy key (best-effort) =="
+          az webapp config appsettings delete \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --setting-names _DiagDummyKey || true
+      
+          echo "== now try AppConfig keys with --debug =="
+          set +e
+          az webapp config appsettings set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --settings AppConfig__Enabled=true AppConfig__Endpoint="$EP" \
+            --debug
+          RC2=$?
+          set -e
+          echo "Return code (AppConfig set) = $RC2"
+      
 
       - name: Ensure jwt-secret exists (idempotent)
         run: |
