@@ -20,7 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: terraform-manual
-
+    env:
+      APP_CONFIG_NAME: "incident-appcfg"
+      APP_CONFIG_LOCATION: "northeurope"
+      
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -45,6 +48,40 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # Ensure the CI principal can enumerate/purge soft-deleted App Config stores
+      - name: "Ensure App Configuration Data Owner (CI)"
+        shell: bash
+        run: |
+          SP_OBJ=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query id -o tsv)
+          SCOPE="/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az role assignment create \
+            --assignee-object-id "$SP_OBJ" \
+            --assignee-principal-type ServicePrincipal \
+            --role "App Configuration Data Owner" \
+            --scope "$SCOPE" >/dev/null 2>&1 || echo "Role already present or not needed."
+
+      # Purge soft-deleted store if exists (avoids provider soft-deleted error)
+      - name: "Purge soft-deleted App Configuration (if exists)"
+        shell: bash
+        env:
+          SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          NAME: ${{ env.APP_CONFIG_NAME }}
+          LOCATION: ${{ env.APP_CONFIG_LOCATION }}
+        run: |
+          set -e
+          BASE="https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.AppConfiguration/locations/$LOCATION"
+          LIST_URL="$BASE/deletedConfigurationStores?api-version=2024-06-01"
+          PURGE_URL="$BASE/deletedConfigurationStores/$NAME/purge?api-version=2024-06-01"
+          COUNT=$(az rest --method get --url "$LIST_URL" --query "value[?name=='$NAME'] | length(@)" -o tsv || echo "0")
+          if [ "${COUNT:-0}" -gt 0 ]; then
+            echo "Purging soft-deleted '$NAME' in '$LOCATION'..."
+            az rest --method post --url "$PURGE_URL" >/dev/null
+            # give ARM few seconds to finalize purge
+            sleep 10
+          else
+            echo "No soft-deleted '$NAME' found in '$LOCATION'."
+          fi
+          
       # OIDC -> Terraform provider/backend (AAD/RBAC, no account keys)
       - name: "Export ARM_* env"
         shell: bash
@@ -54,12 +91,6 @@ jobs:
           echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
           echo "ARM_OIDC_TOKEN_FILE_PATH=${AZURE_FEDERATED_TOKEN_FILE}" >> $GITHUB_ENV
-
-      # - name: "Export TF_VAR for jwt (optional)"
-      #   shell: bash
-      #   run: |
-      #     echo "TF_VAR_jwt_issuer=${{ secrets.JWT_ISSUER }}" >> $GITHUB_ENV
-      #     echo "TF_VAR_jwt_audience=${{ secrets.JWT_AUDIENCE }}" >> $GITHUB_ENV
 
       - name: "Export TF_VAR_action_group_email"
         shell: bash
