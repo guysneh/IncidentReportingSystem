@@ -157,7 +157,6 @@ namespace IncidentReportingSystem.API.Controllers
         /// First‑Write‑Wins: the first response for a given key is returned for subsequent
         /// requests with the same key for 24h, even if the payload differs.
         /// </summary>
-        [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPost("bulk-status")]
         [ProducesResponseType(typeof(BulkStatusUpdateResultDto), StatusCodes.Status200OK)]
