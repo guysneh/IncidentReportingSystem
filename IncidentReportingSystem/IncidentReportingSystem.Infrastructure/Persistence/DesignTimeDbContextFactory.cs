@@ -17,6 +17,7 @@ namespace IncidentReportingSystem.Infrastructure.DbContextFactory
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
                 .Build();
 
             var connectionString =
