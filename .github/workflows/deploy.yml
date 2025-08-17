@@ -122,31 +122,41 @@ jobs:
             --connection "$CONN"
 
       # ----- Ensure minimal app settings (only if missing) -----
-      - name: Ensure minimal app settings
+      - name: Ensure AppConfig bootstrap settings on Web App (hardened)
         run: |
-          set -e
-          # get current settings
-          CURRENT=$(az webapp config appsettings list \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "${{ env.WEBAPP_NAME }}" \
-            --query "[].{name:name,value:value}" -o json)
-
-          need_conn=$(echo "$CURRENT" | jq -r 'map(select(.name=="ConnectionStrings__DefaultConnection")) | length == 0')
-          need_swgr=$(echo "$CURRENT" | jq -r 'map(select(.name=="EnableSwagger")) | length == 0')
-
-          if [ "$need_conn" = "true" ] || [ "$need_swgr" = "true" ]; then
-            echo "Setting missing app settings..."
-            ARGS=()
-            if [ "$need_conn" = "true" ]; then ARGS+=("ConnectionStrings__DefaultConnection=$CONN"); fi
-            if [ "$need_swgr" = "true" ]; then ARGS+=("EnableSwagger=true"); fi
-
-            az webapp config appsettings set \
-              --resource-group "${{ env.RESOURCE_GROUP }}" \
-              --name "${{ env.WEBAPP_NAME }}" \
-              --settings "${ARGS[@]}"
-          else
-            echo "App settings already contain ConnectionStrings__DefaultConnection and EnableSwagger. Skipping."
+          set -euo pipefail
+          RG="${{ env.RESOURCE_GROUP }}"
+          APP="${{ env.WEBAPP_NAME }}"
+          # Trim CR/LF/whitespace just in case
+          EP="$(az appconfig show --name incident-appcfg --resource-group "$RG" --query endpoint -o tsv | tr -d '\r' | xargs)"
+      
+          echo "RG=$RG APP=$APP EP=$EP"
+      
+          # Validate endpoint shape
+          if ! echo "$EP" | grep -Eq '^https://[a-z0-9-]+\.azconfig\.io/?$'; then
+            echo "ERROR: Unexpected AppConfig endpoint: '$EP'"
+            exit 1
           fi
+          EP="${EP%/}"
+      
+          # Make sure the web app exists
+          az webapp show -g "$RG" -n "$APP" -o none
+      
+          # Set keys using __ (double underscore)
+          az webapp config appsettings set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --settings \
+              AppConfig__Enabled=true \
+              AppConfig__Endpoint="$EP" \
+            --output none
+      
+          # Verify
+          az webapp config appsettings list -g "$RG" -n "$APP" -o tsv \
+            | grep -E '^(AppConfig__Enabled|AppConfig__Endpoint)\s' >/dev/null
+      
+          echo "App Service appsettings ensured for AppConfig bootstrap."
+
 
       - name: Ensure jwt-secret exists (idempotent)
         run: |
