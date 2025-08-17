@@ -1,3 +1,4 @@
+﻿using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
@@ -44,53 +45,40 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             string? searchText = null,
             DateTime? reportedAfter = null,
             DateTime? reportedBefore = null,
+            IncidentSortField sortBy = IncidentSortField.CreatedAt,
+            SortDirection direction = SortDirection.Desc,
             CancellationToken cancellationToken = default)
         {
-            IQueryable<IncidentReport> query = _context.IncidentReports.AsQueryable();
-
-            // Filter out closed if not requested
-            if (status.HasValue)
-                query = query.Where(r => r.Status == status.Value);
-
-            // Filter by category
-            if (category.HasValue)
-            {
-                query = query.Where(i => i.Category == category.Value);
-            }
-
-            // Filter by severity
-            if (severity.HasValue)
-            {
-                query = query.Where(i => i.Severity == severity.Value);
-            }
-
-            // Text search (description or location)
+            IQueryable<IncidentReport> query = _context.IncidentReports.AsNoTracking();
+    
+            if (status.HasValue) query = query.Where(i => i.Status == status.Value);
+            if (category.HasValue) query = query.Where(i => i.Category == category.Value);
+            if (severity.HasValue) query = query.Where(i => i.Severity == severity.Value);
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                var lowerSearch = searchText.ToLower();
+                var s = searchText.Trim().ToLower();
                 query = query.Where(i =>
-                    i.Description.ToLower().Contains(lowerSearch) ||
-                    i.Location.ToLower().Contains(lowerSearch));
+                    i.Description.ToLower().Contains(s) ||
+                    i.Location.ToLower().Contains(s) ||
+                    i.ReporterId.ToString().Contains(s));
             }
-
-            // Filter by reported date
-            if (reportedAfter.HasValue)
+            if (reportedAfter.HasValue) query = query.Where(i => i.ReportedAt >= reportedAfter.Value);
+            if (reportedBefore.HasValue) query = query.Where(i => i.ReportedAt <= reportedBefore.Value);
+    
+            query = (sortBy, direction) switch
             {
-                query = query.Where(i => i.ReportedAt >= reportedAfter.Value);
-            }
-
-            if (reportedBefore.HasValue)
-            {
-                query = query.Where(i => i.ReportedAt <= reportedBefore.Value);
-            }
-
-            // Paging and sorting
-            return await query
-                .OrderByDescending(i => i.CreatedAt)
-                .Skip(skip)
-                .Take(take)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+                (IncidentSortField.ReportedAt, SortDirection.Desc) => query.OrderByDescending(i => i.ReportedAt),
+                (IncidentSortField.ReportedAt, SortDirection.Asc) => query.OrderBy(i => i.ReportedAt),
+                (IncidentSortField.CreatedAt, SortDirection.Desc) => query.OrderByDescending(i => i.CreatedAt),
+                (IncidentSortField.CreatedAt, SortDirection.Asc) => query.OrderBy(i => i.CreatedAt),
+                (IncidentSortField.Severity, SortDirection.Desc) => query.OrderByDescending(i => i.Severity),
+                (IncidentSortField.Severity, SortDirection.Asc) => query.OrderBy(i => i.Severity),
+                (IncidentSortField.Status, SortDirection.Desc) => query.OrderByDescending(i => i.Status),
+                (IncidentSortField.Status, SortDirection.Asc) => query.OrderBy(i => i.Status),
+                _ => query.OrderByDescending(i => i.CreatedAt)
+            };
+    
+            return await query.Skip(skip).Take(take).ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -114,6 +102,28 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             }
 
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(
+            IReadOnlyList<Guid> ids,
+            IncidentStatus newStatus,
+            CancellationToken ct)
+        {
+            if (ids is null || ids.Count == 0) return (0, new List<Guid>());
+
+            var incidents = await _context.IncidentReports.Where(i => ids.Contains(i.Id)).ToListAsync(ct);
+            var foundIds = incidents.Select(i => i.Id).ToHashSet();
+            var notFound = ids.Where(id => !foundIds.Contains(id)).ToList();
+
+            foreach (var inc in incidents)
+            {
+                inc.UpdateStatus(newStatus);   
+                _context.IncidentReports.Update(inc);
+            }
+
+            var updated = await _context.SaveChangesAsync(ct);
+            return (updated, notFound);
         }
     }
 }

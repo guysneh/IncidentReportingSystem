@@ -46,5 +46,9 @@ public record GetIncidentReportsQuery(
     /// <summary>
     /// Optional filter for reports created before a specific date.
     /// </summary>
-    DateTime? ReportedBefore = null
+    DateTime? ReportedBefore = null,
+
+    IncidentSortField SortBy = IncidentSortField.CreatedAt,
+
+    SortDirection Direction = SortDirection.Desc
 ) : IRequest<IReadOnlyList<IncidentReport>>;

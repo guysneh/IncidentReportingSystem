@@ -1,3 +1,4 @@
+﻿using IncidentReportingSystem.Application.IncidentReports.Commands.BulkUpdateIncidentStatus;
 using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Application.IncidentReports.DTOs;
@@ -5,7 +6,6 @@ using IncidentReportingSystem.Application.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Domain.Auth;
-using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 
@@ -83,9 +83,15 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="reportedBefore">Optional filter to include only incidents reported before this date.</param>
         /// <param name="cancellationToken">Cancellation token for aborting the request.</param>
         /// <returns>A list of matching incident reports.</returns>
+
+        /// <summary>
+        /// Retrieves incident reports with filtering, paging and enum‑based sorting.
+        /// Supported fields: <see cref="IncidentSortField"/>; direction: <see cref="SortDirection"/>.
+        /// Default: <c>CreatedAt</c> <c>Desc</c> (newest first).
+        /// </summary>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<IncidentReport>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
             [FromQuery] IncidentStatus? status = null,
             [FromQuery] int skip = 0,
@@ -95,8 +101,15 @@ namespace IncidentReportingSystem.API.Controllers
             [FromQuery] string? searchText = null,
             [FromQuery] DateTime? reportedAfter = null,
             [FromQuery] DateTime? reportedBefore = null,
+            [FromQuery] IncidentSortField sortBy = IncidentSortField.CreatedAt,
+            [FromQuery] SortDirection direction = SortDirection.Desc,
             CancellationToken cancellationToken = default)
         {
+            if (take is < 1 or > 200) return BadRequest("take must be between 1 and 200.");
+            if (skip < 0) return BadRequest("skip must be >= 0.");
+            if (reportedAfter.HasValue && reportedBefore.HasValue && reportedAfter > reportedBefore)
+                return BadRequest("reportedAfter must be <= reportedBefore.");
+
             var query = new GetIncidentReportsQuery(
                 Status: status,
                 Skip: skip,
@@ -105,22 +118,24 @@ namespace IncidentReportingSystem.API.Controllers
                 Severity: severity,
                 SearchText: searchText,
                 ReportedAfter: reportedAfter,
-                ReportedBefore: reportedBefore
+                ReportedBefore: reportedBefore,
+                SortBy: sortBy,
+                Direction: direction
             );
 
             var result = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
-            return Ok(result);
+            return Ok(result.Select(x => x.ToDto()));
         }
 
 
-        /// <summary>
-        /// Updates the status of an existing incident report.
-        /// </summary>
-        /// <param name="id">ID of the incident report to update.</param>
-        /// <param name="newStatus">New status to apply.</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
-        [Authorize(Policy = PolicyNames.CanManageIncidents)]
+            /// <summary>
+            /// Updates the status of an existing incident report.
+            /// </summary>
+            /// <param name="id">ID of the incident report to update.</param>
+            /// <param name="newStatus">New status to apply.</param>
+            /// <param name="cancellationToken">Cancellation token.</param>
+            /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
+            [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -136,5 +151,31 @@ namespace IncidentReportingSystem.API.Controllers
                 return NotFound(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Bulk-updates incident statuses. Requires the <c>Idempotency-Key</c> header.
+        /// First‑Write‑Wins: the first response for a given key is returned for subsequent
+        /// requests with the same key for 24h, even if the payload differs.
+        /// </summary>
+        [Authorize(Policy = PolicyNames.CanManageIncidents)]
+        [HttpPost("bulk-status")]
+        [ProducesResponseType(typeof(BulkStatusUpdateResultDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> BulkStatus(
+            [FromBody] BulkStatusUpdateRequest request,
+            [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+                return BadRequest("Idempotency-Key header is required.");
+            if (request.Ids is null || request.Ids.Count == 0)
+                return BadRequest("Ids must be non-empty.");
+
+            var cmd = new BulkUpdateIncidentStatusCommand(idempotencyKey, request.Ids, request.NewStatus);
+            var result = await _mediator.Send(cmd, ct).ConfigureAwait(false);
+            return Ok(result);
+        }
+
+        /// <summary>Request body for bulk status updates.</summary>
+        public sealed record BulkStatusUpdateRequest(IReadOnlyList<Guid> Ids, IncidentStatus NewStatus);
     }
 }

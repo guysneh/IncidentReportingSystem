@@ -27,7 +27,9 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             var query = new GetIncidentReportsQuery(
                 Status: null,
                 Skip: 0,
-                Take: 10
+                Take: 10,
+                SortBy: IncidentSortField.Status,
+                Direction: SortDirection.Asc
             );
 
             var expectedReports = new List<IncidentReport>
@@ -40,6 +42,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
                 .Setup(r => r.GetAsync(
                     null, 0, 10,
                     null, null, null, null, null,
+                    IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReports);
 
@@ -51,6 +54,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             _repositoryMock.Verify(r => r.GetAsync(
                 null, 0, 10,
                 null, null, null, null, null,
+                IncidentSortField.Status, SortDirection.Asc,
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -67,7 +71,9 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
                 Severity: IncidentSeverity.High,
                 SearchText: "Berlin",
                 ReportedAfter: new DateTime(2023, 1, 1),
-                ReportedBefore: new DateTime(2023, 12, 31)
+                ReportedBefore: new DateTime(2023, 12, 31),
+                SortBy: IncidentSortField.Status,
+                Direction: SortDirection.Asc
             );
 
             var expectedReports = new List<IncidentReport>
@@ -83,6 +89,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
                     "Berlin",
                     new DateTime(2023, 1, 1),
                     new DateTime(2023, 12, 31),
+                    IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReports);
 
@@ -98,6 +105,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
                 "Berlin",
                 new DateTime(2023, 1, 1),
                 new DateTime(2023, 12, 31),
+                IncidentSortField.Status, SortDirection.Asc,
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -106,12 +114,16 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
         public async Task Handle_ShouldReturnEmptyList_WhenNoReportsFound()
         {
             // Arrange
-            var query = new GetIncidentReportsQuery();
+            var query = new GetIncidentReportsQuery(
+                SortBy: IncidentSortField.Status,
+                Direction: SortDirection.Asc
+            );
 
             _repositoryMock
                 .Setup(r => r.GetAsync(
                     null, 0, 50,
                     null, null, null, null, null,
+                    IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<IncidentReport>());
 
@@ -123,6 +135,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetI
             _repositoryMock.Verify(r => r.GetAsync(
                 null, 0, 50,
                 null, null, null, null, null,
+                IncidentSortField.Status, SortDirection.Asc,
                 It.IsAny<CancellationToken>()), Times.Once);
         }
     }
