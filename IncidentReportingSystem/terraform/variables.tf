@@ -134,9 +134,9 @@ variable "ci_role_assignment_name" {
 }
 
 variable "subscription_id" {
-   type = string 
-   }
+  type = string
+}
 
-variable "tenant_id" { 
-  type = string 
-  }
+variable "tenant_id" {
+  type = string
+}
