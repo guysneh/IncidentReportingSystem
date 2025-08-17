@@ -127,7 +127,7 @@ jobs:
           set -euo pipefail
           RG="${{ env.RESOURCE_GROUP }}"
           APP="${{ env.WEBAPP_NAME }}"
-          EP="https://incident-appcfg.azconfig.io"  # או מה-outputs אם יש לך
+          EP="https://incident-appcfg.azconfig.io" 
       
           az webapp config appsettings set \
             --resource-group "$RG" \
