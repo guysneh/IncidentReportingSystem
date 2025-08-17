@@ -122,63 +122,28 @@ jobs:
             --connection "$CONN"
 
       # ----- Ensure minimal app settings (only if missing) -----
-      - name: Ensure AppConfig bootstrap settings on Web App (with inline debug)
+      - name: Ensure AppConfig bootstrap settings on Web App
         run: |
           set -euo pipefail
           RG="${{ env.RESOURCE_GROUP }}"
           APP="${{ env.WEBAPP_NAME }}"
-          EP_RAW="${{ steps.appcfg.outputs.endpoint }}"
+          EP="https://incident-appcfg.azconfig.io"  # או מה-outputs אם יש לך
       
-          EP="$(printf "%s" "$EP_RAW" | tr -d '\r' | xargs)"
-          echo "RG=$RG"
-          echo "APP=$APP"
-          printf 'EP_RAW bytes: '; printf "%s" "$EP_RAW" | od -An -t x1
-          printf 'EP norm : %s\n' "$EP"
-      
-          echo "== sanity: show az version =="
-          az version
-      
-          echo "== sanity: show subscription =="
-          az account show -o jsonc
-      
-          echo "== list current settings =="
-          az webapp config appsettings list -g "$RG" -n "$APP" -o table || true
-      
-          echo "== try setting a dummy key with --debug =="
-          set +e
           az webapp config appsettings set \
             --resource-group "$RG" \
             --name "$APP" \
-            --settings _DiagDummyKey=123 \
-            --debug
-          RC_DUMMY=$?
-          set -e
-          echo "Return code (dummy set) = $RC_DUMMY"
-      
-          echo "== cleanup dummy key (best-effort) =="
-          az webapp config appsettings delete \
-            --resource-group "$RG" \
-            --name "$APP" \
-            --setting-names _DiagDummyKey || true
-      
-          echo "== now set AppConfig keys with --debug =="
-          set +e
-          az webapp config appsettings set \
-            --resource-group "$RG" \
-            --name "$APP" \
-            --settings AppConfig__Enabled=true AppConfig__Endpoint="$EP" \
-            --debug
-          RC_APPCFG=$?
-          set -e
-          echo "Return code (AppConfig set) = $RC_APPCFG"
-      
-          # Fail the step if any of the sets failed
-          if [ "$RC_DUMMY" -ne 0 ] || [ "$RC_APPCFG" -ne 0 ]; then
-            echo "One of the set operations failed (dummy=$RC_DUMMY, appcfg=$RC_APPCFG)."
-            exit 1
-          fi
+            --settings \
+              AppConfig__Enabled=true \
+              AppConfig__Endpoint="$EP" \
+            --output none
       
           echo "App Service appsettings ensured for AppConfig bootstrap."
+
+      - name: Verify AppConfig app settings
+        run: |
+          az webapp config appsettings list \
+            -g "${{ env.RESOURCE_GROUP }}" \
+            -n "${{ env.WEBAPP_NAME }}" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint'
 
 
       - name: Ensure jwt-secret exists (idempotent)
