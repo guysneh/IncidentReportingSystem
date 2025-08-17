@@ -132,3 +132,11 @@ variable "ci_role_assignment_name" {
   type        = string
   description = "Existing RBAC assignment GUID for CI on Key Vault"
 }
+
+variable "subscription_id" {
+   type = string 
+   }
+
+variable "tenant_id" { 
+  type = string 
+  }

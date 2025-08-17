@@ -96,30 +96,39 @@ jobs:
       - name: Fetch ADMIN connection string from Key Vault
         id: adminconn
         run: |
+          set -e
+          NAME="${{ env.ADMIN_CONN_SECRET }}"   
           CONN=$(az keyvault secret show \
             --vault-name "${{ env.KEY_VAULT_NAME }}" \
-            --name "${{ env.ADMIN_CONN_SECRET }}" \
+            --name "$NAME" \
             --query value -o tsv)
+          if [ -z "$CONN" ]; then
+            echo "Secret $NAME is empty or missing in Key Vault ${ { env.KEY_VAULT_NAME } }"
+            exit 1
+          fi
+          # Guard נגד placeholders
+          if [[ "$CONN" == *"__PORT__"* || "$CONN" == *"__HOST__"* || "$CONN" == *"__DB__"* ]]; then
+            echo "Secret $NAME contains placeholders. Fix the secret value in Key Vault."
+            PORT=$(echo "$CONN" | sed -n 's/.*Port=\([^;]*\).*/\1/p')
+            echo "Port field in secret is: '$PORT'"
+            exit 1
+          fi
           echo "::add-mask::$CONN"
-          {
-            echo 'CONN<<EOF'
-            echo "$CONN"
-            echo EOF
-          } >> $GITHUB_ENV
+          echo "CONN=$CONN" >> $GITHUB_ENV
 
-      - name: Apply EF migrations (admin connection; design-time)
+      - name: Apply EF migrations (explicit connection)
         env:
           DOTNET_NOLOGO: true
         run: |
-          # EF will read the connection string from this env var (Npgsql format is fine)
-          export ConnectionStrings__DefaultConnection="$CONN"
-          export ASPNETCORE_ENVIRONMENT=Production
-          export DOTNET_ENVIRONMENT=Production
+          dotnet tool install -g dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
           dotnet ef database update \
             --project "${{ env.DB_PROJECT_PATH }}" \
             --startup-project "${{ env.PROJECT_PATH }}" \
-            --configuration Release
+            --configuration Release \
+            --connection "$CONN"
+
 
       # ----- Deploy ZIP to Web App -----
       - name: Deploy ZIP to Web App
