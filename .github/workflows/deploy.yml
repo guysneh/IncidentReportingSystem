@@ -64,6 +64,14 @@ jobs:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      # -----DEBUG-----
+      - name: Guard: fail if any colon-based AppConfig keys exist in workflows
+        run: |
+          set -e
+          if git grep -n "AppConfig:" .github/workflows || true; then
+            echo "Found colon-based AppConfig keys in workflows. Replace ':' with '__' in workflow files."
+            exit 1
+          fi
 
       # ----- Open temporary firewall for runner IP (Postgres) -----
       - name: Detect runner public IP
@@ -121,14 +129,20 @@ jobs:
             --configuration Release \
             --connection "$CONN"
 
-      # ----- Ensure minimal app settings (only if missing) -----
-      - name: Ensure AppConfig bootstrap settings on Web App
+      # ----- Ensure minimal app settings (only if missing) -----       
+      - name: Ensure AppConfig bootstrap settings on Web App (scripted)
         run: |
+          set -euo pipefail
+          cat > set_appcfg.sh <<'SCRIPT'
           set -euo pipefail
           RG="${{ env.RESOURCE_GROUP }}"
           APP="${{ env.WEBAPP_NAME }}"
-          EP="https://incident-appcfg.azconfig.io" 
-      
+          EP="${{ steps.appcfg.outputs.endpoint }}"
+
+          echo "About to set appsettings on $RG/$APP"
+          echo "USING KEYS: AppConfig__Enabled / AppConfig__Endpoint"
+          echo "EP=$EP"
+
           az webapp config appsettings set \
             --resource-group "$RG" \
             --name "$APP" \
@@ -136,8 +150,26 @@ jobs:
               AppConfig__Enabled=true \
               AppConfig__Endpoint="$EP" \
             --output none
-      
-          echo "App Service appsettings ensured for AppConfig bootstrap."
+          SCRIPT
+
+          echo "=== Script content (should show __, not :) ==="
+          sed -n '1,200p' set_appcfg.sh
+
+          echo "=== Executing script ==="
+          bash set_appcfg.sh
+
+          echo "=== Verify set ==="
+          az webapp config appsettings list \
+            -g "${{ env.RESOURCE_GROUP }}" \
+            -n "${{ env.WEBAPP_NAME }}" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint|AppConfig:'
+            
+      - name: Cleanup legacy colon-based keys
+        run: |
+          az webapp config appsettings delete \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --setting-names "AppConfig:Enabled" "AppConfig:Endpoint" || true
+
 
       - name: Verify AppConfig app settings
         run: |
