@@ -148,6 +148,52 @@ jobs:
             echo "App settings already contain ConnectionStrings__DefaultConnection and EnableSwagger. Skipping."
           fi
 
+      - name: Ensure jwt-secret exists (idempotent)
+        run: |
+          set -e
+          KV="${{ env.KEY_VAULT_NAME }}"
+          NAME="jwt-secret"
+          if az keyvault secret show --vault-name "$KV" --name "$NAME" >/dev/null 2>&1; then
+            echo "Secret $NAME exists; skipping."
+          else
+            # 64 bytes, URL-safe
+            VAL=$(openssl rand -base64 64 | tr -d '\n' | sed -e 's/[\/+=]/_/g')
+            az keyvault secret set --vault-name "$KV" --name "$NAME" --value "$VAL" --description "JWT signing key" >/dev/null
+            echo "Secret $NAME created."
+          fi
+
+      - name: Get App Configuration endpoint
+        id: appcfg
+        run: |
+          set -e
+          NAME="incident-appcfg"
+          RG="${{ env.RESOURCE_GROUP }}"
+          EP=$(az appconfig show --name "$NAME" --resource-group "$RG" --query endpoint -o tsv)
+          if [ -z "$EP" ]; then
+            echo "Could not resolve App Configuration endpoint for $NAME"
+            exit 1
+          fi
+          echo "endpoint=$EP" >> $GITHUB_OUTPUT
+          echo "AppConfig endpoint: $EP"
+      
+      - name: Ensure AppConfig bootstrap settings on Web App
+        run: |
+          set -e
+          RG="${{ env.RESOURCE_GROUP }}"
+          APP="${{ env.WEBAPP_NAME }}"
+          EP="${{ steps.appcfg.outputs.endpoint }}"
+      
+          # Set both settings idempotently
+          az webapp config appsettings set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --settings \
+              "AppConfig:Enabled=true" \
+              "AppConfig:Endpoint=$EP" \
+            --output none
+      
+          echo "App Service appsettings ensured for AppConfig bootstrap."
+
       # ----- Deploy ZIP to Web App -----
       - name: Deploy ZIP to Web App
         run: |

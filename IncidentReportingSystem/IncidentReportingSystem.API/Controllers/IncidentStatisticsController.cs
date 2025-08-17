@@ -1,4 +1,5 @@
-﻿using IncidentReportingSystem.Application.IncidentReports.DTOs;
+﻿using Asp.Versioning;
+using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentStatistics;
 using IncidentReportingSystem.Domain.Auth;
 using MediatR;

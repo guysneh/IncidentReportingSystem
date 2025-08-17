@@ -71,10 +71,6 @@ variable "app_service_plan_sku_name" {
 variable "jwt_issuer" { type = string }
 variable "jwt_audience" { type = string }
 
-variable "jwt_secret_length" {
-  type    = number
-  default = 64
-}
 variable "always_on" {
   type    = bool
   default = true
@@ -133,10 +129,52 @@ variable "ci_role_assignment_name" {
   description = "Existing RBAC assignment GUID for CI on Key Vault"
 }
 
+variable "app_config_name" {
+  type        = string
+  description = "App Configuration resource name"
+  default     = "incident-appcfg"
+}
+
+variable "demo_enable_config_probe" {
+  type        = bool
+  description = "Expose config-demo endpoint in non-Dev (protected by Admin policy)"
+  default     = false
+}
+
+variable "demo_probe_auth_mode" {
+  type        = string
+  description = "Runtime auth mode for the probe endpoint: Admin or Anonymous"
+  default     = "Admin"
+  validation {
+    condition     = contains(["Admin", "Anonymous"], var.demo_probe_auth_mode)
+    error_message = "demo_probe_auth_mode must be 'Admin' or 'Anonymous'."
+  }
+}
+
+variable "app_name" {
+  type        = string
+  description = "Human-friendly application name"
+  default     = "Incident API"
+}
+
+variable "api_basepath" {
+  type        = string
+  description = "Base path prefix for the API"
+  default     = "/api"
+}
+
+variable "api_version" {
+  type        = string
+  description = "Displayed API version (keep aligned with code default)"
+  default     = "v1"
+}
+
 variable "subscription_id" {
-  type = string
+  type        = string
+  description = "Azure subscription ID to deploy into"
 }
 
 variable "tenant_id" {
-  type = string
+  type        = string
+  description = "Azure AD tenant ID"
 }

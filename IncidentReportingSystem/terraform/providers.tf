@@ -1,6 +1,5 @@
 terraform {
   required_version = ">= 1.6, < 2.0"
-
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -19,7 +18,6 @@ terraform {
       version = "~> 0.13.0"
     }
   }
-
   backend "azurerm" {}
 }
 
@@ -29,4 +27,6 @@ provider "azurerm" {
   tenant_id       = var.tenant_id
 }
 
-provider "azuread" {}
+provider "azuread" {
+  tenant_id = var.tenant_id
+}
