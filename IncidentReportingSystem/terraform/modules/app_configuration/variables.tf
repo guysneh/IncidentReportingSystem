@@ -33,6 +33,18 @@ variable "api_version" {
   type        = string
 }
 
+variable "assign_ci_data_owner" {
+  description = "If true, assign App Configuration Data Owner to the CI principal within this module."
+  type        = bool
+  default     = true
+}
+
+variable "ci_principal_id" {
+  description = "Object ID of the CI service principal (OIDC) that runs Terraform."
+  type        = string
+  default     = null
+}
+
 variable "enable_swagger" {
   description = "Enable Swagger UI flag."
   type        = bool

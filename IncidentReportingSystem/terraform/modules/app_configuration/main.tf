@@ -11,6 +11,19 @@ resource "time_sleep" "wait_for_appcfg" {
   depends_on      = [azurerm_app_configuration.appcfg]
 }
 
+resource "azurerm_role_assignment" "ci_appcfg_data_owner" {
+  count               = var.assign_ci_data_owner && var.ci_principal_id != null ? 1 : 0
+  scope               = azurerm_app_configuration.appcfg.id
+  role_definition_name = "App Configuration Data Owner"
+  principal_id        = var.ci_principal_id
+}
+
+resource "time_sleep" "appcfg_rbac_propagation" {
+  count          = var.assign_ci_data_owner && var.ci_principal_id != null ? 1 : 0
+  create_duration = "60s"
+  depends_on      = [azurerm_role_assignment.ci_appcfg_data_owner]
+}
+
 locals {
   appconfig_settings = {
     "App:Name"                       = var.app_name
@@ -32,5 +45,8 @@ resource "azurerm_app_configuration_key" "keys" {
   value = each.value
   label = var.label
 
-  depends_on = [time_sleep.wait_for_appcfg]
+  depends_on = compact([
+  time_sleep.wait_for_appcfg,
+  length(time_sleep.appcfg_rbac_propagation) > 0 ? time_sleep.appcfg_rbac_propagation[0] : null
+  ])
 }

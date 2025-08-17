@@ -84,7 +84,6 @@ module "monitoring" {
 
 module "app_configuration" {
   source              = "./modules/app_configuration"
-
   name                = var.app_config_name
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
@@ -101,6 +100,9 @@ module "app_configuration" {
   feature_enable_demo_banner_default = false
   label               = "prod"
   stabilization_delay = "90s"
+
+  ci_principal_id       = azuread_service_principal.gha.object_id
+  assign_ci_data_owner  = true
 }
 
 
