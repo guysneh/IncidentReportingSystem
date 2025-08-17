@@ -122,73 +122,38 @@ jobs:
             --connection "$CONN"
 
       # ----- Ensure minimal app settings (only if missing) -----
-      - name: Ensure AppConfig bootstrap settings on Web App (hardened)
-        run: |
-          set -euo pipefail
-          RG="${{ env.RESOURCE_GROUP }}"
-          APP="${{ env.WEBAPP_NAME }}"
-          # Trim CR/LF/whitespace just in case
-          EP="$(az appconfig show --name incident-appcfg --resource-group "$RG" --query endpoint -o tsv | tr -d '\r' | xargs)"
-      
-          echo "RG=$RG APP=$APP EP=$EP"
-      
-          # Validate endpoint shape
-          if ! echo "$EP" | grep -Eq '^https://[a-z0-9-]+\.azconfig\.io/?$'; then
-            echo "ERROR: Unexpected AppConfig endpoint: '$EP'"
-            exit 1
-          fi
-          EP="${EP%/}"
-      
-          # Make sure the web app exists
-          az webapp show -g "$RG" -n "$APP" -o none
-      
-          # Set keys using __ (double underscore)
-          az webapp config appsettings set \
-            --resource-group "$RG" \
-            --name "$APP" \
-            --settings \
-              AppConfig__Enabled=true \
-              AppConfig__Endpoint="$EP" \
-            --output none
-      
-          # Verify
-          az webapp config appsettings list -g "$RG" -n "$APP" -o tsv \
-            | grep -E '^(AppConfig__Enabled|AppConfig__Endpoint)\s' >/dev/null
-      
-          echo "App Service appsettings ensured for AppConfig bootstrap."
-
-      - name: Diagnose App Settings 400 (deep debug)
+      - name: Ensure AppConfig bootstrap settings on Web App (with inline debug)
         run: |
           set -euo pipefail
           RG="${{ env.RESOURCE_GROUP }}"
           APP="${{ env.WEBAPP_NAME }}"
           EP_RAW="${{ steps.appcfg.outputs.endpoint }}"
-          # נרמול וקצת אינפו
+      
           EP="$(printf "%s" "$EP_RAW" | tr -d '\r' | xargs)"
           echo "RG=$RG"
           echo "APP=$APP"
           printf 'EP_RAW bytes: '; printf "%s" "$EP_RAW" | od -An -t x1
           printf 'EP norm : %s\n' "$EP"
       
-          echo "== az version =="
+          echo "== sanity: show az version =="
           az version
       
-          echo "== whoami/subscription =="
+          echo "== sanity: show subscription =="
           az account show -o jsonc
       
-          echo "== can we list current settings? =="
+          echo "== list current settings =="
           az webapp config appsettings list -g "$RG" -n "$APP" -o table || true
       
-          echo "== minimal set (dummy key) with --debug =="
+          echo "== try setting a dummy key with --debug =="
           set +e
           az webapp config appsettings set \
             --resource-group "$RG" \
             --name "$APP" \
             --settings _DiagDummyKey=123 \
             --debug
-          RC=$?
+          RC_DUMMY=$?
           set -e
-          echo "Return code (dummy set) = $RC"
+          echo "Return code (dummy set) = $RC_DUMMY"
       
           echo "== cleanup dummy key (best-effort) =="
           az webapp config appsettings delete \
@@ -196,17 +161,25 @@ jobs:
             --name "$APP" \
             --setting-names _DiagDummyKey || true
       
-          echo "== now try AppConfig keys with --debug =="
+          echo "== now set AppConfig keys with --debug =="
           set +e
           az webapp config appsettings set \
             --resource-group "$RG" \
             --name "$APP" \
             --settings AppConfig__Enabled=true AppConfig__Endpoint="$EP" \
             --debug
-          RC2=$?
+          RC_APPCFG=$?
           set -e
-          echo "Return code (AppConfig set) = $RC2"
+          echo "Return code (AppConfig set) = $RC_APPCFG"
       
+          # Fail the step if any of the sets failed
+          if [ "$RC_DUMMY" -ne 0 ] || [ "$RC_APPCFG" -ne 0 ]; then
+            echo "One of the set operations failed (dummy=$RC_DUMMY, appcfg=$RC_APPCFG)."
+            exit 1
+          fi
+      
+          echo "App Service appsettings ensured for AppConfig bootstrap."
+
 
       - name: Ensure jwt-secret exists (idempotent)
         run: |
