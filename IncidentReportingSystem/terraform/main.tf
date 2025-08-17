@@ -84,13 +84,11 @@ module "monitoring" {
 
 module "app_configuration" {
   source              = "./modules/app_configuration"
+
   name                = var.app_config_name
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   tags                = var.default_tags
-
-  key_vault_uri       = module.key_vault.uri
-  webapp_principal_id = module.app_service.principal_id
 
   app_name     = var.app_name
   api_basepath = var.api_basepath
@@ -100,14 +98,11 @@ module "app_configuration" {
   demo_enable_config_probe = var.demo_enable_config_probe
   demo_probe_auth_mode     = var.demo_probe_auth_mode
 
-  db_conn_secret_name      = "PostgreSqlRuntimeConnectionString"
-  jwt_issuer_secret_name   = "jwt-issuer"
-  jwt_audience_secret_name = "jwt-audience"
-  jwt_secret_secret_name   = "jwt-secret"
-
-  ai_connection_string               = module.monitoring.connection_string
   feature_enable_demo_banner_default = false
+  label               = "prod"
+  stabilization_delay = "90s"
 }
+
 
 
 resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
