@@ -106,7 +106,6 @@ jobs:
             echo "Secret $NAME is empty or missing in Key Vault ${ { env.KEY_VAULT_NAME } }"
             exit 1
           fi
-          # Guard נגד placeholders
           if [[ "$CONN" == *"__PORT__"* || "$CONN" == *"__HOST__"* || "$CONN" == *"__DB__"* ]]; then
             echo "Secret $NAME contains placeholders. Fix the secret value in Key Vault."
             PORT=$(echo "$CONN" | sed -n 's/.*Port=\([^;]*\).*/\1/p')
