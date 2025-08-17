@@ -112,6 +112,23 @@ resource "azurerm_app_configuration_key" "ai_conn" {
   content_type           = "text/plain"
 }
 
+resource "time_sleep" "wait_for_appcfg" {
+  create_duration = "90s"
+}
+
+resource "azurerm_app_configuration_key" "keys" {
+  for_each               = var.appconfig_settings
+  configuration_store_id = azurerm_app_configuration.appcfg.id
+  key                    = each.key
+  value                  = each.value
+  label                  = "prod"
+
+  depends_on = [
+    azurerm_app_configuration.appcfg,
+    time_sleep.wait_for_appcfg
+  ]
+}
+
 # -------- Feature Flags --------
 resource "azurerm_app_configuration_key" "ff_demo_banner" {
   configuration_store_id = azurerm_app_configuration.this.id
