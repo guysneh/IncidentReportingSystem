@@ -101,8 +101,9 @@ module "app_configuration" {
   label               = "prod"
   stabilization_delay = "90s"
 
-  ci_principal_id       = azuread_service_principal.gha.object_id
-  assign_ci_data_owner  = true
+  depends_on = [
+    time_sleep.appcfg_rbac_propagation
+  ]
 }
 
 
@@ -118,4 +119,15 @@ locals {
     "AppConfig__Enabled"  = "true"
     "AppConfig__Endpoint" = module.app_configuration.endpoint
   }
+}
+
+resource "azurerm_role_assignment" "ci_appcfg_data_owner" {
+  scope                 = data.azurerm_resource_group.rg.id
+  role_definition_name  = "App Configuration Data Owner"
+  principal_id          = azuread_service_principal.gha.object_id
+}
+
+resource "time_sleep" "appcfg_rbac_propagation" {
+  create_duration = "60s"
+  depends_on      = [azurerm_role_assignment.ci_appcfg_data_owner]
 }
