@@ -1,4 +1,6 @@
-﻿using Azure.Core;
+﻿using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+using Azure.Core;
 using Azure.Identity;
 using FluentValidation;
 using IncidentReportingSystem.API.Authentication;
@@ -24,7 +26,6 @@ using MediatR;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FeatureManagement;
 using Microsoft.IdentityModel.Tokens;
@@ -136,9 +137,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
         options.AssumeDefaultVersionWhenUnspecified = true;
         options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ReportApiVersions = true;
-    });
-
-    services.AddVersionedApiExplorer(options =>
+    })
+    .AddApiExplorer(options =>
     {
         options.GroupNameFormat = "'v'VVV";
         options.SubstituteApiVersionInUrl = true;
@@ -333,40 +333,75 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Liveness: always OK, independent of dependencies
-    app.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
-    // Readiness (existing): may fail if dependencies are down (e.g., DB)
-    app.MapHealthChecks("/health").AllowAnonymous();
+    // Liveness: keep but hide from Swagger
+    app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
+       .AllowAnonymous()
+       .ExcludeFromDescription();
 
-    app.MapControllers().RequireCors("Default");
-    app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent()).RequireCors("Default");
+    // Readiness: keep but hide from Swagger
+    app.MapHealthChecks("/health")
+       .AllowAnonymous()
+       .ExcludeFromDescription();
 
-    app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
-    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain")).AllowAnonymous();
-    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain")).AllowAnonymous();
+    // CORS preflight catch-all: hide from Swagger
+    app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
+       .RequireCors("Default")
+       .ExcludeFromDescription();
 
+    // Redirect root to Swagger: hide from Swagger
+    app.MapGet("/", () => Results.Redirect("/swagger"))
+       .AllowAnonymous()
+       .ExcludeFromDescription();
+
+    // Robots: hide from Swagger
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /", "text/plain"))
+       .AllowAnonymous()
+       .ExcludeFromDescription();
+
+    app.MapGet("/robots933456.txt", () => Results.Text("OK", "text/plain"))
+       .AllowAnonymous()
+       .ExcludeFromDescription();
+
+    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
     var apiBase = app.Configuration.GetValue<string>("Api:BasePath") ?? "/api";
-    var apiVersion = app.Configuration.GetValue<string>("Api:Version") ?? "v1";
-    var api = app.MapGroup($"{apiBase}/{apiVersion}");
-    // Development-only diagnostic endpoint (open)
-    if (app.Environment.IsDevelopment())
-    {
-        api.MapGet("config-demo", async (IConfiguration cfg, IFeatureManager fm) => new
-        {
-            AppName = cfg["App:Name"],
-            NewReporting = await fm.IsEnabledAsync("NewReporting")
-        }).AllowAnonymous();
-    }
+    var enableProbe = app.Environment.IsDevelopment()
+        || app.Configuration.GetValue<bool>("Demo:EnableConfigProbe");
 
-    // Production/Demo: expose the same endpoint only if explicitly enabled, and require admin policy
-    var enableProbe = app.Configuration.GetValue<bool>("Demo:EnableConfigProbe");
-    if (!app.Environment.IsDevelopment() && enableProbe)
+    if (enableProbe)
     {
-        api.MapGet("config-demo", async (IConfiguration cfg, IFeatureManager fm) => new
+        foreach (var desc in provider.ApiVersionDescriptions)
         {
-            AppName = cfg["App:Name"],
-            NewReporting = await fm.IsEnabledAsync("NewReporting")
-        }).RequireAuthorization(PolicyNames.CanManageIncidents);
+            // desc.GroupName is like "v1", "v2"
+            var group = app.MapGroup($"{apiBase}/{desc.GroupName}");
+
+            group.MapGet("config-demo", async (HttpContext http, IConfiguration cfg, IFeatureManager fm) =>
+            {
+                var authMode = (cfg["Demo:ProbeAuthMode"] ?? "Admin").Trim();
+                if (!app.Environment.IsDevelopment() &&
+                    authMode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    var user = http.User;
+                    if (!(user?.Identity?.IsAuthenticated ?? false) || !user.IsInRole(Roles.Admin))
+                        return Results.Unauthorized();
+                }
+
+                return Results.Ok(new
+                {
+                    AppName = cfg["App:Name"],
+                    ApiVersion = cfg["Api:Version"],
+                    EnableDemoBanner = await fm.IsEnabledAsync("EnableDemoBanner"),
+                    AuthMode = authMode
+                });
+            })
+            .AllowAnonymous()
+            .WithTags("Demo")
+            .WithOpenApi(op =>
+            {
+                op.Summary = "Configuration probe (demo)";
+                op.Description = "Shows live values from Azure App Configuration (feature flags + config).";
+                return op;
+            });
+        }
     }
 }
 
@@ -396,6 +431,7 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
 
         configuration.AddAzureAppConfiguration(options =>
             options.Connect(endpoint, cred)
+                   .ConfigureKeyVault(kv => kv.SetCredential(cred))   // <-- enable KV references
                    .ConfigureRefresh(refresh =>
                        refresh.Register(sentinelKey, refreshAll: true)
                               .SetCacheExpiration(TimeSpan.FromSeconds(30)))

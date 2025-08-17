@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using IncidentReportingSystem.API.Contracts.Authentication;
 using IncidentReportingSystem.Application.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Users.Commands.RegisterUser;

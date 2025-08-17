@@ -37,10 +37,10 @@ module "key_vault" {
   ci_principal_object_id  = azuread_service_principal.gha.object_id
   ci_role_assignment_name = var.ci_role_assignment_name
 
+  # Do NOT create jwt-secret here. It is managed elsewhere in your stack.
   secrets = {
     jwt-issuer         = var.jwt_issuer
     jwt-audience       = var.jwt_audience
-    jwt-secret         = random_password.jwt_secret.result
     jwt-expiry-minutes = tostring(var.jwt_expiry_minutes)
   }
 }
@@ -56,12 +56,6 @@ module "app_service" {
 
   app_settings = local.app_settings
   tags         = var.tags
-}
-
-resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = module.app_service.principal_id
 }
 
 locals {
@@ -88,29 +82,43 @@ module "monitoring" {
   action_group_email  = var.action_group_email
 }
 
+module "app_configuration" {
+  source              = "./modules/app_configuration"
+  name                = var.app_config_name
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  tags                = var.default_tags
+
+  key_vault_uri       = module.key_vault.uri
+  webapp_principal_id = module.app_service.principal_id
+
+  app_name     = var.app_name
+  api_basepath = var.api_basepath
+  api_version  = var.api_version
+
+  enable_swagger           = true
+  demo_enable_config_probe = var.demo_enable_config_probe
+  demo_probe_auth_mode     = var.demo_probe_auth_mode
+
+  db_conn_secret_name      = "PostgreSqlRuntimeConnectionString"
+  jwt_issuer_secret_name   = "jwt-issuer"
+  jwt_audience_secret_name = "jwt-audience"
+  jwt_secret_secret_name   = "jwt-secret"
+
+  ai_connection_string               = module.monitoring.connection_string
+  feature_enable_demo_banner_default = false
+}
+
+
+resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = module.app_service.principal_id
+}
+
 locals {
-  # Base settings – single source of truth for the connection string
-  base_app_settings = {
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/PostgreSqlRuntimeConnectionString/)"
-    "ASPNETCORE_ENVIRONMENT"               = "Production"
-    "EnableSwagger"                        = "true"
+  app_settings = {
+    "AppConfig__Enabled"  = "true"
+    "AppConfig__Endpoint" = module.app_configuration.endpoint
   }
-
-  # Extra settings – Application Insights for example
-  extra_app_settings = {
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" = module.monitoring.connection_string
-  }
-
-  # Final app settings passed into the module
-  app_settings = merge(
-    local.base_app_settings,
-    local.extra_app_settings,
-    {
-      # JWT from Key Vault (no duplication)
-      "Jwt__Issuer"        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-issuer/)"
-      "Jwt__Audience"      = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-audience/)"
-      "Jwt__Secret"        = "@Microsoft.KeyVault(SecretUri=${module.key_vault.uri}secrets/jwt-secret/)"
-      "Jwt__ExpiryMinutes" = tostring(var.jwt_expiry_minutes)
-    }
-  )
 }
