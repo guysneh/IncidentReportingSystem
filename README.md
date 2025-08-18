@@ -259,7 +259,6 @@ Services started:
 - `api` — waits for DB + migrations, then starts
 
 URLs:
-- API base: http://localhost:8080  
 - Swagger: http://localhost:8080/swagger  
 - pgAdmin: http://localhost:5050
 
@@ -279,8 +278,6 @@ dotnet ef database update --project IncidentReportingSystem.Infrastructure
   - The **JWT secret** is injected by the **deployment pipeline** (not stored in Terraform state).
 - **Azure App Configuration** holds **non‑secret** settings + **feature flags** (e.g., `FeatureManagement:...`, `AppConfiguration:Sentinel`).
 - **Application Insights + Log Analytics** for observability (requests, exceptions, p95, dashboards).
-
-**Future improvement:** move the DB from password-based auth to **Azure AD authentication for PostgreSQL**.
 ---
 
 ## 🔁 Request Flow (End-to-End)
