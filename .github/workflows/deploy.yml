@@ -1,4 +1,4 @@
-name: Deploy IncidentReportingSystem (.NET 8) to Azure Web App
+﻿name: Deploy IncidentReportingSystem (.NET 8) to Azure Web App
 
 on:
   workflow_dispatch:
@@ -164,7 +164,7 @@ jobs:
           az webapp config appsettings delete \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
-            --setting-names "AppConfig:Enabled" "AppConfig:Endpoint" || true
+            --setting-names "AppConfig__Enabled" "AppConfig__Endpoint" || true
 
       # ----- Deploy ZIP to Web App -----
       - name: Deploy ZIP to Web App
