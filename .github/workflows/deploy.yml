@@ -65,8 +65,10 @@ jobs:
       - name: Guard (no colon-based AppConfig keys)
         run: |
           set -e
-          if git grep -n "AppConfig:" .github/workflows >/dev/null 2>&1; then
-            echo "Found colon-based AppConfig keys in workflows. Replace ':' with '__'."
+          offenders=$(git grep -nE '^[^#]*AppConfig:[A-Za-z]' .github/workflows || true)
+          if [ -n "$offenders" ]; then
+            echo "Found colon-based AppConfig keys in workflows. Replace ':' with '__' in these lines:"
+            echo "$offenders"
             exit 1
           fi
 
