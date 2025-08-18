@@ -70,8 +70,6 @@ repo-root/
 
 ---
 
-## Screenshots
-
 **Swagger**
 ![Swagger](docs/images/swagger.png)
 
