@@ -312,39 +312,36 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseCors("Default");
     app.UseRateLimiter();
 
-    // Always register Swagger at startup.
+    // --- Swagger gated by feature flag (EnableSwaggerUI) ---
+    var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+
+    // Gate all /swagger* requests by feature flag
+    app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase), branch =>
+    {
+        branch.Use(async (ctx, next) =>
+        {
+            // Use the snapshot to evaluate per-request with AppConfig refresh
+            var fm = ctx.RequestServices.GetRequiredService<Microsoft.FeatureManagement.IFeatureManagerSnapshot>();
+            var enabled = await fm.IsEnabledAsync("EnableSwaggerUI");
+            if (!enabled)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                await ctx.Response.WriteAsync("Not Found");
+                return;
+            }
+            await next();
+        });
+    });
+
+    // Register Swagger middlewares unconditionally
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
         foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
         {
             options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json",
                                     description.GroupName.ToUpperInvariant());
         }
-    });
-
-    // Gate access to /swagger at request-time using a Feature Flag (no restart needed).
-    app.Use(async (context, next) =>
-    {
-        if (context.Request.Path.StartsWithSegments("/swagger"))
-        {
-            var env = context.RequestServices.GetRequiredService<IHostEnvironment>();
-
-            // Allow in Development unconditionally 
-            if (!env.IsDevelopment())
-            {
-                var fm = context.RequestServices.GetRequiredService<Microsoft.FeatureManagement.IFeatureManagerSnapshot>();
-                var enabled = await fm.IsEnabledAsync("EnableSwaggerUI");
-                if (!enabled)
-                {
-                    context.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-            }
-        }
-
-        await next();
     });
 
     app.UseMiddleware<RequestLoggingMiddleware>();
