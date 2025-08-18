@@ -37,7 +37,6 @@ module "key_vault" {
   ci_principal_object_id  = azuread_service_principal.gha.object_id
   ci_role_assignment_name = var.ci_role_assignment_name
 
-  # Do NOT create jwt-secret here. It is managed elsewhere in your stack.
   secrets = {
     jwt-issuer         = var.jwt_issuer
     jwt-audience       = var.jwt_audience
@@ -118,6 +117,7 @@ locals {
   app_settings = {
     "AppConfig__Enabled"  = "true"
     "AppConfig__Endpoint" = module.app_configuration.endpoint
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/PostgreSqlConnectionString)"
   }
 }
 
