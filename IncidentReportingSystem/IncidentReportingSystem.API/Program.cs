@@ -448,8 +448,8 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
                    .Select(KeyFilter.Any)
                    .ConfigureRefresh(refresh =>
                        refresh.Register(sentinelKey, refreshAll: true)
-                              .SetCacheExpiration(TimeSpan.FromSeconds(30)))
-                   .UseFeatureFlags(ff => ff.CacheExpirationInterval = TimeSpan.FromSeconds(15))
+                              .SetCacheExpiration(TimeSpan.FromSeconds(90)))
+                   .UseFeatureFlags(ff => ff.CacheExpirationInterval = TimeSpan.FromSeconds(90))
         );
 
         configuration["AppConfig:__Active"] = "true";
