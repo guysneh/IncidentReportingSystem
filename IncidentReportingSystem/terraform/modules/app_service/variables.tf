@@ -27,6 +27,10 @@ variable "app_settings" {
   description = "App settings for the Web App"
   type        = map(string)
   default     = {}
+   validation {
+    condition     = contains(keys(var.app_settings), "ConnectionStrings__DefaultConnection")
+    error_message = "app_settings must include ConnectionStrings__DefaultConnection."
+  }
 }
 
 variable "key_vault_id" {
