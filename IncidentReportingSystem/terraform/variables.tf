@@ -178,3 +178,23 @@ variable "tenant_id" {
   type        = string
   description = "Azure AD tenant ID"
 }
+
+variable "webapp_name" {
+  description = "Name of the existing Linux Web App."
+  type        = string
+  default     = "incident-api"
+}
+
+variable "webapp_resource_group_name" {
+  description = "Resource group of the Web App."
+  type        = string
+  default     = "incident-rg"
+}
+
+# Client ID of the SP that runs Terraform (from azure/login OIDC)
+variable "terraform_deployer_client_id" {
+  description = "Application (client) ID of the Service Principal running Terraform."
+  type        = string
+  default     = null
+}
+

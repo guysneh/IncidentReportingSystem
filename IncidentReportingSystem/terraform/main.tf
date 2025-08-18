@@ -97,13 +97,13 @@ module "app_configuration" {
   demo_enable_config_probe = var.demo_enable_config_probe
   demo_probe_auth_mode     = var.demo_probe_auth_mode
 
-  feature_enable_demo_banner_default = false
   label               = "prod"
   stabilization_delay = "90s"
 
   depends_on = [
     time_sleep.appcfg_rbac_propagation
   ]
+  webapp_identity_object_id = one(data.azurerm_linux_web_app.api.identity[*].principal_id)
 }
 
 
@@ -122,12 +122,17 @@ locals {
 }
 
 resource "azurerm_role_assignment" "ci_appcfg_data_owner" {
-  scope                 = data.azurerm_resource_group.rg.id
-  role_definition_name  = "App Configuration Data Owner"
-  principal_id          = azuread_service_principal.gha.object_id
+  scope                = data.azurerm_resource_group.rg.id
+  role_definition_name = "App Configuration Data Owner"
+  principal_id         = azuread_service_principal.gha.object_id
 }
 
 resource "time_sleep" "appcfg_rbac_propagation" {
   create_duration = "60s"
   depends_on      = [azurerm_role_assignment.ci_appcfg_data_owner]
+}
+
+data "azurerm_linux_web_app" "api" {
+  name                = var.webapp_name
+  resource_group_name = var.webapp_resource_group_name
 }

@@ -42,17 +42,6 @@ variable "demo_enable_config_probe" {
   description = "Enable demo config probe flag."
   type        = bool
 }
-
-variable "demo_probe_auth_mode" {
-  description = "Demo probe auth mode string."
-  type        = string
-}
-
-variable "feature_enable_demo_banner_default" {
-  description = "Default value for demo banner feature flag."
-  type        = bool
-}
-
 variable "label" {
   description = "Label for App Configuration keys."
   type        = string

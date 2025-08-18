@@ -312,21 +312,40 @@ static void ConfigureMiddleware(WebApplication app)
     app.UseCors("Default");
     app.UseRateLimiter();
 
-    // ---- Swagger before Authentication/Authorization (prevents 401 on swagger.json) ----
-    var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-    var showSwagger = app.Configuration.GetValue<bool>("EnableSwagger", false);
-    if (showSwagger || app.Environment.IsDevelopment())
+    // Always register Swagger at startup.
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(options =>
+        var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
         {
-            foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+            options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json",
+                                    description.GroupName.ToUpperInvariant());
+        }
+    });
+
+    // Gate access to /swagger at request-time using a Feature Flag (no restart needed).
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            var env = context.RequestServices.GetRequiredService<IHostEnvironment>();
+
+            // Allow in Development unconditionally 
+            if (!env.IsDevelopment())
             {
-                options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json",
-                                        description.GroupName.ToUpperInvariant());
+                var fm = context.RequestServices.GetRequiredService<Microsoft.FeatureManagement.IFeatureManagerSnapshot>();
+                var enabled = await fm.IsEnabledAsync("EnableSwaggerUI");
+                if (!enabled)
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
             }
-        });
-    }
+        }
+
+        await next();
+    });
 
     app.UseMiddleware<RequestLoggingMiddleware>();
 
@@ -364,44 +383,58 @@ static void ConfigureMiddleware(WebApplication app)
 
     var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
     var apiBase = app.Configuration.GetValue<string>("Api:BasePath") ?? "/api";
-    var enableProbe = app.Environment.IsDevelopment()
-        || app.Configuration.GetValue<bool>("Demo:EnableConfigProbe");
 
-    if (enableProbe)
+    // Always register the endpoint; response is controlled by a feature flag.
+    foreach (var desc in provider.ApiVersionDescriptions)
     {
-        foreach (var desc in provider.ApiVersionDescriptions)
+        var group = app.MapGroup($"{apiBase}/{desc.GroupName}");
+
+        group.MapGet("config-demo", async (HttpContext http, IConfiguration cfg, Microsoft.FeatureManagement.IFeatureManager fm) =>
         {
-            // desc.GroupName is like "v1", "v2"
-            var group = app.MapGroup($"{apiBase}/{desc.GroupName}");
+            // Feature flag that controls whether the probe is active
+            var probeEnabled = await fm.IsEnabledAsync("EnableConfigProbe");
 
-            group.MapGet("config-demo", async (HttpContext http, IConfiguration cfg, IFeatureManager fm) =>
+            // Existing flag already used 
+            var demoBannerEnabled = await fm.IsEnabledAsync("EnableDemoBanner");
+
+            // Regular Key-Value (will refresh via Sentinel if configured)
+            var authMode = (cfg["Demo:ProbeAuthMode"] ?? "Admin").Trim();
+
+            if (!app.Environment.IsDevelopment() &&
+                authMode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
-                var authMode = (cfg["Demo:ProbeAuthMode"] ?? "Admin").Trim();
-                if (!app.Environment.IsDevelopment() &&
-                    authMode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-                {
-                    var user = http.User;
-                    if (!(user?.Identity?.IsAuthenticated ?? false) || !user.IsInRole(Roles.Admin))
-                        return Results.Unauthorized();
-                }
+                var user = http.User;
+                if (!(user?.Identity?.IsAuthenticated ?? false) || !user.IsInRole(Roles.Admin))
+                    return Results.Unauthorized();
+            }
 
+            if (!probeEnabled)
+            {
                 return Results.Ok(new
                 {
-                    AppName = cfg["App:Name"],
-                    ApiVersion = cfg["Api:Version"],
-                    EnableDemoBanner = await fm.IsEnabledAsync("EnableDemoBanner"),
+                    Enabled = false,
+                    Reason = "Config probe disabled by feature flag.",
                     AuthMode = authMode
                 });
-            })
-            .AllowAnonymous()
-            .WithTags("Demo")
-            .WithOpenApi(op =>
+            }
+
+            return Results.Ok(new
             {
-                op.Summary = "Configuration probe (demo)";
-                op.Description = "Shows live values from Azure App Configuration (feature flags + config).";
-                return op;
+                Enabled = true,
+                AppName = cfg["App:Name"],
+                ApiVersion = cfg["Api:Version"],
+                EnableDemoBanner = demoBannerEnabled,
+                AuthMode = authMode
             });
-        }
+        })
+        .AllowAnonymous()
+        .WithTags("Demo")
+        .WithOpenApi(op =>
+        {
+            op.Summary = "Configuration probe (demo)";
+            op.Description = "Shows live values controlled by Azure App Configuration Feature Flags.";
+            return op;
+        });
     }
 }
 

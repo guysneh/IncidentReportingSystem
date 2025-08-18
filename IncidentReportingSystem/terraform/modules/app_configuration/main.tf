@@ -13,14 +13,11 @@ resource "time_sleep" "wait_for_appcfg" {
 
 locals {
   appconfig_settings = {
-    "App:Name"                       = var.app_name
-    "Api:BasePath"                   = var.api_basepath
-    "Api:Version"                    = var.api_version
-    "EnableSwagger"                  = tostring(var.enable_swagger)
-    "Demo:EnableConfigProbe"         = tostring(var.demo_enable_config_probe)
-    "Demo:ProbeAuthMode"             = var.demo_probe_auth_mode
-    "FeatureManagement:DemoBanner"   = tostring(var.feature_enable_demo_banner_default)
-    "AppConfiguration:Sentinel"      = "v1"
+    "App:Name"                  = var.app_name
+    "Api:BasePath"              = var.api_basepath
+    "Api:Version"               = var.api_version
+    "Demo:ProbeAuthMode"        = var.demo_probe_auth_mode
+    "AppConfiguration:Sentinel" = "v1"
   }
 }
 
