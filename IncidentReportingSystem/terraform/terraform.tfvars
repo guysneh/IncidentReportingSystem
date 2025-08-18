@@ -21,3 +21,5 @@ action_group_email       = "guysneh@gmail.com"
 subscription_id         = "27406235-5e35-4236-9a1a-054b917fb75c"
 tenant_id               = "1d4c9c59-34e3-48b9-a9cc-3e2a46828136"
 ci_role_assignment_name = "34717617-5922-4c36-b9d5-2711f21af8cc"
+
+telemetry_sample_ratio = "0.10"

@@ -1,14 +1,16 @@
 ﻿using Azure.Monitor.OpenTelemetry.AspNetCore;
-using OpenTelemetry.Trace;                        
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 
-namespace IncidentReportingSystem.API.Extensions 
+namespace IncidentReportingSystem.API.Extensions
 {
+    /// <summary>
+    /// OpenTelemetry → Azure Monitor (Application Insights).
+    /// Activates only if APPLICATIONINSIGHTS_CONNECTION_STRING exists.
+    /// Sampling ratio is config-driven via Telemetry:SamplingRatio (0.0–1.0).
+    /// </summary>
     public static class ObservabilityExtensions
     {
-        /// <summary>
-        /// Minimal OpenTelemetry → Azure Monitor (Application Insights).
-        /// Opt-in: activates only if APPLICATIONINSIGHTS_CONNECTION_STRING exists.
-        /// </summary>
         public static IServiceCollection AddAppTelemetry(
             this IServiceCollection services,
             IConfiguration configuration,
@@ -17,14 +19,34 @@ namespace IncidentReportingSystem.API.Extensions
             var connectionString = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                // Skip telemetry when no connection string (e.g., test runs).
+                // Skip telemetry when no connection string (e.g., tests).
                 return services;
             }
 
+            // Read sampling from configuration; default to 10%
+            var ratio = configuration.GetValue<double?>("Telemetry:SamplingRatio") ?? 0.10;
+            if (ratio <= 0 || ratio > 1) ratio = 0.10;
+
             services.AddOpenTelemetry()
-                .UseAzureMonitor() // reads APPLICATIONINSIGHTS_CONNECTION_STRING automatically
+                .ConfigureResource(r =>
+                {
+                    // Equivalent to "cloud role" naming in AI
+                    r.AddService(
+                        serviceName: "incident-api",
+                        serviceVersion: configuration["Api:Version"] ?? "v1",
+                        serviceInstanceId: Environment.MachineName);
+
+                    r.AddAttributes(new[]
+                    {
+                        new KeyValuePair<string, object>("deployment.environment", env.EnvironmentName),
+                        new KeyValuePair<string, object>("project", "IncidentReportingSystem"),
+                    });
+                })
+                .UseAzureMonitor() // reads APPLICATIONINSIGHTS_CONNECTION_STRING
                 .WithTracing(b =>
                 {
+                    b.SetSampler(new TraceIdRatioBasedSampler(ratio));
+
                     b.AddAspNetCoreInstrumentation(o =>
                     {
                         o.RecordException = true;
@@ -32,8 +54,6 @@ namespace IncidentReportingSystem.API.Extensions
                         o.Filter = ctx =>
                         {
                             var raw = ctx.Request.Path.Value ?? string.Empty;
-
-                            // Normalize once: lowercase + trim trailing '/'
                             var path = raw.TrimEnd('/').ToLowerInvariant();
 
                             // Drop common health/infra noise
@@ -52,14 +72,14 @@ namespace IncidentReportingSystem.API.Extensions
                                 return false;
                             }
 
-                            // Optionally drop synthetic/keep-alive probes by User-Agent
+                            // Optionally drop synthetic probes by UA
                             var ua = ctx.Request.Headers.UserAgent.ToString().ToLowerInvariant();
                             if (!string.IsNullOrEmpty(ua) &&
-                                (ua.Contains("alwayson") ||      // Azure App Service keep-alive
-                                 ua.Contains("kube-probe") ||    // Kubernetes probes
-                                 ua.Contains("availability") ||  // AI availability tests
-                                 ua.Contains("uptime") ||        // uptime monitors
-                                 ua.Contains("pingdom")))        // external pingers
+                                (ua.Contains("alwayson") ||
+                                 ua.Contains("kube-probe") ||
+                                 ua.Contains("availability") ||
+                                 ua.Contains("uptime") ||
+                                 ua.Contains("pingdom")))
                             {
                                 return false;
                             }
@@ -73,7 +93,6 @@ namespace IncidentReportingSystem.API.Extensions
                                 activity?.SetTag("correlation_id", cid.ToString());
                         };
                     });
-
                 });
 
             return services;

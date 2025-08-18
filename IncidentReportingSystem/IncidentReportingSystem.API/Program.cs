@@ -23,7 +23,6 @@ using IncidentReportingSystem.Infrastructure.Services.Idempotency;
 using IncidentReportingSystem.Infrastructure.Telemetry;
 using IncidentReportingSystem.Infrastructure.Users.Repositories;
 using MediatR;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -83,8 +82,6 @@ static bool IsRunningInDocker() =>
 
 static void ConfigureServices(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
 {
-    services.AddSingleton<ITelemetryInitializer>(_ => new TelemetryInitializer("incident-api"));
-
     services.AddAzureAppConfiguration();
     services.AddFeatureManagement();
 

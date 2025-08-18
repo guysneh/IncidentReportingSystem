@@ -117,6 +117,7 @@ locals {
     "AppConfig__Enabled"  = "true"
     "AppConfig__Endpoint" = module.app_configuration.endpoint
     "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/PostgreSqlConnectionString)"
+    "Telemetry__SamplingRatio"  = var.telemetry_sample_ratio
   }
 }
 

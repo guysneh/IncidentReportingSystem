@@ -198,3 +198,8 @@ variable "terraform_deployer_client_id" {
   default     = null
 }
 
+variable "telemetry_sample_ratio" {
+  description = "Telemetry sample ratio of logs"
+  type        = string
+  default     = "0.10"
+}
