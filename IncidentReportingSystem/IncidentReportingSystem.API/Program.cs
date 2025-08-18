@@ -27,6 +27,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.FeatureManagement;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
@@ -315,12 +316,20 @@ static void ConfigureMiddleware(WebApplication app)
     // --- Swagger gated by feature flag (EnableSwaggerUI) ---
     var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
-    // Gate all /swagger* requests by feature flag
+    // Read once at startup: if AppConfig pipeline is active
+    var isAppConfigActive = app.Configuration.GetValue<bool>("AppConfig:__Active");
+
+    // Gate all /swagger* only when AppConfig is active; otherwise always allow
     app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase), branch =>
     {
+        if (!isAppConfigActive)
+        {
+            // App Configuration is disabled -> don't gate, always allow Swagger locally.
+            return;
+        }
+
         branch.Use(async (ctx, next) =>
         {
-            // Use the snapshot to evaluate per-request with AppConfig refresh
             var fm = ctx.RequestServices.GetRequiredService<Microsoft.FeatureManagement.IFeatureManagerSnapshot>();
             var enabled = await fm.IsEnabledAsync("EnableSwaggerUI");
             if (!enabled)
@@ -343,6 +352,7 @@ static void ConfigureMiddleware(WebApplication app)
                                     description.GroupName.ToUpperInvariant());
         }
     });
+
 
     app.UseMiddleware<RequestLoggingMiddleware>();
 
@@ -462,6 +472,7 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
         configuration.AddAzureAppConfiguration(options =>
             options.Connect(endpoint, cred)
                    .ConfigureKeyVault(kv => kv.SetCredential(cred))   // <-- enable KV references
+                   .Select(KeyFilter.Any)
                    .ConfigureRefresh(refresh =>
                        refresh.Register(sentinelKey, refreshAll: true)
                               .SetCacheExpiration(TimeSpan.FromSeconds(30)))

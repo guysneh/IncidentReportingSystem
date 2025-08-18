@@ -96,7 +96,6 @@ module "app_configuration" {
   demo_enable_config_probe = var.demo_enable_config_probe
   demo_probe_auth_mode     = var.demo_probe_auth_mode
 
-  label               = "prod"
   stabilization_delay = "90s"
 
   depends_on = [

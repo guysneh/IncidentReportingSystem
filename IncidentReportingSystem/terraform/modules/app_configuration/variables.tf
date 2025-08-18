@@ -42,11 +42,6 @@ variable "demo_enable_config_probe" {
   description = "Enable demo config probe flag."
   type        = bool
 }
-variable "label" {
-  description = "Label for App Configuration keys."
-  type        = string
-  default     = "prod"
-}
 
 variable "stabilization_delay" {
   description = "Delay to allow the store to be fully ready before writing keys."

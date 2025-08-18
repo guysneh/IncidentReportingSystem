@@ -6,7 +6,6 @@ resource "azurerm_app_configuration_feature" "enable_swagger_ui" {
   configuration_store_id = azurerm_app_configuration.appcfg.id
   name                   = "EnableSwaggerUI"
   enabled                = true
-  # label                = ""  # no labels in this project
 }
 
 resource "azurerm_app_configuration_feature" "enable_config_probe" {
@@ -47,7 +46,6 @@ resource "azurerm_app_configuration_key" "kv_demo_probe_auth_mode" {
   configuration_store_id = azurerm_app_configuration.appcfg.id
   key                    = "Demo:ProbeAuthMode"
   value                  = var.demo_probe_auth_mode
-  # label                = ""
 }
 
 resource "azurerm_app_configuration_key" "kv_app_name" {

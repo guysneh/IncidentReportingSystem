@@ -17,7 +17,7 @@ locals {
     "Api:BasePath"              = var.api_basepath
     "Api:Version"               = var.api_version
     "Demo:ProbeAuthMode"        = var.demo_probe_auth_mode
-    "AppConfiguration:Sentinel" = "v1"
+    "AppConfig:Sentinel"        = "v1"
   }
 }
 
@@ -27,7 +27,6 @@ resource "azurerm_app_configuration_key" "keys" {
 
   key   = each.key
   value = each.value
-  label = var.label
 
   depends_on = [time_sleep.wait_for_appcfg]
 }
