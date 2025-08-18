@@ -358,6 +358,7 @@ static void ConfigureMiddleware(WebApplication app)
 
     app.UseAuthentication();
     app.UseAuthorization();
+    app.MapControllers();
 
     // Liveness: keep but hide from Swagger
     app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
@@ -396,41 +397,16 @@ static void ConfigureMiddleware(WebApplication app)
     {
         var group = app.MapGroup($"{apiBase}/{desc.GroupName}");
 
-        group.MapGet("config-demo", async (HttpContext http, IConfiguration cfg, Microsoft.FeatureManagement.IFeatureManager fm) =>
+        group.MapGet("config-demo", (IConfiguration cfg) =>
         {
-            // Feature flag that controls whether the probe is active
-            var probeEnabled = await fm.IsEnabledAsync("EnableConfigProbe");
-
-            // Existing flag already used 
-            var demoBannerEnabled = await fm.IsEnabledAsync("EnableDemoBanner");
-
-            // Regular Key-Value (will refresh via Sentinel if configured)
+            // Values read at request time. They refresh after AppConfig:Sentinel changes.
             var authMode = (cfg["Demo:ProbeAuthMode"] ?? "Admin").Trim();
-
-            if (!app.Environment.IsDevelopment() &&
-                authMode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                var user = http.User;
-                if (!(user?.Identity?.IsAuthenticated ?? false) || !user.IsInRole(Roles.Admin))
-                    return Results.Unauthorized();
-            }
-
-            if (!probeEnabled)
-            {
-                return Results.Ok(new
-                {
-                    Enabled = false,
-                    Reason = "Config probe disabled by feature flag.",
-                    AuthMode = authMode
-                });
-            }
 
             return Results.Ok(new
             {
                 Enabled = true,
                 AppName = cfg["App:Name"],
                 ApiVersion = cfg["Api:Version"],
-                EnableDemoBanner = demoBannerEnabled,
                 AuthMode = authMode
             });
         })
@@ -439,7 +415,7 @@ static void ConfigureMiddleware(WebApplication app)
         .WithOpenApi(op =>
         {
             op.Summary = "Configuration probe (demo)";
-            op.Description = "Shows live values controlled by Azure App Configuration Feature Flags.";
+            op.Description = "Shows live values from Azure App Configuration (key-values refreshed via sentinel).";
             return op;
         });
     }

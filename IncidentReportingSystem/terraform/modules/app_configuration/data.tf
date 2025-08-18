@@ -8,18 +8,6 @@ resource "azurerm_app_configuration_feature" "enable_swagger_ui" {
   enabled                = true
 }
 
-resource "azurerm_app_configuration_feature" "enable_config_probe" {
-  configuration_store_id = azurerm_app_configuration.appcfg.id
-  name                   = "EnableConfigProbe"
-  enabled                = true
-}
-
-resource "azurerm_app_configuration_feature" "enable_demo_banner" {
-  configuration_store_id = azurerm_app_configuration.appcfg.id
-  name                   = "EnableDemoBanner"
-  enabled                = true
-}
-
 ########################################
 # Key-Values used by the demo (refreshed via Sentinel)
 ########################################

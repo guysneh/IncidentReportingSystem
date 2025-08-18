@@ -22,18 +22,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true)
                .AddEnvironmentVariables();
 
-            // Apply test overrides last
+            // Test overrides (last wins)
             var testOverrides = new Dictionary<string, string?>
             {
                 ["Cors:AllowedOrigins"] = "http://example.com",
-                ["EnableSwagger"] = "false"
+                ["AppConfig:Enabled"] = "false" // do not wire Azure App Configuration in tests
             };
             cfg.AddInMemoryCollection(testOverrides);
         });
 
         builder.ConfigureServices((context, services) =>
         {
-            // ✅ Ensure CORS is registered for tests
+            // Ensure CORS policy exists in tests (as in the app)
             var origins = (context.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -43,32 +43,29 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 {
                     if (origins.Length > 0)
                     {
-                        b.WithOrigins(origins)
-                         .AllowAnyHeader()
-                         .AllowAnyMethod()
-                         .AllowCredentials();
+                        b.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
                     }
                     else
                     {
-                        b.AllowAnyOrigin()
-                         .AllowAnyHeader()
-                         .AllowAnyMethod();
+                        b.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
                     }
                 });
             });
 
-            // Remove existing DbContext registration
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+            // Re-register DbContext with test connection string
+            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             if (descriptor != null) services.Remove(descriptor);
 
-            // Add DbContext with test connection string
-            var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(connectionString));
+            var connectionString = context.Configuration.GetConnectionString("DefaultConnection")
+                                    ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection for tests.");
 
-            // Run migrations for test DB
-            var sp = services.BuildServiceProvider();
+            // Make this available to tests that do manual cleanup via Npgsql
+            Environment.SetEnvironmentVariable("TEST_DB_CONNECTION", connectionString);
+
+            services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+
+            // Apply migrations
+            using var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             db.Database.Migrate();

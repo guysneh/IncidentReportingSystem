@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace IncidentReportingSystem.IntegrationTests.Configuration
 {
@@ -25,10 +26,8 @@ namespace IncidentReportingSystem.IntegrationTests.Configuration
                     {
                         ["AppConfig:Enabled"] = "false",          // default: do not wire AppConfig in tests
                         ["AppConfig:Endpoint"] = "",
-                        ["Demo:EnableConfigProbe"] = "false",
                         ["Api:BasePath"] = "/api",
                         ["Api:Version"] = "v1",
-                        ["EnableSwagger"] = "true"                // allow swagger in Test env
                     });
 
                     if (_overrides.Count > 0)
@@ -56,36 +55,42 @@ namespace IncidentReportingSystem.IntegrationTests.Configuration
             var client = factory.CreateClient();
 
             var resp = await client.GetAsync("/api/v1/config-demo");
-            Assert.True(
-                resp.StatusCode == HttpStatusCode.NotFound ||
-                resp.StatusCode == HttpStatusCode.Unauthorized,
-                $"Expected 404 or 401, got {resp.StatusCode}"
-            );
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         }
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async Task ApiVersion_from_config_changes_route()
+        public async Task ApiVersion_from_config_reflected_in_payload()
         {
             using var factory = new TestFactory(new()
             {
-                ["Demo:EnableConfigProbe"] = "true",
-                ["Api:Version"] = "v9"
+                // override for the test
+                ["Api:Version"] = "v9",
+                ["App:Name"] = "Incident API (Test)"
             });
             var client = factory.CreateClient();
 
-            // old version should not be accessible for anonymous
-            var wrong = await client.GetAsync("/api/v1/config-demo");
-            Assert.True(
-                wrong.StatusCode == HttpStatusCode.NotFound ||
-                wrong.StatusCode == HttpStatusCode.Unauthorized,
-                $"Expected 404 or 401 for old version, got {wrong.StatusCode}"
-            );
+            var resp = await client.GetAsync("/api/v1/config-demo");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
-            // new version route exists but requires auth -> 401 for anonymous
-            var correct = await client.GetAsync("/api/v9/config-demo");
-            Assert.Equal(HttpStatusCode.Unauthorized, correct.StatusCode);
+            var json = await resp.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            // The response uses camelCase (enabled, appName, apiVersion)
+            Assert.True(root.TryGetProperty("apiVersion", out var ver), "payload is missing 'apiVersion'");
+            Assert.Equal("v9", ver.GetString());
+
+            // Optional extra checks 
+            Assert.True(root.TryGetProperty("enabled", out var enabled));
+            Assert.True(enabled.GetBoolean());
+
+            Assert.True(root.TryGetProperty("appName", out var appName));
+            Assert.False(string.IsNullOrWhiteSpace(appName.GetString()));
         }
+
+
 
     }
 }

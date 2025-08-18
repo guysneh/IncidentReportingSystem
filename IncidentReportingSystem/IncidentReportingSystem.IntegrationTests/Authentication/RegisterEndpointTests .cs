@@ -12,7 +12,7 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
 
         public RegisterEndpointTests(CustomWebApplicationFactory factory)
         {
-            _client = factory.CreateClient();
+            _client = factory.AsAdmin();
         }
 
         [Fact]
