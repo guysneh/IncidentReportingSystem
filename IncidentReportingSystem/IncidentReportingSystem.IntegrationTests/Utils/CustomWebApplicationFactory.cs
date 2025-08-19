@@ -24,6 +24,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.AddHostedService<RouteLogger>();
             // Remove any prior EF registrations for ApplicationDbContext (pooled or not)
             var toRemove = services.Where(d =>
                     d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
