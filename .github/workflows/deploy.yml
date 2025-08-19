@@ -172,10 +172,13 @@ jobs:
       - name: Deploy ZIP to Web App
         run: |
           az webapp deploy \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "${{ env.WEBAPP_NAME }}" \
+            --resource-group incident-rg \
+            --name incident-api \
             --type zip \
-            --src-path app.zip
+            --src-path app.zip \
+            --restart true \
+            --async true
+
 
       - name: Enable application logs (once)
         run: |
