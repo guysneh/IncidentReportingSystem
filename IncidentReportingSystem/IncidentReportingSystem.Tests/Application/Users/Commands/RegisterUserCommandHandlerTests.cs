@@ -3,7 +3,7 @@ using IncidentReportingSystem.Application.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Authentication;
 using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Interfaces;
-using IncidentReportingSystem.Domain.Users;
+using IncidentReportingSystem.Domain.Entities;
 using Moq;
 using IncidentReportingSystem.Application.Common.Exceptions;
 

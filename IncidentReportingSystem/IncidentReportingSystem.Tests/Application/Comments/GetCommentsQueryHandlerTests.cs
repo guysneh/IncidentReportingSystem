@@ -47,8 +47,8 @@ namespace IncidentReportingSystem.Tests.Application.Comments
             await repo.AddAsync(new IncidentComment { Id = Guid.NewGuid(), IncidentId = incidentId, UserId = Guid.NewGuid(), Text = "c1", CreatedAtUtc = DateTime.UtcNow.AddSeconds(-2) }, CancellationToken.None);
             await repo.AddAsync(new IncidentComment { Id = Guid.NewGuid(), IncidentId = incidentId, UserId = Guid.NewGuid(), Text = "c2", CreatedAtUtc = DateTime.UtcNow.AddSeconds(-1) }, CancellationToken.None);
 
-            var handler = new GetCommentsQueryHandler(repo);
-            var list = await handler.Handle(new GetCommentsQuery(incidentId, Skip: 0, Take: 2), CancellationToken.None);
+            var handler = new ListCommentsQueryHandler(repo);
+            var list = await handler.Handle(new ListCommentsQuery(incidentId, Skip: 0, Take: 2), CancellationToken.None);
 
             Assert.Equal(2, list.Count);
             Assert.Equal("c2", list[0].Text);

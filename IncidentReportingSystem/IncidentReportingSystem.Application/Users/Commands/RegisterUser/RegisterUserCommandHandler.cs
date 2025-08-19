@@ -2,7 +2,7 @@
 using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Interfaces;
-using IncidentReportingSystem.Domain.Users;
+using IncidentReportingSystem.Domain.Entities;
 using MediatR;
 
 namespace IncidentReportingSystem.Application.Users.Commands.RegisterUser

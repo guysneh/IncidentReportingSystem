@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Domain.Users;
+﻿using IncidentReportingSystem.Domain.Entities;
 
 namespace IncidentReportingSystem.Domain.Interfaces
 {

@@ -147,7 +147,7 @@ static void ConfigureServices(WebApplicationBuilder builder)
     })
     .AddApiExplorer(options =>
     {
-        options.GroupNameFormat = "'v'V";
+        options.GroupNameFormat = "'v'VVV";
         options.SubstituteApiVersionInUrl = true;
     });
 
@@ -280,8 +280,8 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
 static void ConfigureMiddleware(WebApplication app)
 {
-    app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+    app.UseMiddleware<CorrelationIdMiddleware>();
     if (app.Environment.IsDevelopment())
     {
         // Keep the developer page for local debugging only

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using FluentAssertions;
-using IncidentReportingSystem.IntegrationTests;
 using IncidentReportingSystem.IntegrationTests.Utils;
+using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
 namespace IncidentReportingSystem.Tests.Integration.CORS;
 
@@ -18,7 +18,7 @@ public class CORSTests : IClassFixture<CustomWebApplicationFactory>
         using var client = _factory.AsUser();
         client.DefaultRequestHeaders.Add("Origin", "http://example.com");
 
-        var res = await client.GetAsync($"/api/{TestConstants.ApiVersion}/incidentreports");
+        var res = await client.GetAsync(RouteHelper.R(_factory, "incidentreports"));
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         res.Headers.TryGetValues("Access-Control-Allow-Origin", out var ao).Should().BeTrue();
         ao!.First().Should().Be("http://example.com");
@@ -29,7 +29,7 @@ public class CORSTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CORSPolicy_Should_Respond_To_Preflight_Request_For_Configured_Origin()
     {
         using var client = _factory.AsUser();
-        var req = new HttpRequestMessage(HttpMethod.Options, "/api/{TestConstants.ApiVersion}/incidentreports");
+        var req = new HttpRequestMessage(HttpMethod.Options, RouteHelper.R(_factory, "incidentreports"));
         req.Headers.Add("Origin", "http://example.com");
         req.Headers.Add("Access-Control-Request-Method", "GET");
 
@@ -37,4 +37,3 @@ public class CORSTests : IClassFixture<CustomWebApplicationFactory>
         res.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 }
-

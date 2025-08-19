@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Users;
 using IncidentReportingSystem.Infrastructure.Persistence.Idempotency;
 using IncidentReportingSystem.Infrastructure.Persistence.Configurations;
 

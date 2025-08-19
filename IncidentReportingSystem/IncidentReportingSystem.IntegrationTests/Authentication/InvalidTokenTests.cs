@@ -2,10 +2,9 @@
 using System.Net.Http.Headers;
 using FluentAssertions;
 using IncidentReportingSystem.IntegrationTests.Utils;
-using IncidentReportingSystem.IntegrationTests;
 using IncidentReportingSystem.Application.Users.Commands.LoginUser;
 using System.Net.Http.Json;
-
+using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
 namespace IncidentReportingSystem.Tests.Integration.Auth;
 
@@ -16,6 +15,7 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
 
     public InvalidTokenTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -25,7 +25,7 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
     [Trait("Category", "Integration")]
     public async Task Should_Return_401_For_Invalid_Token(string token)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/{TestConstants.ApiVersion}/incidentreports");
+        var request = new HttpRequestMessage(HttpMethod.Get, RouteHelper.R(_factory, "incidentreports"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Replace("Bearer ", ""));
 
         var response = await _client.SendAsync(request);
@@ -37,7 +37,7 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
     [Trait("Category", "Integration")]
     public async Task Should_Return_401_When_Missing_Token()
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/{TestConstants.ApiVersion}/incidentreports");
+        var request = new HttpRequestMessage(HttpMethod.Get, RouteHelper.R(_factory, "incidentreports"));
 
         var response = await _client.SendAsync(request);
 
@@ -50,7 +50,7 @@ public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
     {
         var payload = new LoginUserCommand("fake@example.com", "wrongpwd");
 
-        var response = await _client.PostAsJsonAsync($"/api/{TestConstants.ApiVersion}/Auth/login", payload);
+        var response = await _client.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/login"), payload);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

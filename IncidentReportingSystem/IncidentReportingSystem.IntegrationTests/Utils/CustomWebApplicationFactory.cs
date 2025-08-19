@@ -4,8 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IncidentReportingSystem.Infrastructure.Persistence;
-using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +11,9 @@ namespace IncidentReportingSystem.IntegrationTests.Utils;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    public string BasePath { get; private set; } = "/";
     public string ApiVersionSegment { get; private set; } = "v1";
+    public IReadOnlyList<string> ApiVersions { get; private set; } = Array.Empty<string>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -22,53 +22,43 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((context, cfg) =>
         {
             cfg.Sources.Clear();
-            var baseDir = AppContext.BaseDirectory;
-
-            cfg.SetBasePath(baseDir)
+            cfg.SetBasePath(AppContext.BaseDirectory)
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-               // IMPORTANT: fail if the test config is missing (so CI won't silently misconfigure)
                .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
                .AddEnvironmentVariables();
-
-            // Force critical defaults for Test (safety net)
-            var forced = new Dictionary<string, string?>
-            {
-                ["Api:BasePath"] = "/api",
-                ["Api:Version"] = "v1",
-            };
-            cfg.AddInMemoryCollection(forced);
         });
 
         builder.ConfigureLogging(lb =>
         {
             lb.ClearProviders();
             lb.AddConsole();
-            lb.SetMinimumLevel(LogLevel.Information);
         });
 
         builder.ConfigureServices(services =>
         {
-            // Remove ANY prior EF registrations (pooled or not)
+            // 1) Remove any EF registrations (pooled or not)
             var toRemove = services
                 .Where(d =>
                     d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
                     d.ServiceType == typeof(ApplicationDbContext) ||
-                    d.ServiceType.FullName?.Contains("PooledDbContextFactory", StringComparison.OrdinalIgnoreCase) == true ||
-                    d.ServiceType == typeof(IDbContextFactory<ApplicationDbContext>))
+                    d.ServiceType == typeof(IDbContextFactory<ApplicationDbContext>) ||
+                    (d.ServiceType.FullName?.Contains("PooledDbContextFactory", StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             foreach (var d in toRemove) services.Remove(d);
 
+            // 2) Build a temporary provider to read configuration
             using var sp0 = services.BuildServiceProvider();
             var cfg = sp0.GetRequiredService<IConfiguration>();
+
+            // 3) Single canonical connection string
             var cs = cfg.GetConnectionString("DefaultConnection")
                      ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection in Test.");
 
-            // Mirror the production registration style (pool or non-pool). If production uses AddDbContextPool, prefer it here too:
-            services.AddDbContextPool<ApplicationDbContext>(o => o.UseNpgsql(cs));
-            // If your Program.cs uses non-pooled: use AddDbContext instead:
-            // services.AddDbContext<ApplicationDbContext>(o => o.UseNpgsql(cs));
+            // 4) Register DbContext (mirror Program.cs style; if Program uses pooling, use AddDbContextPool)
+            services.AddDbContext<ApplicationDbContext>(o => o.UseNpgsql(cs));
+            // or: services.AddDbContextPool<ApplicationDbContext>(o => o.UseNpgsql(cs));
 
-            // Apply migrations once
+            // 5) Apply migrations
             using (var sp = services.BuildServiceProvider())
             using (var scope = sp.CreateScope())
             {
@@ -76,46 +66,41 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 db.Database.Migrate();
             }
 
-            // Resolve API version segment from ApiExplorer (e.g., "v1" or "v1.0")
-            using (var sp = services.BuildServiceProvider())
+            // 6) Resolve BasePath
+            BasePath = cfg["Api:BasePath"];
+            BasePath = string.IsNullOrWhiteSpace(BasePath) || BasePath == "/" ? "/" : BasePath.TrimEnd('/');
+
+            using (var sp1 = services.BuildServiceProvider())
             {
-                var provider = sp.GetService<IApiVersionDescriptionProvider>();
+                var provider = sp1.GetService<Asp.Versioning.ApiExplorer.IApiVersionDescriptionProvider>();
                 if (provider != null)
                 {
                     ApiVersionSegment = provider.ApiVersionDescriptions
-                        .OrderBy(d => d.ApiVersion.MajorVersion)
-                        .ThenBy(d => d.ApiVersion.MinorVersion)
-                        .First().GroupName ?? "v1";
+                        .Where(d => !d.IsDeprecated)
+                        .OrderByDescending(d => d.ApiVersion.MajorVersion ?? 0)
+                        .ThenByDescending(d => d.ApiVersion.MinorVersion ?? 0)
+                        .Select(d => d.GroupName)
+                        .FirstOrDefault() ?? "v1";
                 }
             }
 
-            // Route dump for CI diagnostics
-            services.AddHostedService<RouteLogger>();
-        });
-    }
 
-    // HostedService for logging mapped endpoints at test host startup
-    private sealed class RouteLogger : IHostedService
-    {
-        private readonly ILogger<RouteLogger> _logger;
-        private readonly EndpointDataSource _endpoints;
-
-        public RouteLogger(ILogger<RouteLogger> logger, EndpointDataSource endpoints)
-        {
-            _logger = logger;
-            _endpoints = endpoints;
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            foreach (var e in _endpoints.Endpoints)
+            // 7) Resolve API versions from ApiExplorer (prefer non-deprecated highest)
+            using (var sp1 = services.BuildServiceProvider())
             {
-                if (e is RouteEndpoint re)
-                    _logger.LogInformation("[TEST HOST] Mapped endpoint: {Route}", re.RoutePattern.RawText);
-            }
-            return Task.CompletedTask;
-        }
+                var provider = sp1.GetService<Asp.Versioning.ApiExplorer.IApiVersionDescriptionProvider>();
+                if (provider != null)
+                {
+                    ApiVersions = provider.ApiVersionDescriptions
+                                          .Where(d => !d.IsDeprecated)
+                                          .Select(d => d.GroupName!)
+                                          .ToArray();
 
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+                    ApiVersionSegment = ApiVersions
+                        .OrderByDescending(v => v) // simple string order "v2.0" > "v1.0"
+                        .FirstOrDefault() ?? "v1";
+                }
+            }
+        });
     }
 }

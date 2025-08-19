@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Xunit.Abstractions;
-using IncidentReportingSystem.IntegrationTests;
+using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
 public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebApplicationFactory>
 {
@@ -30,7 +30,7 @@ public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebAppli
 
         var body = new { ids = new[] { id1, id2 }, newStatus = "Closed" };
 
-        using var req1 = new HttpRequestMessage(HttpMethod.Post, $"api/{TestConstants.ApiVersion}/IncidentReports/bulk-status")
+        using var req1 = new HttpRequestMessage(HttpMethod.Post, RouteHelper.R(_factory, "IncidentReports/bulk-status"))
         { Content = JsonContent.Create(body /*, options: JsonEnumOptions */) };
         req1.Headers.Add("Idempotency-Key", "bulk-test-1");
         var res1 = await client.SendAsync(req1);
@@ -38,7 +38,7 @@ public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebAppli
         Assert.Equal(HttpStatusCode.OK, res1.StatusCode);
         var payload1 = await res1.Content.ReadFromJsonAsync<BulkResult>();
 
-        using var req2 = new HttpRequestMessage(HttpMethod.Post, $"api/{TestConstants.ApiVersion}/IncidentReports/bulk-status")
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, RouteHelper.R(_factory, "IncidentReports/bulk-status"))
         { Content = JsonContent.Create(body /*, options: JsonEnumOptions */) };
         req2.Headers.Add("Idempotency-Key", "bulk-test-1");
         var res2 = await client.SendAsync(req2);
@@ -59,7 +59,7 @@ public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebAppli
         var first = new { ids = new[] { Guid.NewGuid() }, newStatus = "InProgress" };
         var second = new { ids = new[] { Guid.NewGuid(), Guid.NewGuid() }, newStatus = "Closed" };
 
-        using var r1 = new HttpRequestMessage(HttpMethod.Post, $"api/{TestConstants.ApiVersion}/IncidentReports/bulk-status")
+        using var r1 = new HttpRequestMessage(HttpMethod.Post, RouteHelper.R(_factory, "IncidentReports/bulk-status"))
         { Content = JsonContent.Create(first /*, options: JsonEnumOptions */) };
         r1.Headers.Add("Idempotency-Key", "bulk-test-2");
         var res1 = await client.SendAsync(r1);
@@ -67,7 +67,7 @@ public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebAppli
         Assert.Equal(HttpStatusCode.OK, res1.StatusCode);
         var p1 = await res1.Content.ReadFromJsonAsync<BulkResult>();
 
-        using var r2 = new HttpRequestMessage(HttpMethod.Post, $"api/{TestConstants.ApiVersion}/IncidentReports/bulk-status")
+        using var r2 = new HttpRequestMessage(HttpMethod.Post, RouteHelper.R(_factory, "IncidentReports/bulk-status"))
         { Content = JsonContent.Create(second /*, options: JsonEnumOptions */) };
         r2.Headers.Add("Idempotency-Key", "bulk-test-2");
         var res2 = await client.SendAsync(r2);

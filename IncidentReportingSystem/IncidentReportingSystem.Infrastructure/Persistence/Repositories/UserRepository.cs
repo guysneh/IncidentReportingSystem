@@ -1,6 +1,5 @@
 ﻿using IncidentReportingSystem.Domain.Interfaces;
-using IncidentReportingSystem.Domain.Users;
-using IncidentReportingSystem.Infrastructure.Persistence;
+using IncidentReportingSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories

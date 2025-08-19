@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace IncidentReportingSystem.Domain.Users
+namespace IncidentReportingSystem.Domain.Entities
 {
     /// <summary>
     /// Application user persisted in the database.

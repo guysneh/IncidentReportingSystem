@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Domain.Users;
+﻿using IncidentReportingSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
