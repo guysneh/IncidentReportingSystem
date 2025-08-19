@@ -147,7 +147,7 @@ static void ConfigureServices(WebApplicationBuilder builder)
     })
     .AddApiExplorer(options =>
     {
-        options.GroupNameFormat = "'v'VVV";
+        options.GroupNameFormat = "'v'V";
         options.SubstituteApiVersionInUrl = true;
     });
 
