@@ -1,11 +1,8 @@
-﻿using System.Reflection;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using IncidentReportingSystem.Infrastructure.Persistence;
 
 namespace IncidentReportingSystem.IntegrationTests.Utils;
@@ -16,47 +13,38 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Test");
 
-        builder.ConfigureAppConfiguration((context, cfg) =>
+        builder.ConfigureAppConfiguration((ctx, cfg) =>
         {
-            var baseDir = AppContext.BaseDirectory;
-
             cfg.Sources.Clear();
-            cfg.SetBasePath(baseDir)
+            cfg.SetBasePath(AppContext.BaseDirectory)                  // <- output folder (bin/…)
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-               .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true)
-               .AddEnvironmentVariables(); 
-        });
-
-        builder.ConfigureLogging(lb =>
-        {
-            lb.ClearProviders();
-            lb.AddConsole();
-            lb.SetMinimumLevel(LogLevel.Information);
+               .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true) // fail if missing
+               .AddEnvironmentVariables();
         });
 
         builder.ConfigureServices(services =>
         {
+            // Remove original registrations
             var toRemove = services.Where(d =>
-                    d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
-                    d.ServiceType == typeof(ApplicationDbContext))
-                .ToList();
+                d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
+                d.ServiceType == typeof(ApplicationDbContext)).ToList();
             foreach (var d in toRemove) services.Remove(d);
 
+            // Read the *same* connection string the API will use
             using var sp0 = services.BuildServiceProvider();
             var cfg = sp0.GetRequiredService<IConfiguration>();
-            var connectionString =
-                cfg.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection in test environment.");
+            var cs = cfg.GetConnectionString("DefaultConnection")
+                     ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection in Test.");
 
-            Environment.SetEnvironmentVariable("TEST_DB_CONNECTION", connectionString);
+            // Re-register a single DbContext that both API and tests will use
+            services.AddDbContext<ApplicationDbContext>(o => o.UseNpgsql(cs));
 
-            services.AddDbContext<ApplicationDbContext>(opt =>
-                opt.UseNpgsql(connectionString));
-
+            // Apply migrations now
             using var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             db.Database.Migrate();
         });
+
     }
 }
