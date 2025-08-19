@@ -31,6 +31,7 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +74,9 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
 
     services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
     services.Configure<PasswordHashingOptions>(configuration.GetSection("Auth:PasswordHashing"));
+
+    // *** ADDED: safe strongly-typed app settings (works with or without AppConfig)
+    services.Configure<MyAppSettings>(configuration.GetSection("MyAppSettings"));
 }
 
 static bool IsRunningInDocker() =>
@@ -84,6 +88,9 @@ static void ConfigureServices(WebApplicationBuilder builder)
     var configuration = builder.Configuration;
     services.AddAzureAppConfiguration();
     services.AddFeatureManagement();
+
+    // *** ADDED: refresh state for diagnostics
+    services.AddSingleton<ConfigRefreshState>();
 
     services.AddRateLimiter(options =>
     {
@@ -339,11 +346,42 @@ static void ConfigureMiddleware(WebApplication app)
         }
     });
 
-
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
+
+    // *** ADDED: options change hook -> update last refresh & log it
+    var state = app.Services.GetRequiredService<ConfigRefreshState>();
+    var monitor = app.Services.GetRequiredService<IOptionsMonitor<MyAppSettings>>();
+    monitor.OnChange(v =>
+    {
+        state.LastRefreshUtc = DateTimeOffset.UtcNow;
+        app.Logger.LogInformation("App Configuration refresh detected. SampleRatio={SampleRatio}", v.SampleRatio);
+    });
+
+    // *** ADDED: Diagnostics endpoints (hidden from Swagger)
+    app.MapGet("/diagnostics/config", (IConfiguration cfg) =>
+    {
+        var version = cfg["AppConfig:Sentinel"] ?? "(missing)";
+        var label = cfg["AppConfig:Label"] ?? "(missing)";
+        var enabled = cfg["AppConfig:Enabled"] ?? "(missing)";
+        var cache = cfg["AppConfig:CacheSeconds"] ?? "(missing)";
+        var sampleRatio = cfg["MyAppSettings:SampleRatio"] ?? "(missing)";
+        return Results.Ok(new { AppConfigEnabled = enabled, Label = label, Sentinel = version, CacheSeconds = cache, SampleRatio = sampleRatio });
+    }).AllowAnonymous().ExcludeFromDescription();
+
+    app.MapGet("/diagnostics/config/refresh-state", (ConfigRefreshState s) =>
+        Results.Ok(new { s.LastRefreshUtc })
+    ).AllowAnonymous().ExcludeFromDescription();
+
+    app.MapPost("/diagnostics/config/force-refresh",
+        async (IConfigurationRefresherProvider refresherProvider) =>
+        {
+            foreach (var r in refresherProvider.Refreshers)
+                await r.TryRefreshAsync();
+            return Results.Ok(new { forced = true, atUtc = DateTimeOffset.UtcNow });
+        }).AllowAnonymous().ExcludeFromDescription();
 
     // Liveness: keep but hide from Swagger
     app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
@@ -419,6 +457,10 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
         return;
     }
 
+    // *** ADDED: honor optional Label + CacheSeconds; keep your defaults intact
+    var label = configuration["AppConfig:Label"];
+    var cacheSeconds = configuration.GetValue<int?>("AppConfig:CacheSeconds") ?? 90;
+
     const string sentinelKey = "AppConfig:Sentinel";
 
     try
@@ -431,14 +473,22 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
         );
 
         configuration.AddAzureAppConfiguration(options =>
+        {
             options.Connect(endpoint, cred)
                    .ConfigureKeyVault(kv => kv.SetCredential(cred))   // <-- enable KV references
-                   .Select(KeyFilter.Any)
+
+                   // *** ADDED: label-aware selection (falls back to "all" if label missing)
+                   .Select(KeyFilter.Any, string.IsNullOrWhiteSpace(label) ? null : label)
+
                    .ConfigureRefresh(refresh =>
                        refresh.Register(sentinelKey, refreshAll: true)
-                              .SetCacheExpiration(TimeSpan.FromSeconds(90)))
-                   .UseFeatureFlags(ff => ff.CacheExpirationInterval = TimeSpan.FromSeconds(90))
-        );
+                              // *** ADDED: cache TTL from config (default 90s to match your original)
+                              .SetCacheExpiration(TimeSpan.FromSeconds(cacheSeconds))
+                   )
+                   .UseFeatureFlags(ff =>
+                       ff.CacheExpirationInterval = TimeSpan.FromSeconds(cacheSeconds)
+                   );
+        });
 
         configuration["AppConfig:__Active"] = "true";
     }
@@ -447,6 +497,20 @@ static void TryAddAzureAppConfiguration(ConfigurationManager configuration)
         // Do not fail startup in dev/test; simply mark as inactive
         configuration["AppConfig:__Active"] = "false";
     }
+}
+
+// *** ADDED: simple POCO for strongly-typed settings
+public sealed class MyAppSettings
+{
+    // Safe defaults when App Configuration is offline/unavailable
+    public double SampleRatio { get; set; } = 1.0;
+    public string? OtherSetting { get; set; }
+}
+
+// *** ADDED: state holder for last refresh timestamp (diagnostics)
+public sealed class ConfigRefreshState
+{
+    public DateTimeOffset LastRefreshUtc { get; set; } = DateTimeOffset.MinValue;
 }
 
 // Required for WebApplicationFactory<Program> to locate the entry point during integration testing
