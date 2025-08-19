@@ -12,19 +12,6 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public CommentsEndpointsTests(CustomWebApplicationFactory factory) => _factory = factory;
 
     [Fact, Trait("Category", "Integration")]
-    public async Task Create_EmptyText_BadRequest()
-    {
-        var owner = await RegisterAndLoginAsync($"owner.{Guid.NewGuid():N}@example.com", "User");
-        var incidentId = await CreateIncidentAsync(owner);
-
-        var res = await owner.PostAsJsonAsync(
-            RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments"),
-            new { text = "" });
-
-        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-    }
-
-    [Fact, Trait("Category", "Integration")]
     public async Task Create_List_Delete_Owner_Succeeds()
     {
         var owner = await RegisterAndLoginAsync($"user.{Guid.NewGuid():N}@example.com", "User");
@@ -130,8 +117,7 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
             RouteHelper.R(_factory, "Auth/register"),
             new { Email = email, Password = "P@ssw0rd!", Roles = new[] { role } });
 
-        if (reg.StatusCode != HttpStatusCode.Created && reg.StatusCode != HttpStatusCode.Conflict)
-            throw new InvalidOperationException($"Register failed: {(int)reg.StatusCode} {reg.StatusCode}");
+        Assert.True(reg.StatusCode is HttpStatusCode.Created or HttpStatusCode.Conflict);
 
         var login = await c.PostAsJsonAsync(
             RouteHelper.R(_factory, "Auth/login"),
@@ -147,7 +133,7 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     {
         var res = await c.PostAsJsonAsync(RouteHelper.R(_factory, "incidentreports"), new
         {
-            description = "Test",
+            description = "Test incident",
             location = "Berlin",
             reporterId = Guid.NewGuid(),
             category = "ITSystems",

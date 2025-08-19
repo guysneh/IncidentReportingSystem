@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Xunit.Abstractions;
-using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
 public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebApplicationFactory>
 {

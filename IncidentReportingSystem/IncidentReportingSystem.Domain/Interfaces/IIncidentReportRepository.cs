@@ -26,5 +26,10 @@ namespace IncidentReportingSystem.Domain.Interfaces
         Task<IncidentReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default);
         Task SaveAsync(IncidentReport report, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Updates the ModifiedAt (UTC) of the incident. Throws KeyNotFoundException if the incident does not exist.
+        /// </summary>
+        Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct);
     }
 }
