@@ -36,7 +36,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             };
 
             var res = await client.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidentreports", payload);
+                $"api/{_factory.ApiVersionSegment}/incidentreports", payload);
 
             res.EnsureSuccessStatusCode();
 
@@ -109,22 +109,22 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
 
             var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
-            var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
+            var probe = await client.GetAsync($"api/{_factory.ApiVersionSegment}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
 
             var create = await client.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                 new { text = "First" });
             Assert.Equal(HttpStatusCode.Created, create.StatusCode);
 
             var list = await client.GetFromJsonAsync<List<CommentView>>(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments?skip=0&take=10");
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments?skip=0&take=10");
             Assert.NotNull(list);
             Assert.True(list!.Count >= 1);
             var commentId = list![0].Id;
 
-            var del = await client.DeleteAsync($"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments/{commentId}");
+            var del = await client.DeleteAsync($"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments/{commentId}");
             Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
         }
 
@@ -140,12 +140,12 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
 
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
             var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
-            var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
+            var probe = await client.GetAsync($"api/{_factory.ApiVersionSegment}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
 
             var res = await client.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                 new { text = "" });
             Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         }
@@ -163,7 +163,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
 
             var res = await client.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{Guid.NewGuid()}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{Guid.NewGuid()}/comments",
                 new { text = "Nope" });
             Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
         }
@@ -181,19 +181,19 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
 
             var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
-            var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
+            var probe = await client.GetAsync($"api/{_factory.ApiVersionSegment}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
             for (var i = 0; i < 3; i++)
             {
                 var r = await client.PostAsJsonAsync(
-                    $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                    $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                     new { text = $"c{i}" });
                 r.EnsureSuccessStatusCode();
                 await Task.Delay(25);
             }
             var list = await client.GetFromJsonAsync<List<CommentView>>(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments?skip=0&take=2");
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments?skip=0&take=2");
             Assert.Equal(2, list!.Count);
             Assert.Equal("c2", list[0].Text);
             Assert.Equal("c1", list[1].Text);
@@ -220,20 +220,20 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             await EnsureUserExistsAsync(_factory.Services, strangerId, "stranger@example.com", Roles.User);
 
             var incidentId = await CreateIncidentViaApiAsync(owner, TestUserId);
-            var probe = await stranger.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
+            var probe = await stranger.GetAsync($"api/{_factory.ApiVersionSegment}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
 
             var create = await owner.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                 new { text = "private" });
             create.EnsureSuccessStatusCode();
 
             var list = await owner.GetFromJsonAsync<List<CommentView>>(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments");
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments");
             var commentId = list![0].Id;
 
-            var del = await stranger.DeleteAsync($"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments/{commentId}");
+            var del = await stranger.DeleteAsync($"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments/{commentId}");
             Assert.Equal(HttpStatusCode.Forbidden, del.StatusCode);
         }
 
@@ -257,20 +257,20 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             await EnsureUserExistsAsync(_factory.Services, AdminUserId, "admin@example.com", Roles.Admin);
 
             var incidentId = await CreateIncidentViaApiAsync(owner, TestUserId);
-            var probe = await owner.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
+            var probe = await owner.GetAsync($"api/{_factory.ApiVersionSegment}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
 
             var create = await owner.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                 new { text = "moderate" });
             create.EnsureSuccessStatusCode();
 
             var list = await owner.GetFromJsonAsync<List<CommentView>>(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments");
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments");
             var commentId = list![0].Id;
 
-            var del = await admin.DeleteAsync($"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments/{commentId}");
+            var del = await admin.DeleteAsync($"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments/{commentId}");
             Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
         }
 
@@ -289,7 +289,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
             // Now perform the action under test with an anonymous client
             var anonymous = _factory.AsAnonymous();
             var res = await anonymous.PostAsJsonAsync(
-                $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
+                $"api/{_factory.ApiVersionSegment}/incidents/{incidentId}/comments",
                 new { text = "no token" });
 
             Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
