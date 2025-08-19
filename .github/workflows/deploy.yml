@@ -5,7 +5,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 defaults:
   run:
@@ -28,10 +28,16 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    outputs:
+      current_sha: ${{ steps.rev.outputs.sha }}
     steps:
       # ----- Build artifacts -----
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Capture current revision
+        id: rev
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -210,6 +216,14 @@ jobs:
             if [ "$SLEEP" -lt 10 ]; then SLEEP=$((SLEEP+2)); fi
           done
 
+        # ----- Mark last-good (update tag) on success -----
+      - name: Move 'prod' tag to this commit (on success)
+        if: success()
+        run: |
+          git tag -f prod "${{ steps.rev.outputs.sha }}"
+          # צריך לשייך remote עם write (GITHUB_TOKEN)
+          git push origin -f refs/tags/prod
+          
       - name: Dump last logs on failure
         if: failure()
         run: |
@@ -225,3 +239,62 @@ jobs:
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.PG_SERVER_NAME }}" \
             --rule-name "${{ env.TEMP_RULE_NAME }}" -y
+
+  rollback:
+    needs: build-and-deploy
+    if: failure()              
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout last-good (prod tag)
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/prod
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore "${{ env.PROJECT_PATH }}"
+
+      - name: Build
+        run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --output ./publish --no-build
+
+      - name: Zip artifact
+        run: |
+          cd publish
+          zip -r ../app.zip .
+          cd ..
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+
+      - name: Roll back Web App to last-good build
+        run: |
+          az webapp deploy \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --type zip \
+            --src-path app.zip \
+            --restart true \
+            --async true
+
+      - name: Verify /health after rollback
+        run: |
+          URL="${{ env.BASE_URL }}/health"
+          for i in {1..60}; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Rollback health [$i] => $CODE"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 3
+          done
+          echo "Production still unhealthy after rollback"; exit 1
