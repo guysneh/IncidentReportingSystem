@@ -38,7 +38,7 @@ var builder = WebApplication.CreateBuilder(args);
 ConfigureConfiguration(builder.Configuration, builder.Services);
 
 // 2) Services & DI
-ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
+ConfigureServices(builder);
 
 // Telemetry (OpenTelemetry + Azure Monitor)
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
@@ -78,8 +78,10 @@ static void ConfigureConfiguration(ConfigurationManager configuration, IServiceC
 static bool IsRunningInDocker() =>
     File.Exists("/.dockerenv") || Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
-static void ConfigureServices(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
+static void ConfigureServices(WebApplicationBuilder builder)
 {
+    var services = builder.Services;
+    var configuration = builder.Configuration;
     services.AddAzureAppConfiguration();
     services.AddFeatureManagement();
 
@@ -126,7 +128,16 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
             };
         });
 
-    ConfigureCors(services, configuration, env);
+    var origins = GetAllowedOrigins(configuration);
+
+    services.AddCors(options =>
+    {
+        options.AddPolicy("Default", b =>
+            b.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+             .AllowAnyHeader()
+             .AllowAnyMethod()
+             .AllowCredentials());
+    });
 
     services.AddApiVersioning(options =>
     {
@@ -208,37 +219,6 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 static string[] GetAllowedOrigins(IConfiguration config) =>
     (config["Cors:AllowedOrigins"] ?? string.Empty)
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-static void ConfigureCors(IServiceCollection services, IConfiguration config, IHostEnvironment env)
-{
-    var origins = GetAllowedOrigins(config);
-
-    services.AddCors(options =>
-    {
-        options.AddPolicy("Default", b =>
-        {
-            if (origins.Length > 0)
-            {
-                b.WithOrigins(origins)
-                 .AllowAnyHeader()
-                 .AllowAnyMethod()
-                 .AllowCredentials();
-            }
-            else if (env.IsDevelopment())
-            {
-                b.AllowAnyOrigin()
-                 .AllowAnyHeader()
-                 .AllowAnyMethod();
-            }
-            else
-            {
-                b.SetIsOriginAllowed(_ => false)
-                 .AllowAnyHeader()
-                 .AllowAnyMethod();
-            }
-        });
-    });
-}
 
 static void ConfigureJwtAuthentication(IServiceCollection services, IConfiguration configuration)
 {
