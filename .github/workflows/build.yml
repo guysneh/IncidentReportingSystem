@@ -14,8 +14,7 @@ jobs:
     env:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
-      EnableSwagger: "true"
-      TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
     services:
       postgres:
         image: postgres:15-alpine
@@ -74,6 +73,7 @@ jobs:
             --results-directory IncidentReportingSystem/TestResults
 
       - name: Publish unit test results
+        if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
@@ -83,6 +83,7 @@ jobs:
           fail-on-empty: false
 
       - name: Publish integration test results
+        if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Integration Tests
@@ -92,6 +93,8 @@ jobs:
           fail-on-empty: false
 
       - name: Generate HTML code coverage report
+        if: always()
+        continue-on-error: true
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
         with:
           reports: IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
@@ -99,7 +102,18 @@ jobs:
           reporttypes: Html
 
       - name: Upload code coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report
           path: IncidentReportingSystem/TestResults/CoverageReport
+
+      - name: Upload raw test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-test-results
+          path: |
+            IncidentReportingSystem/TestResults/**/*.trx
+            IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
+
