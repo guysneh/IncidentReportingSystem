@@ -1,34 +1,79 @@
 ﻿using IncidentReportingSystem.Application.Comments.Commands;
 using IncidentReportingSystem.Application.Comments.Handlers;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Interfaces;
-using Moq;
+using IncidentReportingSystem.Domain.Enums;
+using IncidentReportingSystem.Domain.Interfaces; 
 
-namespace IncidentReportingSystem.Tests.Application.Comments
+namespace IncidentReportingSystem.Tests.Unit.Application.Comments
 {
-    /// <summary>Unit tests for CreateCommentCommandHandler.</summary>
     public sealed class CreateCommentCommandHandlerTests
     {
-        // Minimal in-memory repo for comments
+        // ---- Test doubles ----
+
         private sealed class FakeCommentsRepo : IIncidentCommentsRepository
         {
-            public bool IncidentExists = true;
-            public IncidentComment? Added;
+            public IncidentComment? Stored;
 
             public Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken ct)
-            { Added = comment; return Task.FromResult(comment); }
+            {
+                Stored = comment;
+                return Task.FromResult(comment);
+            }
 
             public Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken ct)
-                => Task.FromResult<IncidentComment?>(null);
+                => Task.FromResult(Stored is not null && Stored.IncidentId == incidentId && Stored.Id == commentId ? Stored : null);
 
             public Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken ct)
-                => Task.FromResult(IncidentExists);
+                => Task.FromResult(Stored?.IncidentId == incidentId);
 
             public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken ct)
                 => Task.FromResult<IReadOnlyList<IncidentComment>>(Array.Empty<IncidentComment>());
 
             public Task RemoveAsync(IncidentComment comment, CancellationToken ct)
-                => Task.CompletedTask;
+            { Stored = null; return Task.CompletedTask; }
+        }
+
+        private sealed class FakeIncidentReportRepo : IIncidentReportRepository
+        {
+            private readonly HashSet<Guid> _existing = new();
+            public readonly Dictionary<Guid, DateTime> LastTouched = new();
+
+            public void Seed(Guid id) => _existing.Add(id);
+
+            public Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct)
+            {
+                if (!_existing.Contains(incidentId))
+                    throw new KeyNotFoundException($"Incident {incidentId} not found.");
+                LastTouched[incidentId] = utcNow;
+                return Task.CompletedTask;
+            }
+
+            public Task<IReadOnlyList<IncidentReport>> GetAsync(IncidentStatus? status = null, int skip = 0, int take = 50, IncidentCategory? category = null, IncidentSeverity? severity = null, string? searchText = null, DateTime? reportedAfter = null, DateTime? reportedBefore = null, IncidentSortField sortBy = IncidentSortField.CreatedAt, SortDirection direction = SortDirection.Desc, CancellationToken cancellationToken = default)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(IReadOnlyList<Guid> ids, IncidentStatus newStatus, CancellationToken ct)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IncidentReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task SaveAsync(IncidentReport report, CancellationToken cancellationToken = default)
+            {
+                throw new NotImplementedException();
+            }
+
+            // If your interface declares more members, add no-op implementations here as needed.
         }
 
         private sealed class FakeUow : IUnitOfWork
@@ -36,71 +81,64 @@ namespace IncidentReportingSystem.Tests.Application.Comments
             public Task<int> SaveChangesAsync(CancellationToken ct) => Task.FromResult(1);
         }
 
+        // ---- Tests ----
+
         [Fact]
-        public async Task Creates_Comment_When_Incident_Exists_And_User_Exists()
+        public async Task Create_Adds_Comment_And_Touches_Incident()
         {
-            // Arrange
-            var repo = new FakeCommentsRepo { IncidentExists = true };
+            var comments = new FakeCommentsRepo();
+            var incidents = new FakeIncidentReportRepo();
             var uow = new FakeUow();
 
-            var users = new Mock<IUserRepository>(MockBehavior.Strict);
             var incidentId = Guid.NewGuid();
+            incidents.Seed(incidentId);
+
             var authorId = Guid.NewGuid();
+            var cmd = new CreateCommentCommand(incidentId, authorId, "hello");
 
-            users.Setup(x => x.ExistsByIdAsync(authorId, It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(true);
+            var sut = new CreateCommentCommandHandler(comments, incidents, uow);
 
-            var handler = new CreateCommentCommandHandler(repo, uow, users.Object);
+            var view = await sut.Handle(cmd, CancellationToken.None);
 
-            // Act
-            var dto = await handler.Handle(new CreateCommentCommand(incidentId, authorId, " hello "), CancellationToken.None);
-
-            // Assert
-            Assert.NotEqual(Guid.Empty, dto.Id);
-            Assert.Equal(incidentId, dto.IncidentId);
-            Assert.Equal(authorId, dto.UserId);
-            Assert.Equal("hello", dto.Text); // trimmed
-            Assert.NotEqual(default, dto.CreatedAtUtc);
-
-            users.VerifyAll();
+            Assert.NotNull(comments.Stored);
+            Assert.Equal(incidentId, comments.Stored!.IncidentId);
+            Assert.Equal(authorId, comments.Stored.UserId);
+            Assert.Equal("hello", comments.Stored.Text);
+            Assert.True(incidents.LastTouched.ContainsKey(incidentId));
+            Assert.Equal(comments.Stored.CreatedAtUtc, incidents.LastTouched[incidentId], TimeSpan.FromSeconds(1));
+            Assert.Equal(view.Id, comments.Stored.Id);
         }
 
         [Fact]
-        public async Task Throws_404_When_Incident_Missing()
+        public async Task Create_Uses_AuthorId_From_Command()
         {
-            // Arrange
-            var repo = new FakeCommentsRepo { IncidentExists = false };
+            var comments = new FakeCommentsRepo();
+            var incidents = new FakeIncidentReportRepo();
             var uow = new FakeUow();
 
-            var users = new Mock<IUserRepository>(MockBehavior.Loose);
-            users.Setup(x => x.ExistsByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(true); // user exists; want to isolate the incident-not-found path
+            var incidentId = Guid.NewGuid();
+            incidents.Seed(incidentId);
 
-            var handler = new CreateCommentCommandHandler(repo, uow, users.Object);
+            var author = Guid.NewGuid();
+            var sut = new CreateCommentCommandHandler(comments, incidents, uow);
 
-            // Act + Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-                handler.Handle(new CreateCommentCommand(Guid.NewGuid(), Guid.NewGuid(), "x"), CancellationToken.None));
+            await sut.Handle(new CreateCommentCommand(incidentId, author, "text"), CancellationToken.None);
+
+            Assert.Equal(author, comments.Stored!.UserId);
         }
 
         [Fact]
-        public async Task Throws_When_Author_Not_Found()
+        public async Task Missing_Incident_Throws_KeyNotFound()
         {
-            // Arrange
-            var repo = new FakeCommentsRepo { IncidentExists = true };
+            var comments = new FakeCommentsRepo();
+            var incidents = new FakeIncidentReportRepo(); // not seeded => incident missing
             var uow = new FakeUow();
 
-            var users = new Mock<IUserRepository>(MockBehavior.Strict);
-            users.Setup(x => x.ExistsByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(false);
+            var sut = new CreateCommentCommandHandler(comments, incidents, uow);
 
-            var handler = new CreateCommentCommandHandler(repo, uow, users.Object);
-
-            // Act + Assert
             await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-                handler.Handle(new CreateCommentCommand(Guid.NewGuid(), Guid.NewGuid(), "x"), CancellationToken.None));
-
-            users.VerifyAll();
+                sut.Handle(new CreateCommentCommand(Guid.NewGuid(), Guid.NewGuid(), "x"),
+                           CancellationToken.None));
         }
     }
 }

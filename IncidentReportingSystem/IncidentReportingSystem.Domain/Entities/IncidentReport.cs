@@ -101,5 +101,7 @@ namespace IncidentReportingSystem.Domain.Entities
             Status = newStatus;
             ModifiedAt = DateTime.UtcNow;
         }
+
+        public void SetModifiedAt(DateTime? modifiedAt) { ModifiedAt = modifiedAt; }
     }
 }

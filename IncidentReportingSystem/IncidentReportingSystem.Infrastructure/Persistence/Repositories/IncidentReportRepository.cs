@@ -125,5 +125,17 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
             var updated = await _context.SaveChangesAsync(ct);
             return (updated, notFound);
         }
+
+        /// <inheritdoc />
+        public async Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct)
+        {
+            var entity = await _context.IncidentReports.FirstOrDefaultAsync(x => x.Id == incidentId, ct);
+            if (entity is null)
+                throw new KeyNotFoundException($"Incident {incidentId} not found.");
+
+            // Adjust property name to your entity ( ModifiedAt )
+            entity.SetModifiedAt(utcNow);
+            // No SaveChanges here; the caller's unit of work will commit.
+        }
     }
 }
