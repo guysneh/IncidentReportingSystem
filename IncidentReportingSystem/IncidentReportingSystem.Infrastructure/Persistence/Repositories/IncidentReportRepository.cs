@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
+namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
 {
     /// <summary>
     /// Repository implementation for managing IncidentReport entities using EF Core.
@@ -50,7 +50,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             CancellationToken cancellationToken = default)
         {
             IQueryable<IncidentReport> query = _context.IncidentReports.AsNoTracking();
-    
+
             if (status.HasValue) query = query.Where(i => i.Status == status.Value);
             if (category.HasValue) query = query.Where(i => i.Category == category.Value);
             if (severity.HasValue) query = query.Where(i => i.Severity == severity.Value);
@@ -64,7 +64,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
             }
             if (reportedAfter.HasValue) query = query.Where(i => i.ReportedAt >= reportedAfter.Value);
             if (reportedBefore.HasValue) query = query.Where(i => i.ReportedAt <= reportedBefore.Value);
-    
+
             query = (sortBy, direction) switch
             {
                 (IncidentSortField.ReportedAt, SortDirection.Desc) => query.OrderByDescending(i => i.ReportedAt),
@@ -77,7 +77,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
                 (IncidentSortField.Status, SortDirection.Asc) => query.OrderBy(i => i.Status),
                 _ => query.OrderByDescending(i => i.CreatedAt)
             };
-    
+
             return await query.Skip(skip).Take(take).ToListAsync(cancellationToken);
         }
 
@@ -118,7 +118,7 @@ namespace IncidentReportingSystem.Infrastructure.IncidentReports.Repositories
 
             foreach (var inc in incidents)
             {
-                inc.UpdateStatus(newStatus);   
+                inc.UpdateStatus(newStatus);
                 _context.IncidentReports.Update(inc);
             }
 

@@ -1,8 +1,12 @@
 using System.Text.Json;
 using FluentValidation;
-using FluentValidation.Results;
-using IncidentReportingSystem.Application.Common.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using IncidentReportingSystem.Application.Common.Exceptions; 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Cryptography;
+using IncidentReportingSystem.Domain.Exceptions;
 
 namespace IncidentReportingSystem.API.Middleware;
 
@@ -73,47 +77,49 @@ public sealed class GlobalExceptionHandlingMiddleware
                 new[] { new MessageDto("Invalid JSON format") },
                 false),
 
-            // 401 – Auth failures
+            // 401 – only for login/auth flow explicit failures (not for business authorization)
             InvalidCredentialsException ice => new ErrorShape(
                 StatusCodes.Status401Unauthorized,
                 "Authentication failed",
                 new[] { new MessageDto(ice.Message) },
                 false),
 
+            // 403 – business authorization (e.g., stranger tries to delete a comment)
             UnauthorizedAccessException uae => new ErrorShape(
-                StatusCodes.Status401Unauthorized,
-                "Authentication failed",
+                StatusCodes.Status403Forbidden,
+                "Forbidden",
                 new[] { new MessageDto(uae.Message) },
                 false),
 
-            // 409 – Conflict (email exists)
-            EmailAlreadyExistsException eaee => new ErrorShape(
-                StatusCodes.Status409Conflict,
-                "Email already exists",
-                new[] { new MessageDto(eaee.Message) },
+            // 404 – missing entities
+            KeyNotFoundException kex => new ErrorShape(
+                StatusCodes.Status404NotFound,
+                "Not found",
+                new[] { new MessageDto(kex.Message) },
                 false),
 
-             // 423 – Account lockout (enable when you add the exception)
-             AccountLockedException ale => new ErrorShape(
-                 StatusCodes.Status423Locked,
-                 "Account locked",
-                 new[] { new MessageDto(ale.Message) },
-                 false),
+            // 409 – database conflicts (unique violation, constraint)
+            Microsoft.EntityFrameworkCore.DbUpdateException due when
+                due.InnerException is Npgsql.PostgresException pgex &&
+                (pgex.SqlState == "23505" /* unique_violation */ ||
+                 pgex.SqlState == "23503" /* foreign_key_violation */ ||
+                 pgex.SqlState == "23514" /* check_violation */)
+                => new ErrorShape(
+                    StatusCodes.Status409Conflict,
+                    "Database update error",
+                    new[] { new { pgex.ConstraintName, pgex.SqlState } },
+                    false),
 
-            // 400 – Bad arguments from app layer
-            ArgumentException aex => new ErrorShape(
-                StatusCodes.Status400BadRequest,
-                "Invalid argument",
-                new[] { new MessageDto(aex.Message) },
-                false),
-
-            // 500 – Fallback
+            // 500 – fallback
             _ => new ErrorShape(
                 StatusCodes.Status500InternalServerError,
                 "Unexpected error",
                 _env.IsDevelopment() ? new[] { new DevError(ex.Message, ex.GetType().FullName) } : null,
                 true)
         };
+
+
+
 
         if (map.LogAsError) _logger.LogError(ex, "Unhandled exception");
         else _logger.LogWarning(ex, "Handled exception: {Title}", map.Title);
@@ -148,4 +154,43 @@ public sealed class GlobalExceptionHandlingMiddleware
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = false
         });
+
+    private ErrorShape MapDbUpdate(DbUpdateException ex)
+    {
+        var status = StatusCodes.Status409Conflict;
+        string title = "Database update error";
+
+        if (ex.InnerException is PostgresException pg)
+        {
+           
+            switch (pg.SqlState)
+            {
+                case PostgresErrorCodes.ForeignKeyViolation:
+                    status = StatusCodes.Status404NotFound;
+                    title = "Related entity not found (FK violation)";
+                    break;
+
+                case PostgresErrorCodes.UniqueViolation:
+                    status = StatusCodes.Status409Conflict;
+                    title = "Unique constraint violation";
+                    break;
+
+                case PostgresErrorCodes.NotNullViolation:
+                    status = StatusCodes.Status400BadRequest;
+                    title = "A required field was null";
+                    break;
+
+                case PostgresErrorCodes.StringDataRightTruncation:
+                    status = StatusCodes.Status400BadRequest;
+                    title = "A string field exceeded the allowed length";
+                    break;
+            }
+
+            var detail = new[] { new { Constraint = pg.ConstraintName, SqlState = pg.SqlState } };
+            return new ErrorShape(status, title, detail, LogAsError: false);
+        }
+
+        return new ErrorShape(status, title, new[] { new MessageDto(ex.Message) }, LogAsError: true);
+    }
+
 }

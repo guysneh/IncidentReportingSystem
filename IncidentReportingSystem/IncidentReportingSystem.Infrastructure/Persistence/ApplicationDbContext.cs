@@ -24,13 +24,18 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
         /// </summary>
         public DbSet<User> Users => Set<User>();
 
+        /// <summary>
+        /// Table for incident comments.
+        /// </summary>
+        public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();
         public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             ArgumentNullException.ThrowIfNull(modelBuilder, nameof(modelBuilder));
             base.OnModelCreating(modelBuilder);
-            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());       
         }
     }
 }

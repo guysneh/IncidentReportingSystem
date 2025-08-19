@@ -1,36 +1,35 @@
-﻿using IncidentReportingSystem.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace IncidentReportingSystem.Infrastructure.DbContextFactory
+namespace IncidentReportingSystem.Infrastructure.Persistence
 {
-    /// <summary>
-    /// Factory for design-time operations (EF Migrations).
-    /// </summary>
-    public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
+    /// <summary>Ensures EF CLI uses the same config as the API at design-time.</summary>
+    public sealed class DesignTimeApplicationDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
     {
         public ApplicationDbContext CreateDbContext(string[] args)
         {
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true)
-                .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                      ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                      ?? "Development";
+
+            // Point to the API project's folder
+            var basePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "IncidentReportingSystem.API");
+
+            var cfg = new ConfigurationBuilder()
+                .SetBasePath(basePath)
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile($"appsettings.{env}.json", optional: true)
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connectionString =
-                Environment.GetEnvironmentVariable("TEST_DB_CONNECTION") ??
-                configuration.GetConnectionString("DefaultConnection");
+            var cs = cfg.GetConnectionString("DefaultConnection")
+                     ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection");
 
-            if (string.IsNullOrWhiteSpace(connectionString))
-                throw new InvalidOperationException("Connection string not found.");
+            var b = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseNpgsql(cs);
 
-            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            optionsBuilder.UseNpgsql(connectionString);
-
-            return new ApplicationDbContext(optionsBuilder.Options);
+            return new ApplicationDbContext(b.Options);
         }
     }
 }

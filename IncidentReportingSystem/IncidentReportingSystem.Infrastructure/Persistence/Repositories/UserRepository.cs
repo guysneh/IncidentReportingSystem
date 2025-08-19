@@ -3,7 +3,7 @@ using IncidentReportingSystem.Domain.Users;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace IncidentReportingSystem.Infrastructure.Users.Repositories
+namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
 {
     /// <summary>
     /// EF Core implementation of IUserRepository.
@@ -30,6 +30,9 @@ namespace IncidentReportingSystem.Infrastructure.Users.Repositories
 
         public Task<bool> ExistsByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken) =>
             _db.Users.AsNoTracking().AnyAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);
+
+        public Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            _db.Users.AsNoTracking().AnyAsync(u => u.Id == id, cancellationToken);
 
         public Task<User?> FindByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken) =>
             _db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);

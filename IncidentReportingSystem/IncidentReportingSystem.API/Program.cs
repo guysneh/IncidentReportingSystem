@@ -17,11 +17,9 @@ using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.Infrastructure.Authentication;
-using IncidentReportingSystem.Infrastructure.IncidentReports.Repositories;
 using IncidentReportingSystem.Infrastructure.Persistence;
+using IncidentReportingSystem.Infrastructure.Persistence.Repositories;
 using IncidentReportingSystem.Infrastructure.Services.Idempotency;
-using IncidentReportingSystem.Infrastructure.Telemetry;
-using IncidentReportingSystem.Infrastructure.Users.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -31,6 +29,7 @@ using Microsoft.FeatureManagement;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -197,6 +196,7 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 
     services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
     services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
+    services.AddScoped<IIncidentCommentsRepository, IncidentCommentsRepository>();
     services.AddScoped<IJwtTokenService, JwtTokenService>();
     services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -290,6 +290,12 @@ static void ConfigureJwtAuthentication(IServiceCollection services, IConfigurati
 
         options.AddPolicy(PolicyNames.CanManageIncidents,
             p => p.RequireRole(Roles.Admin));
+
+        options.AddPolicy(PolicyNames.CanCommentOnIncident,
+            p => p.RequireRole(Roles.User, Roles.Admin));
+
+        options.AddPolicy(PolicyNames.CanDeleteComment,
+            p => p.RequireRole(Roles.User, Roles.Admin));
     });
 }
 

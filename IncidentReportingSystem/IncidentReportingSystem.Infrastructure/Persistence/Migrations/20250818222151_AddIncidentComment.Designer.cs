@@ -3,17 +3,20 @@ using System;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IncidentReportingSystem.Infrastructure.Migrations
+namespace IncidentReportingSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250818222151_AddIncidentComment")]
+    partial class AddIncidentComment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,7 +50,7 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
 
                     b.HasIndex("IncidentId", "CreatedAtUtc");
 
-                    b.ToTable("incident_comments", "public");
+                    b.ToTable("incident_comments", (string)null);
                 });
 
             modelBuilder.Entity("IncidentReportingSystem.Domain.Entities.IncidentReport", b =>

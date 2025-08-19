@@ -20,5 +20,7 @@
         public const string CanReadIncidents = nameof(CanReadIncidents);
         public const string CanCreateIncident = nameof(CanCreateIncident);
         public const string CanManageIncidents = nameof(CanManageIncidents);
+        public const string CanCommentOnIncident = nameof(CanCommentOnIncident);
+        public const string CanDeleteComment = nameof(CanDeleteComment);
     }
 }
