@@ -15,6 +15,7 @@ jobs:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
       ConnectionStrings__DefaultConnection: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
+      Cors__AllowedOrigins: "http://example.com"
     services:
       postgres:
         image: postgres:15-alpine
