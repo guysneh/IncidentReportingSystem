@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <ExcludeByFile>**/Migrations/*.cs;**/*Designer.cs;**/*g.cs;**/obj/**;**/Generated/**</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute;CompilerGeneratedAttribute;ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          <Include>[IncidentReportingSystem.*]*</Include>
+          <Exclude>
+            [IncidentReportingSystem.API]IncidentReportingSystem.API.Program
+          </Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
