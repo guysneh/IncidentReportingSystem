@@ -49,6 +49,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IncidentReportingSystem.API\IncidentReportingSystem.API.csproj" />
+    <ProjectReference Include="..\IncidentReportingSystem.Infrastructure\IncidentReportingSystem.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
 	  <None Update="appsettings.Test.json">
