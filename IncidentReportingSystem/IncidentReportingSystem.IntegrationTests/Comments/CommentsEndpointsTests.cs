@@ -22,27 +22,37 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
         private readonly CustomWebApplicationFactory _factory;
         public CommentsEndpointsTests(CustomWebApplicationFactory factory) => _factory = factory;
 
-        private async Task<Guid> CreateIncidentAsync()
+        private async Task<Guid> CreateIncidentViaApiAsync(HttpClient client, Guid reporterId)
         {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var payload = new
+            {
+                description = "Test incident",
+                location = "Berlin",
+                reporterId = reporterId,
+                category = "ITSystems",
+                systemAffected = "API",
+                severity = "Medium",
+                reportedAt = DateTime.UtcNow
+            };
 
-            // Use the domain constructor (no object-initializer on read-only props)
-            var incident = new IncidentReport(
-                description: "Test incident",
-                location: "Berlin",
-                reporterId: Guid.NewGuid(),
-                category: IncidentCategory.ITSystems,      
-                systemAffected: "API",
-                severity: IncidentSeverity.Medium,        
-                reportedAt: DateTime.UtcNow
-            );
+            var res = await client.PostAsJsonAsync(
+                $"api/{TestConstants.ApiVersion}/incidentreports", payload);
 
-            db.IncidentReports.Add(incident);
-            await db.SaveChangesAsync();
+            res.EnsureSuccessStatusCode();
 
-            return incident.Id;
+            // If your API returns the created entity (recommended):
+            var created = await res.Content.ReadFromJsonAsync<IncidentView>();
+            if (created is null || created.Id == Guid.Empty)
+                throw new InvalidOperationException("Incident creation via API did not return a valid Id.");
+
+            return created.Id;
         }
+
+        private sealed class IncidentView
+        {
+            public Guid Id { get; set; }
+        }
+
 
         private static async Task EnsureUserExistsAsync(IServiceProvider services, Guid id, string email, string role)
         {
@@ -98,7 +108,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
 
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
 
-            var incidentId = await CreateIncidentAsync();
+            var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
             var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
@@ -129,7 +139,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
                 email: "user@example.com");
 
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
-            var incidentId = await CreateIncidentAsync();
+            var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
             var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
@@ -170,7 +180,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
 
             await EnsureUserExistsAsync(_factory.Services, TestUserId, "user@example.com", Roles.User);
 
-            var incidentId = await CreateIncidentAsync();
+            var incidentId = await CreateIncidentViaApiAsync(client, TestUserId);
             var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
@@ -209,7 +219,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
                 email: "stranger@example.com");
             await EnsureUserExistsAsync(_factory.Services, strangerId, "stranger@example.com", Roles.User);
 
-            var incidentId = await CreateIncidentAsync();
+            var incidentId = await CreateIncidentViaApiAsync(owner, TestUserId);
             var probe = await stranger.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
@@ -246,7 +256,7 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
                 email: "admin@example.com");
             await EnsureUserExistsAsync(_factory.Services, AdminUserId, "admin@example.com", Roles.Admin);
 
-            var incidentId = await CreateIncidentAsync();
+            var incidentId = await CreateIncidentViaApiAsync(owner, TestUserId);
             var probe = await owner.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
             if (probe.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
@@ -268,15 +278,20 @@ namespace IncidentReportingSystem.IntegrationTests.Comments
         [Trait("Category", "Integration")]
         public async Task Create_Unauthenticated_Unauthorized()
         {
-            var client = _factory.AsAnonymous();
-            var incidentId = await CreateIncidentAsync();
-            var probe = await client.GetAsync($"api/{TestConstants.ApiVersion}/incidentreports/{incidentId}");
-            if (probe.StatusCode == HttpStatusCode.NotFound)
-                throw new InvalidOperationException("Sanity check: API cannot see the incident created via DbContext — indicates split DBs in CI.");
+            // Seed via API with an authenticated owner
+            var ownerId = Guid.NewGuid();
+            var owner = AuthenticatedHttpClientFactory.CreateClientWithToken(
+                _factory, userId: ownerId, roles: new[] { Roles.User }, email: "user@example.com");
+            await EnsureUserExistsAsync(_factory.Services, ownerId, "user@example.com", Roles.User);
 
-            var res = await client.PostAsJsonAsync(
+            var incidentId = await CreateIncidentViaApiAsync(owner, ownerId);
+
+            // Now perform the action under test with an anonymous client
+            var anonymous = _factory.AsAnonymous();
+            var res = await anonymous.PostAsJsonAsync(
                 $"api/{TestConstants.ApiVersion}/incidents/{incidentId}/comments",
                 new { text = "no token" });
+
             Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
         }
 
