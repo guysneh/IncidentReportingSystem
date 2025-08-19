@@ -29,7 +29,6 @@ using Microsoft.FeatureManagement;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
-using Npgsql;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -303,7 +302,11 @@ static void ConfigureMiddleware(WebApplication app)
 {
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
-
+    if (app.Environment.IsDevelopment())
+    {
+        // Keep the developer page for local debugging only
+        app.UseDeveloperExceptionPage();
+    }
     app.UseHttpsRedirection();
     app.UseRouting();
 
@@ -358,7 +361,6 @@ static void ConfigureMiddleware(WebApplication app)
 
 
     app.UseMiddleware<RequestLoggingMiddleware>();
-
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

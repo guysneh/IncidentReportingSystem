@@ -27,7 +27,7 @@ namespace IncidentReportingSystem.Application.Comments.Handlers
             var isOwner = entity.UserId == request.RequestedBy;
             var isAdmin = request.RequesterIsAdmin; // admin flag passed from API
             if (!isOwner && !isAdmin)
-                  throw new ForbiddenException("Only the author or an Admin may delete this comment.");
+                 throw new ForbiddenException("Only the author or an Admin may delete this comment.");
 
             await _repo.RemoveAsync(entity, ct);
             await _uow.SaveChangesAsync(ct);

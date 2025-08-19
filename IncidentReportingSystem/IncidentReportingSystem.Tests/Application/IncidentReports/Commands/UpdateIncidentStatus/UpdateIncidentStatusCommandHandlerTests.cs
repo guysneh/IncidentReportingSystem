@@ -37,7 +37,7 @@ namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
             // Assert
             incident.Status.Should().Be(IncidentStatus.Closed);
             _repositoryMock.Verify(r => r.SaveAsync(incident, It.IsAny<CancellationToken>()), Times.Once);
-            result.Should().Be(Unit.Value);
+            result.Should().Be(MediatR.Unit.Value);
         }
 
         [Fact]
