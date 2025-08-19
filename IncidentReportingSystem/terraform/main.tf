@@ -54,6 +54,12 @@ module "app_service" {
   health_check_eviction_time_in_min = 5
 
   app_settings = local.app_settings
+  extra_app_settings = {
+    "AppConfig__Enabled"      = tostring(var.app_config_enabled)
+    "AppConfig__Endpoint"     = "https://${var.app_config_name}.azconfig.io"
+    "AppConfig__Label"        = var.app_config_label
+    "AppConfig__CacheSeconds" = tostring(var.app_config_cache_seconds)
+  }
   tags         = var.tags
 }
 
