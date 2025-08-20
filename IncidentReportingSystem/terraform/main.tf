@@ -60,7 +60,7 @@ module "app_service" {
     "AppConfig__Label"        = var.app_config_label
     "AppConfig__CacheSeconds" = tostring(var.app_config_cache_seconds)
   }
-  tags         = var.tags
+  tags = var.tags
 }
 
 locals {
@@ -120,10 +120,10 @@ resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
 
 locals {
   app_settings = {
-    "AppConfig__Enabled"  = "true"
-    "AppConfig__Endpoint" = module.app_configuration.endpoint
+    "AppConfig__Enabled"                   = "true"
+    "AppConfig__Endpoint"                  = module.app_configuration.endpoint
     "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/PostgreSqlConnectionString)"
-    "Telemetry__SamplingRatio"  = var.telemetry_sample_ratio
+    "Telemetry__SamplingRatio"             = var.telemetry_sample_ratio
   }
 }
 

@@ -204,26 +204,26 @@ variable "telemetry_sample_ratio" {
   default     = "0.10"
 }
 
-variable "web_app_name"  { 
+variable "web_app_name" {
   description = "Linux Web App name (API)"
-  type = string
-  default = "incident-api" 
-  }
+  type        = string
+  default     = "incident-api"
+}
 
-variable "app_config_label" { 
+variable "app_config_label" {
   description = "Label (prod/dev/blue/green)"
-  type = string
-  default = "prod" 
-  }
+  type        = string
+  default     = "prod"
+}
 
-variable "app_config_enabled"       { 
+variable "app_config_enabled" {
   description = "Enable App Configuration at runtime"
-  type = bool
-  default = true 
-  }
+  type        = bool
+  default     = true
+}
 
-variable "app_config_cache_seconds" { 
+variable "app_config_cache_seconds" {
   description = "TTL for AppConfig cache"
-  type = number
-  default = 90 
-  }
+  type        = number
+  default     = 90
+}

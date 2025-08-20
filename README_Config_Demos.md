@@ -1,0 +1,174 @@
+# Operational & Configuration Demo Guide (Non-Swagger Routes)
+
+> Paste this section into your main `README.md` (recommended location: after the “Live demo” section), or keep it as a separate doc.
+
+## Table of Contents
+- [Operational & Diagnostics Endpoints (non-Swagger)](#operational--diagnostics-endpoints-non-swagger)
+  - [Health](#health)
+  - [Configuration Diagnostics](#configuration-diagnostics)
+- [Feature Flags & Swagger Gating](#feature-flags--swagger-gating)
+- [Configuration Demo Playbook (Sentinel, Cache/TTL, Refresh)](#configuration-demo-playbook-sentinel-cachettl-refresh)
+  - [Prerequisites](#prerequisites)
+  - [Baseline](#baseline)
+  - [A) Demonstrate Cache & TTL](#a-demonstrate-cache--ttl)
+  - [B) Demonstrate Sentinel-based refresh](#b-demonstrate-sentinel-based-refresh)
+  - [C) Demonstrate Force Refresh (bypass TTL)](#c-demonstrate-force-refresh-bypass-ttl)
+  - [CLI (Optional)](#cli-optional)
+- [Rate Limiting (FYI)](#rate-limiting-fyi)
+- [Local / Offline Mode (no App Configuration)](#local--offline-mode-no-app-configuration)
+
+---
+
+## Operational & Diagnostics Endpoints (non-Swagger)
+
+> These routes are intentionally **not** exposed in Swagger UI, so they remain simple operational probes.
+
+### Health
+- `GET /health/live`  
+  Liveness probe. Returns `{ "status": "ok" }`. **No auth** required.
+
+- `GET /health`  
+  Readiness/health checks (e.g., PostgreSQL via Npgsql). **No auth** required.
+
+### Configuration Diagnostics
+- `GET /diagnostics/config`  
+  Returns the current view of key config values:
+  ```json
+  {
+    "AppConfigEnabled": "true",
+    "Label": "prod",
+    "Sentinel": "2",
+    "CacheSeconds": "90",
+    "SampleRatio": "1.0"
+  }
+  ```
+
+- `GET /diagnostics/config/refresh-state`  
+  Shows when options were **last re-bound** (UTC). Useful to verify a refresh occurred:
+  ```json
+  { "lastRefreshUtc": "2025-08-20T18:12:05.1234567Z" }
+  ```
+
+- `POST /diagnostics/config/force-refresh`  
+  Forces an immediate refresh attempt (bypasses the configured TTL). Handy for demos/tests:
+  ```json
+  { "forced": true, "atUtc": "2025-08-20T18:12:34.5678901Z" }
+  ```
+
+> Tip: All diagnostics endpoints are anonymous and excluded from Swagger (`ExcludeFromDescription`).
+
+
+## Feature Flags & Swagger Gating
+
+We use **Azure App Configuration Feature Flags** to gate Swagger UI when App Configuration is active.
+
+- Feature flag name: **`EnableSwaggerUI`**
+- Behavior:
+  - If App Configuration is **inactive** → Swagger UI is **always** accessible (local dev safety).
+  - If App Configuration is **active** → access to `/swagger` is allowed **only when** `EnableSwaggerUI = true`.
+
+**To demo:**
+1. Ensure App Configuration is active (see `/diagnostics/config` → `AppConfigEnabled=true`).
+2. In **App Configuration → Feature manager**, toggle **`EnableSwaggerUI`** to **false** (match the same Label).
+3. Wait for the Feature Flags cache TTL (see `AppConfig__CacheSeconds`) **or** call:
+   ```
+   POST /diagnostics/config/force-refresh
+   ```
+4. Browse `/swagger` → you should get **404 Not Found**.
+5. Toggle back to **true**, wait TTL or force refresh → `/swagger` works again.
+
+> Note: Feature flags are cached with the same TTL you configured (`AppConfig__CacheSeconds`), and also refresh on force-refresh.
+
+
+## Configuration Demo Playbook (Sentinel, Cache/TTL, Refresh)
+
+The app uses:
+- **In-memory cache** for key-values with TTL = `AppConfig__CacheSeconds`.
+- **Sentinel key** `AppConfig:Sentinel` to trigger a **hot refresh** of all watched keys (checked when TTL elapses).
+- **Force-refresh** endpoint to bypass TTL during demos/tests.
+
+### Prerequisites
+- App Settings (in App Service) were set by Terraform:
+  - `AppConfig__Enabled=true`
+  - `AppConfig__Endpoint=https://<your-appcfg>.azconfig.io`
+  - `AppConfig__Label=prod`
+  - `AppConfig__CacheSeconds=90` (example)
+- Keys exist in App Configuration (with the **same Label**):
+  - `AppConfig:Sentinel = "1"`
+  - `MyAppSettings:SampleRatio = "1.0"`
+
+### Baseline
+```
+GET /diagnostics/config
+```
+Expect something like:
+```json
+{ "AppConfigEnabled": "true", "Label": "prod", "Sentinel": "1", "CacheSeconds": "90", "SampleRatio": "1.0" }
+```
+
+### A) Demonstrate **Cache & TTL**
+1. In App Configuration (label `prod`), change:
+   - `MyAppSettings:SampleRatio` → `0.7`
+   - **Do not** change the sentinel yet.
+2. Immediately call:
+   ```
+   GET /diagnostics/config
+   ```
+   You should still see `SampleRatio = 1.0` (cached).
+3. Wait for **TTL** (e.g., 90s) → call again → you’ll see `0.7`.
+
+> This proves the in-memory cache holds values until TTL elapses.
+
+### B) Demonstrate **Sentinel-based refresh**
+1. In App Configuration (label `prod`), **bump**:
+   - `AppConfig:Sentinel` → from `1` to `2`
+2. After TTL elapses, the next request will notice the sentinel change and **refresh** values.
+3. Call:
+   ```
+   GET /diagnostics/config
+   GET /diagnostics/config/refresh-state
+   ```
+   You should see the new `Sentinel = "2"` and an updated `lastRefreshUtc`.
+
+> Sentinel is evaluated when the TTL window expires. Use **force refresh** to bypass TTL during demos.
+
+### C) Demonstrate **Force Refresh (bypass TTL)**
+1. Change a value in App Configuration (e.g., `SampleRatio`).
+2. Immediately call:
+   ```
+   POST /diagnostics/config/force-refresh
+   GET  /diagnostics/config
+   ```
+   You should see the new value **right away**, without waiting for TTL.
+
+### CLI (Optional)
+You can also change keys via Azure CLI:
+```bash
+# Update SampleRatio (label=prod)
+az appconfig kv set --name <APP_CONFIG_NAME> --key "MyAppSettings:SampleRatio" --value "0.7" --label "prod"
+
+# Bump the sentinel (label=prod)
+az appconfig kv set --name <APP_CONFIG_NAME> --key "AppConfig:Sentinel" --value "2" --label "prod"
+```
+
+
+## Rate Limiting (FYI)
+
+The API uses a simple **fixed-window** global rate limiter (e.g., 10 requests / 10 seconds, queue limit 5).  
+If you fire more than the allowed rate, you will get **HTTP 429 Too Many Requests**.
+
+**Quick check (bash loop):**
+```bash
+for i in {1..20}; do curl -s -o /dev/null -w "%{http_code}\n" https://<your-app>/health/live; done
+# You should see some 200s and some 429s within a 10-second window.
+```
+
+
+## Local / Offline Mode (no App Configuration)
+
+- Local dev and Docker compose use:
+  - `AppConfig__Enabled=false`
+  - Optional defaults in `appsettings.Development.json` or environment variables
+- Diagnostics routes work the same:
+  - `GET /diagnostics/config` will show `AppConfigEnabled=false`
+  - You can still exercise health endpoints and any feature defaults you set locally
