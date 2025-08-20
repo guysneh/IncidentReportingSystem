@@ -34,7 +34,7 @@ resource "azurerm_app_configuration_key" "sample_ratio" {
   configuration_store_id = data.azurerm_app_configuration.this.id
   key                    = "MyAppSettings:SampleRatio"
   label                  = var.app_config_label
-  value                  = var.sample_ratio
+  value                  = var.telemetry_sample_ratio
   content_type           = "text/plain"
   tags                   = var.default_tags
 }
