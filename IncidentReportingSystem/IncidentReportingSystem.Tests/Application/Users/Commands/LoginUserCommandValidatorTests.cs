@@ -1,5 +1,5 @@
-﻿using IncidentReportingSystem.Application.Users.Commands.LoginUser;
-using Xunit;
+﻿
+using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 
 namespace IncidentReportingSystem.Tests.Users.Commands
 {

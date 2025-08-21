@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using IncidentReportingSystem.Application.Authentication;
+using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using Microsoft.Extensions.Options;
 

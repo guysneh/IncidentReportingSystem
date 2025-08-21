@@ -1,6 +1,6 @@
-﻿using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-using IncidentReportingSystem.Domain.Enums;
+﻿using IncidentReportingSystem.Domain.Enums;
 using FluentAssertions;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 
 public class CreateIncidentReportCommandTests
 {

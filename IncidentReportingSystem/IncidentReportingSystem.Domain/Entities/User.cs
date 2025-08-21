@@ -43,7 +43,7 @@ namespace IncidentReportingSystem.Domain.Entities
             if (distinct.Length == 0)
                 throw new ArgumentException("At least one role is required.", nameof(roles));
 
-            if (distinct.Any(r => !Auth.Roles.Allowed.Contains(r)))
+            if (distinct.Any(r => !Domain.Roles.Allowed.Contains(r)))
                 throw new ArgumentException("One or more roles are invalid.", nameof(roles));
 
             Roles = distinct;

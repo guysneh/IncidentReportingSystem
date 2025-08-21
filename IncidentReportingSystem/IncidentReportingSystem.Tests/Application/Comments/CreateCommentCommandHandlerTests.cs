@@ -1,8 +1,8 @@
-﻿using IncidentReportingSystem.Application.Comments.Commands;
-using IncidentReportingSystem.Application.Comments.Handlers;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces; 
 
 namespace IncidentReportingSystem.Tests.Unit.Application.Comments
 {

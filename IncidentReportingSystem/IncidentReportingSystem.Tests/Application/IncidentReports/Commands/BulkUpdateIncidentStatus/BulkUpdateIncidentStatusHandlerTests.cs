@@ -1,8 +1,7 @@
 ﻿using FluentAssertions;
-using IncidentReportingSystem.Application.Common.Idempotency;
-using IncidentReportingSystem.Application.IncidentReports.Commands.BulkUpdateIncidentStatus;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
 using Moq;
 
 namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.BulkUpdateIncidentStatus

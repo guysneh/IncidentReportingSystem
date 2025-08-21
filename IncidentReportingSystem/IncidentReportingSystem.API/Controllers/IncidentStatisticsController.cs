@@ -1,7 +1,7 @@
 ﻿using Asp.Versioning;
-using IncidentReportingSystem.Application.IncidentReports.DTOs;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentStatistics;
-using IncidentReportingSystem.Domain.Auth;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentStatistics;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

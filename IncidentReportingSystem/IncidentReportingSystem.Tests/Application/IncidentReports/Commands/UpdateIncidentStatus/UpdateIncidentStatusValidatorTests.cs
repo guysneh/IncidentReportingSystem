@@ -1,8 +1,6 @@
 ﻿using FluentValidation.TestHelper;
-using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
-using IncidentReportingSystem.Application.IncidentReports.Validators;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Enums;
-using Xunit;
 
 namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.CreateIncidentReport;
 

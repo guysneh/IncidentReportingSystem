@@ -1,7 +1,7 @@
-﻿using IncidentReportingSystem.Application.Authentication;
-using IncidentReportingSystem.Application.Common.Exceptions;
-using IncidentReportingSystem.Application.Users.Commands.LoginUser;
-using IncidentReportingSystem.Domain.Interfaces;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using Moq;
 
 namespace IncidentReportingSystem.Tests.Application.Users.Commands

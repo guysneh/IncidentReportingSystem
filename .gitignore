@@ -458,3 +458,10 @@ scripts/.sonartoken
 IncidentReportingSystem/.sonarqube/
 scripts/.sonarqube/
 INTERNAL_PLAN.md
+.sonarqube/conf/Sonar-cs.ruleset
+.sonarqube/conf/Sonar-cs-none.ruleset
+.sonarqube/conf/SonarQubeAnalysisConfig.xml
+.sonarqube/conf/Sonar-vbnet.ruleset
+.sonarqube/conf/Sonar-vbnet-none.ruleset
+.sonarqube/conf/cs/SonarLint.xml
+.sonarqube/conf/vbnet/SonarLint.xml

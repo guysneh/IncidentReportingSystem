@@ -1,7 +1,6 @@
-﻿using IncidentReportingSystem.Application.Comments.Handlers;
-using IncidentReportingSystem.Application.Comments.Queries;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Interfaces;
 
 namespace IncidentReportingSystem.Tests.Application.Comments
 {

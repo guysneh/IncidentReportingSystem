@@ -2,14 +2,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using IncidentReportingSystem.Application.Comments.Commands;
-using IncidentReportingSystem.Application.Comments.Queries;
-using IncidentReportingSystem.Application.Common.Exceptions;
-using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using Asp.Versioning;
-using IncidentReportingSystem.Application.Comments.DTOs;
-using IncidentReportingSystem.API.Authentication;
+using IncidentReportingSystem.Application.Features.Comments.Dtos;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
+using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
+using IncidentReportingSystem.API.Auth;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 
 namespace IncidentReportingSystem.API.Controllers
 {

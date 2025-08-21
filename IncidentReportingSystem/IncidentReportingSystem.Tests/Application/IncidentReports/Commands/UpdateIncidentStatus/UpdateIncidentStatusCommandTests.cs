@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Enums;
 
 namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.UpdateIncidentStatus

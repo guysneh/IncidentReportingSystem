@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using FluentValidation;
-using IncidentReportingSystem.Application.Common.Exceptions;
+using IncidentReportingSystem.Application.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

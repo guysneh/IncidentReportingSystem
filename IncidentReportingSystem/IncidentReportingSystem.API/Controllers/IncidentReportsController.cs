@@ -1,15 +1,15 @@
 ﻿using Asp.Versioning;
-using IncidentReportingSystem.Application.IncidentReports.Commands.BulkUpdateIncidentStatus;
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
-using IncidentReportingSystem.Application.IncidentReports.DTOs;
-using IncidentReportingSystem.Application.IncidentReports.Mappers;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
-using IncidentReportingSystem.Domain.Auth;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
+using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

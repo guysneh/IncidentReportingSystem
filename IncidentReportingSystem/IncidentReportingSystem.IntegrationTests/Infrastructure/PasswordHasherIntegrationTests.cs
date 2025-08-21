@@ -1,4 +1,5 @@
-﻿using IncidentReportingSystem.Application.Authentication;
+﻿using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

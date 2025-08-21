@@ -1,4 +1,4 @@
-﻿using IncidentReportingSystem.Application.Comments.Commands;
+﻿using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
 
 namespace IncidentReportingSystem.Tests.Application.Comments
 {

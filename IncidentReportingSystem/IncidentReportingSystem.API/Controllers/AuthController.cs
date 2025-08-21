@@ -1,12 +1,12 @@
 using Asp.Versioning;
 using IncidentReportingSystem.API.Contracts.Authentication;
-using IncidentReportingSystem.Application.Users.Commands.LoginUser;
-using IncidentReportingSystem.Application.Users.Commands.RegisterUser;
+using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
+using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security; // for UnauthorizedAccessException
+using System.Security;
 
 namespace IncidentReportingSystem.API.Controllers
 {

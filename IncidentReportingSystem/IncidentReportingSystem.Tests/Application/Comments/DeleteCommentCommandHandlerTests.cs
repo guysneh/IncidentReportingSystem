@@ -1,9 +1,9 @@
-﻿using IncidentReportingSystem.Application.Comments.Commands;
-using IncidentReportingSystem.Application.Comments.Handlers;
-using IncidentReportingSystem.Application.Common.Exceptions;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
 
 namespace IncidentReportingSystem.Tests.Unit.Application.Comments
 {

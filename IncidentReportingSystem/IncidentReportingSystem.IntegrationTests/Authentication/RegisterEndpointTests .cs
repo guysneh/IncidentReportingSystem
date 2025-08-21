@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Users.Commands.RegisterUser;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Xunit;

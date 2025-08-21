@@ -1,9 +1,7 @@
-﻿using FluentAssertions;
-using IncidentReportingSystem.Application.IncidentReports.DTOs;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentStatistics;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentStatistics;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Tests.Helpers;
 using Moq;
 using Shouldly;

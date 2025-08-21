@@ -9,17 +9,11 @@ using IncidentReportingSystem.API.Extensions;
 using IncidentReportingSystem.API.Middleware;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Application;
-using IncidentReportingSystem.Application.Authentication;
-using IncidentReportingSystem.Application.Common.Behaviors;
-using IncidentReportingSystem.Application.Common.Idempotency;
-using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Infrastructure.Auth;
 using IncidentReportingSystem.Infrastructure.Authentication;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using IncidentReportingSystem.Infrastructure.Persistence.Repositories;
-using IncidentReportingSystem.Infrastructure.Services.Idempotency;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +26,12 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Options;
+using IncidentReportingSystem.Application.Behaviors;
+using IncidentReportingSystem.Infrastructure.Persistence.Idempotency;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -218,7 +218,7 @@ static void ConfigureServices(WebApplicationBuilder builder)
     services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
     services.AddScoped<IPasswordHasher, PasswordHasherPBKDF2>();
-    services.AddScoped<IIdempotencyStore, IdempotencyStoreEf>();
+    services.AddScoped<IIdempotencyStore, IdempotencyStore>();
 
     ConfigureJwtAuthentication(services, configuration);
 }

@@ -1,7 +1,7 @@
 ﻿using FluentAssertions;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Interfaces;
 using IncidentReportingSystem.Tests.Helpers;
 using Moq;
 

@@ -1,14 +1,8 @@
-﻿using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
+﻿using IncidentReportingSystem.Application.Persistence;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
-using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
 {
@@ -37,17 +31,17 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
 
         /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> GetAsync(
-            IncidentStatus? status = null,
-            int skip = 0,
-            int take = 50,
-            IncidentCategory? category = null,
-            IncidentSeverity? severity = null,
-            string? searchText = null,
-            DateTime? reportedAfter = null,
-            DateTime? reportedBefore = null,
-            IncidentSortField sortBy = IncidentSortField.CreatedAt,
-            SortDirection direction = SortDirection.Desc,
-            CancellationToken cancellationToken = default)
+            IncidentStatus? status,
+            int skip,
+            int take,
+            IncidentCategory? category,
+            IncidentSeverity? severity,
+            string? searchText,
+            DateTime? reportedAfter,
+            DateTime? reportedBefore,
+            IncidentSortField sortBy,
+            SortDirection direction,
+            CancellationToken cancellationToken)
         {
             IQueryable<IncidentReport> query = _context.IncidentReports.AsNoTracking();
 

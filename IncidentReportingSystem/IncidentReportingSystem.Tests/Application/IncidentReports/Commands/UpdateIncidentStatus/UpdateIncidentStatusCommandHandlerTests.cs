@@ -1,10 +1,9 @@
 ﻿using FluentAssertions;
 using FluentValidation;
-using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
-using MediatR;
 using Moq;
 
 namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands

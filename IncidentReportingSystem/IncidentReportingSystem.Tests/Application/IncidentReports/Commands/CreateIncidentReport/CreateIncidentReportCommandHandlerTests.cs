@@ -1,10 +1,5 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Tests.Helpers;
 
 using Moq;

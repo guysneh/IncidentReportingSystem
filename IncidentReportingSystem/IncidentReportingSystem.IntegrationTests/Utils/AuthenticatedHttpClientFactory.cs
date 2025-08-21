@@ -1,11 +1,11 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using IncidentReportingSystem.Application.Common.Auth;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using IncidentReportingSystem.Domain.Auth;      
 
 namespace IncidentReportingSystem.IntegrationTests.Utils
 {
