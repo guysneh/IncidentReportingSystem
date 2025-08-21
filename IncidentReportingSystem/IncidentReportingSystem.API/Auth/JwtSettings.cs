@@ -1,4 +1,4 @@
-﻿namespace IncidentReportingSystem.API.Authentication;
+﻿namespace IncidentReportingSystem.API.Auth;
 
 public class JwtSettings
 {
