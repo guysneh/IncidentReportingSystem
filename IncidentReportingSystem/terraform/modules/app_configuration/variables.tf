@@ -48,3 +48,37 @@ variable "stabilization_delay" {
   type        = string
   default     = "90s"
 }
+
+variable "app_config_name" {
+  type        = string
+  description = "App Configuration resource name"
+  default     = "incident-appcfg"
+}
+
+variable "app_config_label" {
+  description = "Label to scope App Configuration keys/features (e.g. prod)"
+  type        = string
+  default     = "prod"
+}
+
+variable "default_tags" {
+  description = "Default tags to apply to resources"
+  type        = map(string)
+}
+
+variable "web_app_name" {
+  description = "Name of the Web App that will consume the App Configuration"
+  type        = string
+}
+
+variable "telemetry_sample_ratio" {
+  description = "Telemetry sample ratio for diagnostics"
+  type        = string
+  default     = "0.10"
+}
+
+variable "app_config_cache_seconds" {
+  description = "TTL for AppConfig cache"
+  type        = number
+  default     = 90
+}

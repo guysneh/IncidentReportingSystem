@@ -91,7 +91,7 @@ public static class MiddlewareExtensions
             var label = cfg["AppConfig:Label"] ?? "(missing)";
             var enabled = cfg["AppConfig:Enabled"] ?? "(missing)";
             var cache = cfg["AppConfig:CacheSeconds"] ?? "(missing)";
-            var sampleRatio = cfg["MyAppSettings:SampleRatio"] ?? "(missing)";
+            var sampleRatio = cfg["AppConfig:SampleRatio"] ?? "(missing)";
             return Results.Ok(new { AppConfigEnabled = enabled, Label = label, Sentinel = version, CacheSeconds = cache, SampleRatio = sampleRatio });
         }).AllowAnonymous().ExcludeFromDescription();
 

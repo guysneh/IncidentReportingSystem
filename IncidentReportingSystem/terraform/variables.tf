@@ -129,12 +129,6 @@ variable "ci_role_assignment_name" {
   description = "Existing RBAC assignment GUID for CI on Key Vault"
 }
 
-variable "app_config_name" {
-  type        = string
-  description = "App Configuration resource name"
-  default     = "incident-appcfg"
-}
-
 variable "demo_enable_config_probe" {
   type        = bool
   description = "Expose config-demo endpoint in non-Dev (protected by Admin policy)"
@@ -216,6 +210,12 @@ variable "app_config_label" {
   default     = "prod"
 }
 
+variable "app_config_name" {
+  description = "Label (prod/dev/blue/green)"
+  type        = string
+  default     = "incident-appcfg"
+}
+
 variable "app_config_enabled" {
   description = "Enable App Configuration at runtime"
   type        = bool
@@ -226,4 +226,10 @@ variable "app_config_cache_seconds" {
   description = "TTL for AppConfig cache"
   type        = number
   default     = 90
+}
+
+variable "stabilization_delay" {
+  description = "stabilization delשy of the app config"
+  type        = string
+  default     = "90s"
 }

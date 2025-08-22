@@ -44,16 +44,6 @@ variable "always_on" {
   default = true
 }
 
-variable "extra_app_settings" {
-  type    = map(string)
-  default = {}
-}
-
-variable "base_app_settings" {
-  type    = map(string)
-  default = {}
-}
-
 variable "health_check_path" {
   description = "Health check endpoint path exposed by the Web App."
   type        = string
