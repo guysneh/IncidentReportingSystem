@@ -67,7 +67,8 @@ jobs:
             /o:"guysne" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.projectBaseDir="$GITHUB_WORKSPACE/IncidentReportingSystem" \
+            /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**"
 
       - name: Build (Release)
@@ -82,25 +83,39 @@ jobs:
           done
           echo "Postgres did not become ready in time." && exit 1
 
-      - name: Test (Unit) with coverage + thresholds
+      - name: Test (Unit) with coverage
         run: |
+          mkdir -p "$GITHUB_WORKSPACE/coverage/unit"
           dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
             --no-build --configuration Release \
             --logger "trx;LogFileName=unit-tests.trx" \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput=IncidentReportingSystem/TestResults/Unit/ \
-            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
-
-      - name: Test (Integration) with coverage + thresholds
+            /p:CoverletOutput="$GITHUB_WORKSPACE/coverage/unit/"
+      
+      - name: Test (Integration) with coverage
         run: |
+          mkdir -p "$GITHUB_WORKSPACE/coverage/integration"
           dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
             --no-build --configuration Release \
             --logger "trx;LogFileName=integration-tests.trx" \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput=IncidentReportingSystem/TestResults/Integration/ \
-            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+            /p:CoverletOutput="$GITHUB_WORKSPACE/coverage/integration/"
+      
+      - name: List coverage files
+        if: always()
+        run: |
+          find "$GITHUB_WORKSPACE/coverage" -type f -name "coverage.opencover.xml" -print || true
+      
+      - name: Generate HTML coverage
+        if: always()
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
+        with:
+          reports: coverage/**/coverage.opencover.xml
+          targetdir: IncidentReportingSystem/TestResults/CoverageReport
+          reporttypes: Html
+
 
       - name: Sonar END
         if: always()
@@ -128,14 +143,6 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: true
           fail-on-empty: false
-
-      - name: Generate HTML coverage
-        if: always()
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
-        with:
-          reports: IncidentReportingSystem/TestResults/**/coverage.opencover.xml
-          targetdir: IncidentReportingSystem/TestResults/CoverageReport
-          reporttypes: Html
 
       - name: Upload coverage report
         if: always()

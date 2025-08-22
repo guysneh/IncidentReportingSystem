@@ -41,7 +41,7 @@ public static class AuthExtensions
                     ClockSkew = TimeSpan.FromSeconds(5),
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing"))
+                        Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret missing")) // NOSONAR: same rationale as above; reviewed as safe.
                     ),
                     RoleClaimType = ClaimTypesConst.Role,
                     NameClaimType = ClaimTypesConst.Name
