@@ -55,34 +55,48 @@ jobs:
           distribution: temurin
 
       - name: Remove legacy sonar-project.properties (if any)
-        shell: bash
-        run: |
+      shell: bash
+      run: |
+          git ls-files | grep -i "sonar-project.properties" || true
           rm -f sonar-project.properties || true
-          rm -f IncidentReportingSystem/sonar-project.properties || true
+          rm -f **/sonar-project.properties || true
+      
 
       - name: Restore
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
       - name: Install tools (SonarScanner, coverlet.console)
-        shell: bash
-        run: |
+      shell: bash
+      run: |
           dotnet tool update --global dotnet-sonarscanner
           dotnet tool install --global coverlet.console --version 3.*
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          
+      - name: Sonar — diagnostics
+        shell: bash
+        env:
+            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+            which dotnet-sonarscanner || true
+            dotnet-sonarscanner --version
+            test -n "$SONAR_TOKEN" || (echo "SONAR_TOKEN missing"; exit 1)
+            pwd; ls -la
 
       - name: Sonar BEGIN
-        env:
+      env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: bash
-        run: |
+      shell: bash
+      run: |
           dotnet-sonarscanner begin \
-            /k:"guysneh_IncidentReportingSystem" \
-            /o:"guysne" \
-            /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.projectBaseDir="." \
-            /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**"
+          /k:"guysneh_IncidentReportingSystem" \
+          /o:"guysne" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.token="${SONAR_TOKEN}" \
+          /d:sonar.verbose=true \
+          /d:sonar.projectBaseDir="." \
+          /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
+          /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**"
+
 
       - name: Build (Release)
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
