@@ -12,14 +12,16 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    # Env for tests (adjust as needed)
     env:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
       ConnectionStrings__DefaultConnection: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
       TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
-      Cors__AllowedOrigins: "http://example.com"
       Api__BasePath: "/api"
       Api__Version: "v1"
+      # Base64(32 bytes) — DO NOT use in prod; CI only
+      JWT__SECRET: "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY="
 
     services:
       postgres:
@@ -40,41 +42,70 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # better relevance for Sonar
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Setup Java 17 (Sonar)
+      - name: Setup Java 17 (required by Sonar)
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: temurin
 
+      - name: Remove legacy sonar-project.properties (if any)
+        shell: bash
+        run: |
+          rm -f sonar-project.properties || true
+          rm -f IncidentReportingSystem/sonar-project.properties || true
+
       - name: Restore
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
+
+      - name: Install SonarScanner
+        run: |
+          dotnet tool update --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Sonar BEGIN
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: bash
         run: |
-          dotnet tool update --global dotnet-sonarscanner
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
           dotnet-sonarscanner begin \
             /k:"guysneh_IncidentReportingSystem" \
             /o:"guysne" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.projectBaseDir="$GITHUB_WORKSPACE/IncidentReportingSystem" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.projectBaseDir="." \
             /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**"
 
       - name: Build (Release)
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
+      # ---------- Unit tests + coverage to absolute path ----------
+      - name: Test (Unit) with OpenCover + thresholds
+        shell: bash
+        run: |
+          set -euxo pipefail
+          UNIT_TRX="IncidentReportingSystem/TestResults/Unit"
+          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/"
+          mkdir -p "$UNIT_TRX" "$UNIT_COV"
+          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=unit-tests.trx" \
+            --results-directory "$UNIT_TRX" \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput="$UNIT_COV" \
+            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+
       - name: Wait for PostgreSQL
+        shell: bash
         run: |
           for i in {1..12}; do
             nc -z localhost 5444 && echo "Postgres is up!" && exit 0
@@ -83,47 +114,47 @@ jobs:
           done
           echo "Postgres did not become ready in time." && exit 1
 
-      - name: Test (Unit) with coverage
+      # ---------- Integration tests + coverage ----------
+      - name: Test (Integration) with OpenCover + thresholds
+        shell: bash
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/coverage/unit"
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
-            --no-build --configuration Release \
-            --logger "trx;LogFileName=unit-tests.trx" \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput="$GITHUB_WORKSPACE/coverage/unit/"
-      
-      - name: Test (Integration) with coverage
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/coverage/integration"
+          set -euxo pipefail
+          INT_TRX="IncidentReportingSystem/TestResults/Integration"
+          INT_COV="$GITHUB_WORKSPACE/coverage/integration/"
+          mkdir -p "$INT_TRX" "$INT_COV"
           dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
-            --no-build --configuration Release \
+            --no-build \
+            --configuration Release \
             --logger "trx;LogFileName=integration-tests.trx" \
+            --results-directory "$INT_TRX" \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput="$GITHUB_WORKSPACE/coverage/integration/"
-      
-      - name: List coverage files
-        if: always()
+            /p:CoverletOutput="$INT_COV" \
+            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+
+      - name: List coverage files (debug)
+        shell: bash
         run: |
-          find "$GITHUB_WORKSPACE/coverage" -type f -name "coverage.opencover.xml" -print || true
-      
-      - name: Generate HTML coverage
-        if: always()
+          echo "Coverage files under $GITHUB_WORKSPACE/coverage:"
+          find "$GITHUB_WORKSPACE/coverage" -name "coverage.opencover.xml" -type f -maxdepth 3 -print || true
+
+      - name: Generate HTML coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
         with:
           reports: coverage/**/coverage.opencover.xml
           targetdir: IncidentReportingSystem/TestResults/CoverageReport
-          reporttypes: Html
+          reporttypes: Html;JsonSummary
+          filefilters: "-*\\obj\\*;-*\\Migrations\\*;-*\\.g.cs"
 
-
-      - name: Sonar END
+      - name: Sonar END (uploads analysis + coverage)
         if: always()
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: bash
         run: |
-          dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
 
+      # ---------- Test results (graph) ----------
       - name: Publish Unit Test results
         if: always()
         uses: dorny/test-reporter@v1
@@ -144,7 +175,8 @@ jobs:
           fail-on-error: true
           fail-on-empty: false
 
-      - name: Upload coverage report
+      # ---------- Artifacts ----------
+      - name: Upload coverage report (artifact)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -158,4 +190,4 @@ jobs:
           name: raw-test-results
           path: |
             IncidentReportingSystem/TestResults/**/*.trx
-            IncidentReportingSystem/TestResults/**/coverage.opencover.xml
+            coverage/**/coverage.opencover.xml
