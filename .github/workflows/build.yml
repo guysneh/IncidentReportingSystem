@@ -55,8 +55,8 @@ jobs:
           distribution: temurin
 
       - name: Remove legacy sonar-project.properties (if any)
-      shell: bash
-      run: |
+        shell: bash
+        run: |
           git ls-files | grep -i "sonar-project.properties" || true
           rm -f sonar-project.properties || true
           rm -f **/sonar-project.properties || true
@@ -66,8 +66,8 @@ jobs:
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
       - name: Install tools (SonarScanner, coverlet.console)
-      shell: bash
-      run: |
+        shell: bash
+        run: |
           dotnet tool update --global dotnet-sonarscanner
           dotnet tool install --global coverlet.console --version 3.*
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
@@ -83,10 +83,10 @@ jobs:
             pwd; ls -la
 
       - name: Sonar BEGIN
-      env:
+        env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      shell: bash
-      run: |
+        shell: bash
+        run: |
           dotnet-sonarscanner begin \
           /k:"guysneh_IncidentReportingSystem" \
           /o:"guysne" \
