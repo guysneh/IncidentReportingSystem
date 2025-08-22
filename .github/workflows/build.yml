@@ -12,7 +12,6 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
-    # Env for tests (adjust as needed)
     env:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
@@ -20,7 +19,7 @@ jobs:
       TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
       Api__BasePath: "/api"
       Api__Version: "v1"
-      # Base64(32 bytes) — DO NOT use in prod; CI only
+      # CI-only demo secret (Base64 of 32 bytes). Do NOT use in production.
       JWT__SECRET: "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY="
 
     services:
@@ -42,14 +41,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # better relevance for Sonar
+          fetch-depth: 0
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Setup Java 17 (required by Sonar)
+      - name: Setup Java 17 (Sonar)
         uses: actions/setup-java@v4
         with:
           java-version: 17
@@ -64,9 +63,11 @@ jobs:
       - name: Restore
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
-      - name: Install SonarScanner
+      - name: Install tools (SonarScanner, coverlet.console)
+        shell: bash
         run: |
           dotnet tool update --global dotnet-sonarscanner
+          dotnet tool install --global coverlet.console --version 3.*
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Sonar BEGIN
@@ -86,23 +87,22 @@ jobs:
       - name: Build (Release)
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
-      # ---------- Unit tests + coverage to absolute path ----------
-      - name: Test (Unit) with OpenCover + thresholds
+      # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
+      - name: Test (Unit) with coverlet.console + thresholds
         shell: bash
         run: |
           set -euxo pipefail
           UNIT_TRX="IncidentReportingSystem/TestResults/Unit"
-          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/"
-          mkdir -p "$UNIT_TRX" "$UNIT_COV"
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
-            --no-build \
-            --configuration Release \
-            --logger "trx;LogFileName=unit-tests.trx" \
-            --results-directory "$UNIT_TRX" \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput="$UNIT_COV" \
-            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
+          UNIT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
+          mkdir -p "$UNIT_TRX" "$(dirname "$UNIT_COV")"
+          # run tests via coverlet wrapper
+          coverlet "$UNIT_DLL" \
+            --target "dotnet" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $UNIT_TRX" \
+            --format opencover \
+            --output "$UNIT_COV" \
+            --threshold 80 --threshold-type line --threshold-stat total
 
       - name: Wait for PostgreSQL
         shell: bash
@@ -114,29 +114,27 @@ jobs:
           done
           echo "Postgres did not become ready in time." && exit 1
 
-      # ---------- Integration tests + coverage ----------
-      - name: Test (Integration) with OpenCover + thresholds
+      # ---------- Integration tests via coverlet.console ----------
+      - name: Test (Integration) with coverlet.console + thresholds
         shell: bash
         run: |
           set -euxo pipefail
           INT_TRX="IncidentReportingSystem/TestResults/Integration"
-          INT_COV="$GITHUB_WORKSPACE/coverage/integration/"
-          mkdir -p "$INT_TRX" "$INT_COV"
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
-            --no-build \
-            --configuration Release \
-            --logger "trx;LogFileName=integration-tests.trx" \
-            --results-directory "$INT_TRX" \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=opencover \
-            /p:CoverletOutput="$INT_COV" \
-            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+          INT_COV="$GITHUB_WORKSPACE/coverage/integration/coverage.opencover.xml"
+          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/bin/Release/net8.0/IncidentReportingSystem.IntegrationTests.dll"
+          mkdir -p "$INT_TRX" "$(dirname "$INT_COV")"
+          coverlet "$INT_DLL" \
+            --target "dotnet" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --configuration Release --logger trx;LogFileName=integration-tests.trx --results-directory $INT_TRX" \
+            --format opencover \
+            --output "$INT_COV" \
+            --threshold 80 --threshold-type line --threshold-stat total
 
       - name: List coverage files (debug)
         shell: bash
         run: |
           echo "Coverage files under $GITHUB_WORKSPACE/coverage:"
-          find "$GITHUB_WORKSPACE/coverage" -name "coverage.opencover.xml" -type f -maxdepth 3 -print || true
+          find "$GITHUB_WORKSPACE/coverage" -name "coverage.opencover.xml" -type f -maxdepth 4 -print || true
 
       - name: Generate HTML coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
@@ -154,7 +152,7 @@ jobs:
         run: |
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
 
-      # ---------- Test results (graph) ----------
+      # ---------- Graphical TRX reports ----------
       - name: Publish Unit Test results
         if: always()
         uses: dorny/test-reporter@v1
