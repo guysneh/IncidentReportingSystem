@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build, Test, Analyze
 
 on:
   workflow_dispatch:
@@ -9,8 +9,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  build-and-test:
+  ci:
     runs-on: ubuntu-latest
+
     env:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
@@ -19,6 +20,7 @@ jobs:
       Cors__AllowedOrigins: "http://example.com"
       Api__BasePath: "/api"
       Api__Version: "v1"
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -35,48 +37,79 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
-      - name: Restore dependencies
+      - name: Setup Java 17 (Sonar)
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Restore
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
-      - name: Build solution
+      - name: Sonar BEGIN
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet tool update --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet-sonarscanner begin \
+            /k:"guysneh_IncidentReportingSystem" \
+            /o:"guysne" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**"
+
+      - name: Build (Release)
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
-      - name: Run unit tests with coverage
+      - name: Wait for PostgreSQL
         run: |
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
-            --no-build \
-            --configuration Release \
-            --logger "trx;LogFileName=unit-tests.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory IncidentReportingSystem/TestResults
-
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          for i in {1..10}; do
+          for i in {1..12}; do
             nc -z localhost 5444 && echo "Postgres is up!" && exit 0
             echo "Waiting for Postgres on localhost:5444..."
-            sleep 3
+            sleep 5
           done
           echo "Postgres did not become ready in time." && exit 1
 
-      - name: Run integration tests with coverage
+      - name: Test (Unit) with coverage + thresholds
+        run: |
+          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
+            --no-build --configuration Release \
+            --logger "trx;LogFileName=unit-tests.trx" \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=IncidentReportingSystem/TestResults/Unit/ \
+            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
+
+      - name: Test (Integration) with coverage + thresholds
         run: |
           dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
-            --no-build \
-            --configuration Release \
+            --no-build --configuration Release \
             --logger "trx;LogFileName=integration-tests.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory IncidentReportingSystem/TestResults
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=IncidentReportingSystem/TestResults/Integration/ \
+            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total
 
-      - name: Publish unit test results
+      - name: Sonar END
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Publish Unit Test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
@@ -86,7 +119,7 @@ jobs:
           fail-on-error: true
           fail-on-empty: false
 
-      - name: Publish integration test results
+      - name: Publish Integration Test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
@@ -96,28 +129,26 @@ jobs:
           fail-on-error: true
           fail-on-empty: false
 
-      - name: Generate HTML code coverage report
+      - name: Generate HTML coverage
         if: always()
-        continue-on-error: true
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
         with:
-          reports: IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
+          reports: IncidentReportingSystem/TestResults/**/coverage.opencover.xml
           targetdir: IncidentReportingSystem/TestResults/CoverageReport
           reporttypes: Html
 
-      - name: Upload code coverage report
+      - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: coverage-report
           path: IncidentReportingSystem/TestResults/CoverageReport
 
-      - name: Upload raw test results
+      - name: Upload raw results (trx + opencover)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: raw-test-results
           path: |
             IncidentReportingSystem/TestResults/**/*.trx
-            IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
-
+            IncidentReportingSystem/TestResults/**/coverage.opencover.xml
