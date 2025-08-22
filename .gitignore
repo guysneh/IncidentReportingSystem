@@ -465,3 +465,4 @@ INTERNAL_PLAN.md
 .sonarqube/conf/Sonar-vbnet-none.ruleset
 .sonarqube/conf/cs/SonarLint.xml
 .sonarqube/conf/vbnet/SonarLint.xml
+sonar-project.properties.ignore
