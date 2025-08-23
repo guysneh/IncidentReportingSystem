@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
-using IncidentReportingSystem.Application.Common.Behaviors;
+using IncidentReportingSystem.Application.Behaviors;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;

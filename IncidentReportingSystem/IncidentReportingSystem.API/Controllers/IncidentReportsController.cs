@@ -1,15 +1,15 @@
 ﻿using Asp.Versioning;
-using IncidentReportingSystem.Application.IncidentReports.Commands.BulkUpdateIncidentStatus;
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-using IncidentReportingSystem.Application.IncidentReports.Commands.UpdateIncidentStatus;
-using IncidentReportingSystem.Application.IncidentReports.DTOs;
-using IncidentReportingSystem.Application.IncidentReports.Mappers;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReportById;
-using IncidentReportingSystem.Application.IncidentReports.Queries.GetIncidentReports;
-using IncidentReportingSystem.Domain.Auth;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
+using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -58,17 +58,10 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
-            try
-            {
-                var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken).ConfigureAwait(false);
-                return Ok(result.ToDto());
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
+            var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), ct);
+            return Ok(result.ToDto());
         }
 
         /// <summary>
@@ -94,63 +87,36 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
-            [FromQuery] IncidentStatus? status = null,
-            [FromQuery] int skip = 0,
-            [FromQuery] int take = 50,
-            [FromQuery] IncidentCategory? category = null,
-            [FromQuery] IncidentSeverity? severity = null,
-            [FromQuery] string? searchText = null,
-            [FromQuery] DateTime? reportedAfter = null,
-            [FromQuery] DateTime? reportedBefore = null,
-            [FromQuery] IncidentSortField sortBy = IncidentSortField.CreatedAt,
-            [FromQuery] SortDirection direction = SortDirection.Desc,
+            IncidentStatus? status, int skip = 0, int take = 50,
+            IncidentCategory? category = null, IncidentSeverity? severity = null,
+            string? searchText = null, DateTime? reportedAfter = null, DateTime? reportedBefore = null,
+            IncidentSortField sortBy = IncidentSortField.CreatedAt, SortDirection direction = SortDirection.Desc,
             CancellationToken cancellationToken = default)
         {
-            if (take is < 1 or > 200) return BadRequest("take must be between 1 and 200.");
-            if (skip < 0) return BadRequest("skip must be >= 0.");
-            if (reportedAfter.HasValue && reportedBefore.HasValue && reportedAfter > reportedBefore)
-                return BadRequest("reportedAfter must be <= reportedBefore.");
-
             var query = new GetIncidentReportsQuery(
-                Status: status,
-                Skip: skip,
-                Take: take,
-                Category: category,
-                Severity: severity,
-                SearchText: searchText,
-                ReportedAfter: reportedAfter,
-                ReportedBefore: reportedBefore,
-                SortBy: sortBy,
-                Direction: direction
-            );
+                status, skip, take, category, severity, searchText,
+                reportedAfter, reportedBefore, sortBy, direction);
 
-            var result = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            var result = await _mediator.Send(query, cancellationToken);
             return Ok(result.Select(x => x.ToDto()));
         }
 
 
-            /// <summary>
-            /// Updates the status of an existing incident report.
-            /// </summary>
-            /// <param name="id">ID of the incident report to update.</param>
-            /// <param name="newStatus">New status to apply.</param>
-            /// <param name="cancellationToken">Cancellation token.</param>
-            /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
-            [Authorize(Policy = PolicyNames.CanManageIncidents)]
+        /// <summary>
+        /// Updates the status of an existing incident report.
+        /// </summary>
+        /// <param name="id">ID of the incident report to update.</param>
+        /// <param name="newStatus">New status to apply.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>No content if update succeeded, or not found if ID doesn't exist.</returns>
+        [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken ct)
         {
-            try
-            {
-                await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken).ConfigureAwait(false);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
+            await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), ct);
+            return NoContent();
         }
 
         /// <summary>
@@ -163,16 +129,11 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(BulkStatusUpdateResultDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> BulkStatus(
             [FromBody] BulkStatusUpdateRequest request,
-            [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
+            [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
             CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(idempotencyKey))
-                return BadRequest("Idempotency-Key header is required.");
-            if (request.Ids is null || request.Ids.Count == 0)
-                return BadRequest("Ids must be non-empty.");
-
             var cmd = new BulkUpdateIncidentStatusCommand(idempotencyKey, request.Ids, request.NewStatus);
-            var result = await _mediator.Send(cmd, ct).ConfigureAwait(false);
+            var result = await _mediator.Send(cmd, ct);
             return Ok(result);
         }
 

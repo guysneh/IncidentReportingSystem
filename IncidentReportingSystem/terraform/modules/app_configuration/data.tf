@@ -1,14 +1,4 @@
 ########################################
-# Feature Flags (runtime ON/OFF, no restart)
-########################################
-
-resource "azurerm_app_configuration_feature" "enable_swagger_ui" {
-  configuration_store_id = azurerm_app_configuration.appcfg.id
-  name                   = "EnableSwaggerUI"
-  enabled                = true
-}
-
-########################################
 # Key-Values used by the demo (refreshed via Sentinel)
 ########################################
 

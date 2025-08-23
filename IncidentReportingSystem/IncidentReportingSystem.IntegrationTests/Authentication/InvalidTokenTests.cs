@@ -2,9 +2,8 @@
 using System.Net.Http.Headers;
 using FluentAssertions;
 using IncidentReportingSystem.IntegrationTests.Utils;
-using IncidentReportingSystem.Application.Users.Commands.LoginUser;
 using System.Net.Http.Json;
-using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
+using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 
 namespace IncidentReportingSystem.Tests.Integration.Auth;
 

@@ -1,7 +1,6 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using IncidentReportingSystem.API.Middleware;
-using IncidentReportingSystem.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using IncidentReportingSystem.IntegrationTests.Utils;
@@ -10,6 +9,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using System.Net;
+using IncidentReportingSystem.Application.Exceptions;
 
 namespace IncidentReportingSystem.IntegrationTests.Middleware
 {
@@ -151,6 +151,5 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
             problem.Title.Should().Be("Unexpected error");
             problem.Extensions.Should().ContainKey("traceId");
         }
-
     }
 }

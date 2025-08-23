@@ -2,14 +2,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using IncidentReportingSystem.Application.Comments.Commands;
-using IncidentReportingSystem.Application.Comments.Queries;
-using IncidentReportingSystem.Application.Common.Exceptions;
-using IncidentReportingSystem.Domain.Auth;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using Asp.Versioning;
-using IncidentReportingSystem.Application.Comments.DTOs;
-using IncidentReportingSystem.API.Authentication;
+using IncidentReportingSystem.Application.Features.Comments.Dtos;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
+using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
+using IncidentReportingSystem.API.Auth;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 
 namespace IncidentReportingSystem.API.Controllers
 {
@@ -41,10 +42,7 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken ct = default)
         {
-            var exists = await _db.IncidentReports.AsNoTracking().AnyAsync(x => x.Id == incidentId, ct);
-            if (!exists) return NotFound();
-
-            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, Math.Clamp(take, 1, 100)), ct);
+            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), ct);
             return Ok(result);
         }
 
@@ -60,33 +58,12 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateAsync(Guid incidentId, [FromBody] CreateCommentCommand body, CancellationToken ct = default)
         {
-            try
-            {
-                var cmd = new CreateCommentCommand(incidentId,User.RequireUserId(), body.Text);
-                var created = await _mediator.Send(cmd, ct);
+            var cmd = new CreateCommentCommand(incidentId, User.RequireUserId(), body.Text);
+            var created = await _mediator.Send(cmd, ct);
 
-                var apiVersion = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
-                var location = $"/api/v{apiVersion}/incidentreports/{incidentId}/comments";
-                return Created(location, created);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (ForbiddenException ex)
-            {
-                return Problem(title: "Forbidden", detail: ex.Message, statusCode: StatusCodes.Status403Forbidden);
-            }
-            catch (FluentValidation.ValidationException vex)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Title = "Validation failed",
-                    Detail = vex.Message,
-                    Status = StatusCodes.Status400BadRequest
-                });
-            }
-
+            var apiVersion = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
+            var location = $"/api/v{apiVersion}/incidentreports/{incidentId}/comments";
+            return Created(location, created);
         }
 
         /// <summary>
@@ -100,25 +77,9 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteAsync(Guid incidentId, Guid commentId, CancellationToken ct = default)
         {
-            try
-            {
-                var isAdmin = User.IsInRole("Admin"); // adapt if your admin check differs
-                await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), ct);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                // If repository uses "stub delete" and no rows are affected → treat as 404 by contract.
-                return NotFound();
-            }
-            catch (ForbiddenException ex)
-            {
-                return Problem(title: "Forbidden", detail: ex.Message, statusCode: StatusCodes.Status403Forbidden);
-            }
+            var isAdmin = User.IsInRole("Admin");
+            await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), ct);
+            return NoContent();
         }
     }
 }

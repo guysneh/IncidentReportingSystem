@@ -5,12 +5,12 @@ using System.Text.Json.Serialization;
 using FluentAssertions;
 using Npgsql;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
-using IncidentReportingSystem.Application.IncidentReports.DTOs;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 
 namespace IncidentReportingSystem.Tests.Integration;
 

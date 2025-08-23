@@ -1,10 +1,7 @@
-using System;
-
-using IncidentReportingSystem.Application.IncidentReports.Commands.CreateIncidentReport;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
-using IncidentReportingSystem.Domain.Interfaces;
-
 using Moq;
 
 namespace IncidentReportingSystem.Tests.Helpers

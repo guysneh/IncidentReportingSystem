@@ -1,10 +1,5 @@
 data "azurerm_client_config" "current" {}
 
-locals {
-  merged_app_settings = var.app_settings
-}
-
-
 resource "azurerm_linux_web_app" "this" {
   name                = var.name
   location            = var.location
@@ -23,6 +18,6 @@ resource "azurerm_linux_web_app" "this" {
   }
 
   https_only   = true
-  app_settings = merge(local.merged_app_settings, var.extra_app_settings)
+  app_settings = var.app_settings
   tags         = var.tags
 }

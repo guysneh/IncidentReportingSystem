@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using IncidentReportingSystem.Infrastructure.Persistence;
-using IncidentReportingSystem.Infrastructure.Services.Idempotency;
+using IncidentReportingSystem.Infrastructure.Persistence.Idempotency;
 using Microsoft.EntityFrameworkCore;
 
 namespace IncidentReportingSystem.Tests.Idempotency
@@ -27,7 +27,7 @@ namespace IncidentReportingSystem.Tests.Idempotency
         public async Task PutIfAbsent_Then_TryGet_Returns_Same_Response()
         {
             using var db = NewDb();
-            var store = new IdempotencyStoreEf(db);
+            var store = new IdempotencyStore(db);
             var key = "K1";
             var payload = new { Ids = new[] { Guid.NewGuid() }, Status = "Closed" };
             var response = new TestResponse { Updated = 1, NotFound = Array.Empty<Guid>(), IdempotencyKey = key };
@@ -47,7 +47,7 @@ namespace IncidentReportingSystem.Tests.Idempotency
         public async Task SameKey_DifferentPayload_FirstWriteWins()
         {
             using var db = NewDb();
-            var store = new IdempotencyStoreEf(db);
+            var store = new IdempotencyStore(db);
             var key = "K2";
 
             var payloadA = new { Ids = new[] { Guid.NewGuid() }, Status = "Closed" };

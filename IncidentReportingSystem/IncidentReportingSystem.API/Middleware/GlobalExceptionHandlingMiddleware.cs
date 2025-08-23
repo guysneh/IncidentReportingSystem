@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using FluentValidation;
-using IncidentReportingSystem.Application.Common.Exceptions;
+using IncidentReportingSystem.Application.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -104,6 +104,18 @@ namespace IncidentReportingSystem.API.Middleware
                     null,
                     null),
 
+                InvalidCredentialsException => (
+                   HttpStatusCode.Unauthorized,
+                   "Invalid credentials",
+                   null,
+                   null),
+
+                EmailAlreadyExistsException => (
+                   HttpStatusCode.Conflict,
+                   "Email already exists",
+                   null,
+                   null),
+
                 UnauthorizedAccessException => (
                     HttpStatusCode.Forbidden,
                     "Forbidden",
@@ -122,11 +134,19 @@ namespace IncidentReportingSystem.API.Middleware
                     null,
                     null),
 
+                NotFoundException => (HttpStatusCode.NotFound, "Not found", null, null),
+
                 DbUpdateException dbue when dbue.InnerException is PostgresException pg && pg.SqlState == "23505" => (
                     HttpStatusCode.Conflict,
                     "Conflict",
                     pg.Detail ?? "Duplicate key value violates unique constraint.",
                     new Dictionary<string, object?> { ["constraint"] = pg.ConstraintName }),
+
+                Microsoft.EntityFrameworkCore.DbUpdateException  => (
+                   HttpStatusCode.ServiceUnavailable,
+                   "Database unavailable",
+                   null,
+                   null),
 
                 var e2 when e2.GetType().Name.Contains("AlreadyExists", StringComparison.OrdinalIgnoreCase) => (
                     HttpStatusCode.Conflict,

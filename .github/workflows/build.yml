@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build, Test, Analyze
 
 on:
   workflow_dispatch:
@@ -9,16 +9,19 @@ permissions:
   pull-requests: write
 
 jobs:
-  build-and-test:
+  ci:
     runs-on: ubuntu-latest
+
     env:
       ASPNETCORE_ENVIRONMENT: Test
       AppConfig__Enabled: "false"
       ConnectionStrings__DefaultConnection: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
       TEST_DB_CONNECTION: Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword
-      Cors__AllowedOrigins: "http://example.com"
       Api__BasePath: "/api"
       Api__Version: "v1"
+      # CI-only demo secret (Base64 of 32 bytes). Do NOT use in production.
+      JWT__SECRET: "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY="
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -35,48 +38,162 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
-      - name: Restore dependencies
+      - name: Setup Java 17 (Sonar)
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Remove legacy sonar-project.properties (if any)
+        shell: bash
+        run: |
+          git ls-files | grep -i "sonar-project.properties" || true
+          rm -f sonar-project.properties || true
+          rm -f **/sonar-project.properties || true
+
+      - name: Restore
         run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.sln
 
-      - name: Build solution
+      - name: Install tools (SonarScanner, coverlet.console)
+        shell: bash
+        run: |
+          dotnet tool update --global dotnet-sonarscanner
+          dotnet tool install --global coverlet.console --version 3.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Sonar — diagnostics
+        shell: bash
+        run: |
+          set -x
+          which dotnet-sonarscanner || true
+          dotnet-sonarscanner --version || true
+          pwd; ls -la
+
+      - name: Sonar BEGIN
+        working-directory: ${{ github.workspace }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Clean previous working dir just in case
+          rm -rf .sonarqube || true
+          dotnet-sonarscanner begin \
+            /k:"guysneh_IncidentReportingSystem" \
+            /o:"guysne" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.verbose=true \
+            /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Dtos/**,**/*Dto.cs,**/Program.cs,**/ConfigureSwagger*.cs,**/GlobalUsings.cs,**/Generated/**,**/*.g.cs"
+
+      - name: Build (Release)
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
-      - name: Run unit tests with coverage
+      # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
+      - name: Test (Unit) with coverlet.console + thresholds
+        shell: bash
         run: |
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj \
-            --no-build \
-            --configuration Release \
-            --logger "trx;LogFileName=unit-tests.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory IncidentReportingSystem/TestResults
+          set -euxo pipefail
+          UNIT_TRX="IncidentReportingSystem/TestResults/Unit"
+          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
+          UNIT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
+          mkdir -p "$UNIT_TRX" "$(dirname "$UNIT_COV")"
+          coverlet "$UNIT_DLL" \
+            --target "dotnet" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $UNIT_TRX" \
+            --format opencover \
+            --output "$UNIT_COV" \
+            --threshold 80 --threshold-type line --threshold-stat total \
+            --exclude-by-file "**/Migrations/*.cs" \
+            --exclude-by-file "**/*Migrations/*.cs" \
+            --exclude-by-file "**/Dtos/**" \
+            --exclude-by-file "**/*Dto.cs" \
+            --exclude-by-file "**/Program.cs" \
+            --exclude-by-file "**/ConfigureSwagger*.cs" \
+            --exclude-by-file "**/GlobalUsings.cs" \
+            --exclude-by-file "**/Generated/**" \
+            --exclude-by-file "**/*.g.cs" \
+            --exclude-by-attribute "GeneratedCodeAttribute" \
+            --exclude-by-attribute "CompilerGeneratedAttribute" \
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
+            --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
+            || echo "Coverage under threshold — continuing for Sonar END"
 
-      - name: Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL
+        shell: bash
         run: |
-          for i in {1..10}; do
+          for i in {1..12}; do
             nc -z localhost 5444 && echo "Postgres is up!" && exit 0
             echo "Waiting for Postgres on localhost:5444..."
-            sleep 3
+            sleep 5
           done
           echo "Postgres did not become ready in time." && exit 1
 
-      - name: Run integration tests with coverage
+      # ---------- Integration tests via coverlet.console ----------
+      - name: Test (Integration) with coverlet.console + thresholds
+        shell: bash
         run: |
-          dotnet test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj \
-            --no-build \
-            --configuration Release \
-            --logger "trx;LogFileName=integration-tests.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory IncidentReportingSystem/TestResults
+          set -euxo pipefail
+          INT_TRX="IncidentReportingSystem/TestResults/Integration"
+          INT_COV="$GITHUB_WORKSPACE/coverage/integration/coverage.opencover.xml"
+          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/bin/Release/net8.0/IncidentReportingSystem.IntegrationTests.dll"
+          mkdir -p "$INT_TRX" "$(dirname "$INT_COV")"
+          coverlet "$INT_DLL" \
+            --target "dotnet" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --configuration Release --logger trx;LogFileName=integration-tests.trx --results-directory $INT_TRX" \
+            --format opencover \
+            --output "$INT_COV" \
+            --threshold 80 --threshold-type line --threshold-stat total \
+            --exclude-by-file "**/Migrations/*.cs" \
+            --exclude-by-file "**/*Migrations/*.cs" \
+            --exclude-by-file "**/Dtos/**" \
+            --exclude-by-file "**/*Dto.cs" \
+            --exclude-by-file "**/Program.cs" \
+            --exclude-by-file "**/ConfigureSwagger*.cs" \
+            --exclude-by-file "**/GlobalUsings.cs" \
+            --exclude-by-file "**/Generated/**" \
+            --exclude-by-file "**/*.g.cs" \
+            --exclude-by-attribute "GeneratedCodeAttribute" \
+            --exclude-by-attribute "CompilerGeneratedAttribute" \
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
+            --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
+            || echo "Coverage under threshold — continuing for Sonar END"
 
-      - name: Publish unit test results
+      - name: List coverage files (debug)
+        shell: bash
+        run: |
+          echo "Coverage files under $GITHUB_WORKSPACE/coverage:"
+          find "$GITHUB_WORKSPACE/coverage" -name "coverage.opencover.xml" -type f -maxdepth 4 -print || true
+
+      - name: Generate HTML coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@873ee34c88a6234bdab7fd264d3666fd1ab417f7
+        with:
+          reports: coverage/**/coverage.opencover.xml
+          targetdir: IncidentReportingSystem/TestResults/CoverageReport
+          reporttypes: Html;JsonSummary
+          filefilters: "-**/obj/**;-**/Migrations/**;-**/*Migrations/**;-**/Generated/**;-**/*.g.cs"
+
+      - name: Sonar END (uploads analysis + coverage)
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: bash
+        run: |
+          dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+      # ---------- Graphical TRX reports ----------
+      - name: Publish Unit Test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
@@ -86,7 +203,7 @@ jobs:
           fail-on-error: true
           fail-on-empty: false
 
-      - name: Publish integration test results
+      - name: Publish Integration Test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
@@ -96,28 +213,19 @@ jobs:
           fail-on-error: true
           fail-on-empty: false
 
-      - name: Generate HTML code coverage report
-        if: always()
-        continue-on-error: true
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
-        with:
-          reports: IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
-          targetdir: IncidentReportingSystem/TestResults/CoverageReport
-          reporttypes: Html
-
-      - name: Upload code coverage report
+      # ---------- Artifacts ----------
+      - name: Upload coverage report (artifact)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: coverage-report
           path: IncidentReportingSystem/TestResults/CoverageReport
 
-      - name: Upload raw test results
+      - name: Upload raw results (trx + opencover)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: raw-test-results
           path: |
             IncidentReportingSystem/TestResults/**/*.trx
-            IncidentReportingSystem/TestResults/**/coverage.cobertura.xml
-
+            coverage/**/coverage.opencover.xml
