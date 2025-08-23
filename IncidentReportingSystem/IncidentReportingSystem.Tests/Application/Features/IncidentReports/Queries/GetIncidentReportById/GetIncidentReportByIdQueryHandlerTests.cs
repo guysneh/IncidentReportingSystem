@@ -5,7 +5,7 @@ using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Tests.Helpers;
 using Moq;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetIncidentReportById
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Queries.GetIncidentReportById
 {
     public class GetIncidentReportByIdQueryHandlerTests
     {

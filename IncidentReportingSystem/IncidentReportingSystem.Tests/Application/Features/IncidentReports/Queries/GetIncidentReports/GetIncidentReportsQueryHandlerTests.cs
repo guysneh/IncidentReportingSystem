@@ -7,7 +7,7 @@ using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Tests.Helpers;
 using Moq;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetIncidentReports
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Queries.GetIncidentReports
 {
     public class GetIncidentReportsQueryHandlerTests
     {

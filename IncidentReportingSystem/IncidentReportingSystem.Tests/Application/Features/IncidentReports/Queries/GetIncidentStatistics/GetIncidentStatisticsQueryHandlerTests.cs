@@ -7,7 +7,7 @@ using Moq;
 using Shouldly;
 
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Queries.GetIncidentStatistics
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Queries.GetIncidentStatistics
 {
     public class GetIncidentStatisticsQueryHandlerTests
     {

@@ -6,7 +6,7 @@ using Moq;
 
 using Xunit;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.CreateIncidentReport
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Commands.CreateIncidentReport
 {
     public class CreateIncidentReportCommandHandlerTests
     {

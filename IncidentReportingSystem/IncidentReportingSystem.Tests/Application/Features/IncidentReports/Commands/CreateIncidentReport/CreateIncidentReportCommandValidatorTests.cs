@@ -2,7 +2,7 @@ using FluentValidation.TestHelper;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Domain.Enums;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.CreateIncidentReport;
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 
 public class CreateIncidentReportCommandValidatorTests
 {

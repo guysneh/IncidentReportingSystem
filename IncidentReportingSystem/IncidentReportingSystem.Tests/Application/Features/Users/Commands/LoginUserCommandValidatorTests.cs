@@ -1,7 +1,6 @@
-﻿
-using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
+﻿using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 
-namespace IncidentReportingSystem.Tests.Users.Commands
+namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 {
     public sealed class LoginUserCommandValidatorTests
     {

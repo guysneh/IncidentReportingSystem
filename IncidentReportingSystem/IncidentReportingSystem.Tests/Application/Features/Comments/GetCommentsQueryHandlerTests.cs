@@ -2,7 +2,7 @@
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
 using IncidentReportingSystem.Domain.Entities;
 
-namespace IncidentReportingSystem.Tests.Application.Comments
+namespace IncidentReportingSystem.Tests.Application.Features.Comments
 {
     /// <summary>Unit tests for GetCommentsQueryHandler (ordering and paging).</summary>
     public sealed class GetCommentsQueryHandlerTests

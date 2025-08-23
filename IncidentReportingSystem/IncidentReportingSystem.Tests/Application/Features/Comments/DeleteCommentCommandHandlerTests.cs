@@ -5,7 +5,7 @@ using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 
-namespace IncidentReportingSystem.Tests.Unit.Application.Comments
+namespace IncidentReportingSystem.Tests.Application.Features.Comments
 {
     public sealed class DeleteCommentCommandHandlerTests
     {

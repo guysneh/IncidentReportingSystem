@@ -7,7 +7,7 @@ using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Domain;
 
-namespace IncidentReportingSystem.Tests.Application.Users.Commands
+namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 {
     public class RegisterUserCommandHandlerTests
     {

@@ -1,12 +1,15 @@
 ﻿using FluentAssertions;
 using FluentValidation;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NSubstitute;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Commands.UpdateIncidentStatus
 {
     public class UpdateIncidentStatusCommandHandlerTests
     {

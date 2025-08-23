@@ -4,7 +4,7 @@ using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using Moq;
 
-namespace IncidentReportingSystem.Tests.Application.Users.Commands
+namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 {
     public sealed class LoginUserCommandHandlerTests
     {

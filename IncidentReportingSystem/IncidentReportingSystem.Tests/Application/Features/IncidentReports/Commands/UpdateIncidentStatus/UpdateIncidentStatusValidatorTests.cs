@@ -2,7 +2,7 @@
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Enums;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.CreateIncidentReport;
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 
 public class UpdateIncidentStatusValidatorTests
 {

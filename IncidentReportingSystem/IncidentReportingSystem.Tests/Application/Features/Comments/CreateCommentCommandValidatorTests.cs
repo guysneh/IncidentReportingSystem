@@ -1,6 +1,6 @@
 ﻿using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
 
-namespace IncidentReportingSystem.Tests.Application.Comments
+namespace IncidentReportingSystem.Tests.Application.Features.Comments
 {
     /// <summary>Unit tests for CreateCommentCommandValidator.</summary>
     public sealed class CreateCommentCommandValidatorTests

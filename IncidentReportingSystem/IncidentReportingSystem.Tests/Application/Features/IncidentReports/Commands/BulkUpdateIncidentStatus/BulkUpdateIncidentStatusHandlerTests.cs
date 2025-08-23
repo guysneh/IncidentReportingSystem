@@ -4,7 +4,7 @@ using IncidentReportingSystem.Application.Features.IncidentReports.Commands.Bulk
 using IncidentReportingSystem.Domain.Enums;
 using Moq;
 
-namespace IncidentReportingSystem.Tests.Application.IncidentReports.Commands.BulkUpdateIncidentStatus
+namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus
 {
     public class BulkUpdateIncidentStatusHandlerTests
     {
