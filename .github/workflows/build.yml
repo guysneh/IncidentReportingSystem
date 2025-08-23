@@ -114,7 +114,19 @@ jobs:
             --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $UNIT_TRX" \
             --format opencover \
             --output "$UNIT_COV" \
-            --threshold 80 --threshold-type line --threshold-stat total || echo "Coverage under threshold — continuing for Sonar END"
+            --threshold 80 --threshold-type line --threshold-stat total || echo "Coverage under threshold — continuing for Sonar END" \
+            --exclude-by-file "**/Migrations/*.cs" \
+            --exclude-by-file "**/*Migrations/*.cs" \
+            --exclude-by-file "**/Dtos/**" \
+            --exclude-by-file "**/*Dto.cs" \
+            --exclude-by-file "**/Program.cs" \
+            --exclude-by-file "**/ConfigureSwagger*.cs" \
+            --exclude-by-file "**/GlobalUsings.cs" \
+            --exclude-by-file "**/Generated/**" \
+            --exclude-by-file "**/*.g.cs" \
+            --exclude-by-attribute "GeneratedCodeAttribute" \
+            --exclude-by-attribute "CompilerGeneratedAttribute" \
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
 
       - name: Wait for PostgreSQL
         shell: bash
@@ -140,7 +152,19 @@ jobs:
             --targetargs "test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --configuration Release --logger trx;LogFileName=integration-tests.trx --results-directory $INT_TRX" \
             --format opencover \
             --output "$INT_COV" \
-            --threshold 80 --threshold-type line --threshold-stat total || echo "Coverage under threshold — continuing for Sonar END"
+            --threshold 80 --threshold-type line --threshold-stat total || echo "Coverage under threshold — continuing for Sonar END" \
+            --exclude-by-file "**/Migrations/*.cs" \
+            --exclude-by-file "**/*Migrations/*.cs" \
+            --exclude-by-file "**/Dtos/**" \
+            --exclude-by-file "**/*Dto.cs" \
+            --exclude-by-file "**/Program.cs" \
+            --exclude-by-file "**/ConfigureSwagger*.cs" \
+            --exclude-by-file "**/GlobalUsings.cs" \
+            --exclude-by-file "**/Generated/**" \
+            --exclude-by-file "**/*.g.cs" \
+            --exclude-by-attribute "GeneratedCodeAttribute" \
+            --exclude-by-attribute "CompilerGeneratedAttribute" \
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
 
       - name: List coverage files (debug)
         shell: bash

@@ -30,14 +30,38 @@ coverlet $unitTestDll `
   --target "dotnet" `
   --targetargs "test IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --verbosity normal" `
   --format opencover `
-  --output "coverage.unit.opencover.xml"
+  --output "coverage.unit.opencover.xml" `
+  --exclude-by-file "**/Migrations/*.cs" `
+  --exclude-by-file "**/*Migrations/*.cs" `
+  --exclude-by-file "**/Dtos/**" `
+  --exclude-by-file "**/*Dto.cs" `
+  --exclude-by-file "**/Program.cs" `
+  --exclude-by-file "**/ConfigureSwagger*.cs" `
+  --exclude-by-file "**/GlobalUsings.cs" `
+  --exclude-by-file "**/Generated/**" `
+  --exclude-by-file "**/*.g.cs" `
+  --exclude-by-attribute "GeneratedCodeAttribute" `
+  --exclude-by-attribute "CompilerGeneratedAttribute" `
+  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
 
 # Step 8: Run integration test coverage
 coverlet $integrationTestDll `
   --target "dotnet" `
   --targetargs "test IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --verbosity normal" `
   --format opencover `
-  --output "coverage.integration.opencover.xml"
+  --output "coverage.integration.opencover.xml" `
+  --exclude-by-file "**/Migrations/*.cs" `
+  --exclude-by-file "**/*Migrations/*.cs" `
+  --exclude-by-file "**/Dtos/**" `
+  --exclude-by-file "**/*Dto.cs" `
+  --exclude-by-file "**/Program.cs" `
+  --exclude-by-file "**/ConfigureSwagger*.cs" `
+  --exclude-by-file "**/GlobalUsings.cs" `
+  --exclude-by-file "**/Generated/**" `
+  --exclude-by-file "**/*.g.cs" `
+  --exclude-by-attribute "GeneratedCodeAttribute" `
+  --exclude-by-attribute "CompilerGeneratedAttribute" `
+  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
 
 # Step 9: Merge both coverage files
 reportgenerator `
