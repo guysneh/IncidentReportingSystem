@@ -8,7 +8,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 {
     public sealed class LoginUserCommandHandlerTests
     {
-        private static LoginUserCommandHandler Make(out Mock<IUserRepository> users, out Mock<IPasswordHasher> hasher, out Mock<IJwtTokenService> jwt, Domain.Entities.User? seeded = null)
+        private static LoginUserCommandHandler Make(out Mock<IUserRepository> users, out Mock<IPasswordHasher> hasher, out Mock<IJwtTokenService> jwt, IncidentReportingSystem.Domain.Entities.User? seeded = null)
         {
             users = new Mock<IUserRepository>();
             hasher = new Mock<IPasswordHasher>();
@@ -29,7 +29,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
         [Fact]
         public async Task Success_Returns_Token()
         {
-            var user = new Domain.Entities.User
+            var user = new IncidentReportingSystem.Domain.Entities.User
             {
                 Id = Guid.NewGuid(),
                 Email = "alice@example.com",
@@ -49,7 +49,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
         [Fact]
         public async Task Wrong_Password_Throws()
         {
-            var user = new Domain.Entities.User { Email = "alice@example.com", NormalizedEmail = "ALICE@EXAMPLE.COM", PasswordHash = new byte[] { 1 }, PasswordSalt = new byte[] { 2 }};
+            var user = new IncidentReportingSystem.Domain.Entities.User { Email = "alice@example.com", NormalizedEmail = "ALICE@EXAMPLE.COM", PasswordHash = new byte[] { 1 }, PasswordSalt = new byte[] { 2 }};
             user.SetRoles(new[] { "User" });
             var handler = Make(out var users, out var hasher, out var jwt, user);
             hasher.Setup(x => x.Verify(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>())).Returns(false);

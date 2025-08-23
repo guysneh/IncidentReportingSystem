@@ -104,6 +104,18 @@ namespace IncidentReportingSystem.API.Middleware
                     null,
                     null),
 
+                IncidentReportingSystem.Application.Exceptions.InvalidCredentialsException => (
+                   HttpStatusCode.Unauthorized,
+                   "Invalid credentials",
+                   null,
+                   null),
+
+                IncidentReportingSystem.Application.Exceptions.EmailAlreadyExistsException => (
+                   HttpStatusCode.Conflict,
+                   "Email already exists",
+                   null,
+                   null),
+
                 UnauthorizedAccessException => (
                     HttpStatusCode.Forbidden,
                     "Forbidden",
@@ -127,6 +139,12 @@ namespace IncidentReportingSystem.API.Middleware
                     "Conflict",
                     pg.Detail ?? "Duplicate key value violates unique constraint.",
                     new Dictionary<string, object?> { ["constraint"] = pg.ConstraintName }),
+
+                Microsoft.EntityFrameworkCore.DbUpdateException  => (
+                   HttpStatusCode.ServiceUnavailable,
+                   "Database unavailable",
+                   null,
+                   null),
 
                 var e2 when e2.GetType().Name.Contains("AlreadyExists", StringComparison.OrdinalIgnoreCase) => (
                     HttpStatusCode.Conflict,

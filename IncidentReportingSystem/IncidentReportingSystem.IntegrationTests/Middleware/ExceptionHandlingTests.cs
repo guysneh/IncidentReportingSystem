@@ -151,6 +151,5 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
             problem.Title.Should().Be("Unexpected error");
             problem.Extensions.Should().ContainKey("traceId");
         }
-
     }
 }
