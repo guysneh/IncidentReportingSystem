@@ -104,13 +104,13 @@ namespace IncidentReportingSystem.API.Middleware
                     null,
                     null),
 
-                IncidentReportingSystem.Application.Exceptions.InvalidCredentialsException => (
+                InvalidCredentialsException => (
                    HttpStatusCode.Unauthorized,
                    "Invalid credentials",
                    null,
                    null),
 
-                IncidentReportingSystem.Application.Exceptions.EmailAlreadyExistsException => (
+                EmailAlreadyExistsException => (
                    HttpStatusCode.Conflict,
                    "Email already exists",
                    null,
@@ -133,6 +133,8 @@ namespace IncidentReportingSystem.API.Middleware
                     "Not found",
                     null,
                     null),
+
+                NotFoundException => (HttpStatusCode.NotFound, "Not found", null, null),
 
                 DbUpdateException dbue when dbue.InnerException is PostgresException pg && pg.SqlState == "23505" => (
                     HttpStatusCode.Conflict,
