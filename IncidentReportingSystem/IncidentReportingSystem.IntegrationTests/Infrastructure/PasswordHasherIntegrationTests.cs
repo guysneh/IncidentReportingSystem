@@ -22,15 +22,15 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
             using var scope = _factory.Services.CreateScope();
             var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
-            var (hash, salt) = hasher.HashPassword("Passw0rd!", CancellationToken.None);
+            var (hash, salt) = hasher.HashPassword("Passw0rd!");
 
             Assert.NotNull(hash);
             Assert.NotNull(salt);
             Assert.True(hash.Length >= 16); // default is 32
             Assert.True(salt.Length >= 8);  // default is 16
 
-            Assert.True(hasher.Verify("Passw0rd!", hash, salt, CancellationToken.None));
-            Assert.False(hasher.Verify("Wrong!", hash, salt, CancellationToken.None));
+            Assert.True(hasher.Verify("Passw0rd!", hash, salt));
+            Assert.False(hasher.Verify("Wrong!", hash, salt));
         }
 
         [Fact]

@@ -17,13 +17,24 @@ namespace IncidentReportingSystem.Infrastructure.Authentication
         /// </summary>
         public PasswordHasherPBKDF2(IOptions<PasswordHashingOptions> options)
         {
-            _options = options.Value;
+            if (options is null) throw new ArgumentNullException(nameof(options));
+            var value = options.Value ?? throw new ArgumentNullException(nameof(options.Value));
+
+            if (value.SaltSizeBytes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value.SaltSizeBytes), "SaltSizeBytes must be > 0.");
+            if (value.KeySizeBytes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value.KeySizeBytes), "KeySizeBytes must be > 0.");
+            if (value.Iterations <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value.Iterations), "Iterations must be > 0.");
+
+            _options = value;
         }
 
         /// <inheritdoc />
-        public (byte[] Hash, byte[] Salt) HashPassword(string password, CancellationToken ct = default)
+        public (byte[] Hash, byte[] Salt) HashPassword(string password)
         {
-            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentNullException(nameof(password));
 
             // Generate a cryptographically strong random salt.
             var salt = RandomNumberGenerator.GetBytes(_options.SaltSizeBytes);
@@ -36,15 +47,22 @@ namespace IncidentReportingSystem.Infrastructure.Authentication
         }
 
         /// <inheritdoc />
-        public bool Verify(string password, byte[] hash, byte[] salt, CancellationToken ct = default)
+        public bool Verify(string password, byte[] hash, byte[] salt)
         {
-            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(password)) return false;
+            if (hash is null || salt is null) return false;
+            if (hash.Length != _options.KeySizeBytes) return false;
+            if (salt.Length != _options.SaltSizeBytes) return false;
 
-            // Recompute the derived key using the provided salt and compare in constant time.
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, _options.Iterations, HashAlgorithmName.SHA256);
+            using var pbkdf2 = new Rfc2898DeriveBytes(
+                password,
+                salt,
+                _options.Iterations,
+                HashAlgorithmName.SHA256);
+
             var computed = pbkdf2.GetBytes(_options.KeySizeBytes);
-
             return CryptographicOperations.FixedTimeEquals(computed, hash);
         }
+
     }
 }

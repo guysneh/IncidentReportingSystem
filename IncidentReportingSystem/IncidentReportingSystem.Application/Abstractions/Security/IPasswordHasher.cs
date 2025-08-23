@@ -11,7 +11,7 @@
         /// <param name="password">Plaintext password to hash.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>A tuple containing the derived key (hash) and the generated salt.</returns>
-        (byte[] Hash, byte[] Salt) HashPassword(string password, CancellationToken ct = default);
+        (byte[] Hash, byte[] Salt) HashPassword(string password);
 
         /// <summary>
         /// Verifies that the provided plaintext password corresponds to the given hash and salt.
@@ -21,6 +21,6 @@
         /// <param name="salt">Previously stored salt.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>True if the password is valid; otherwise false.</returns>
-        bool Verify(string password, byte[] hash, byte[] salt, CancellationToken ct = default);
+        bool Verify(string password, byte[] hash, byte[] salt);
     }
 }

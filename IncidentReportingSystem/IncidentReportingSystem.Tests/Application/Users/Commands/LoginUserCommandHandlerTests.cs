@@ -40,7 +40,7 @@ namespace IncidentReportingSystem.Tests.Application.Users.Commands
             user.SetRoles(new[] { "User" });
 
             var handler = Make(out var users, out var hasher, out var jwt, user);
-            hasher.Setup(x => x.Verify("P@ssw0rd!", user.PasswordHash, user.PasswordSalt, It.IsAny<CancellationToken>())).Returns(true);
+            hasher.Setup(x => x.Verify("P@ssw0rd!", user.PasswordHash, user.PasswordSalt)).Returns(true);
 
             var result = await handler.Handle(new LoginUserCommand(user.Email, "P@ssw0rd!"), CancellationToken.None);
             Assert.Equal("token", result.AccessToken);
@@ -52,7 +52,7 @@ namespace IncidentReportingSystem.Tests.Application.Users.Commands
             var user = new Domain.Entities.User { Email = "alice@example.com", NormalizedEmail = "ALICE@EXAMPLE.COM", PasswordHash = new byte[] { 1 }, PasswordSalt = new byte[] { 2 }};
             user.SetRoles(new[] { "User" });
             var handler = Make(out var users, out var hasher, out var jwt, user);
-            hasher.Setup(x => x.Verify(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>())).Returns(false);
+            hasher.Setup(x => x.Verify(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>())).Returns(false);
             await Assert.ThrowsAsync<InvalidCredentialsException>(() => handler.Handle(new LoginUserCommand(user.Email, "bad"), CancellationToken.None));
         }
 

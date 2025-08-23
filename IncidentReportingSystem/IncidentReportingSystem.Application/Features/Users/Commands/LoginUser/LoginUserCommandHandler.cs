@@ -29,9 +29,9 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
             var user = await _users.FindByNormalizedEmailAsync(normalized, ct).ConfigureAwait(false);
             if (user is null)
                 throw new InvalidCredentialsException();
-            if (!_hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt, ct))
+            if (!_hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt))
                 throw new InvalidCredentialsException();
-            var ok = _hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt, ct);
+            var ok = _hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt);
             if (!ok)
                 throw new InvalidCredentialsException();
 

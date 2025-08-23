@@ -32,7 +32,7 @@ namespace IncidentReportingSystem.Tests.Application.Users.Commands
                 .ReturnsAsync(false);
 
             _hasher
-                .Setup(h => h.HashPassword(cmd.Password, It.IsAny<CancellationToken>()))
+                .Setup(h => h.HashPassword(cmd.Password))
                 .Returns((new byte[] { 1, 2, 3 }, new byte[] { 4, 5, 6 }));
 
             // Act
@@ -48,7 +48,7 @@ namespace IncidentReportingSystem.Tests.Application.Users.Commands
 
             _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-            _hasher.Verify(h => h.HashPassword(cmd.Password, It.IsAny<CancellationToken>()), Times.Once);
+            _hasher.Verify(h => h.HashPassword(cmd.Password), Times.Once);
         }
 
         [Fact]
