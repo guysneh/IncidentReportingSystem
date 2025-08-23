@@ -1,7 +1,7 @@
 ﻿using FluentAssertions;
 using FluentValidation;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;

@@ -1,5 +1,5 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;

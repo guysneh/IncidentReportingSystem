@@ -1,7 +1,7 @@
 ﻿using System;
 using FluentAssertions;
 using Xunit;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 
 namespace IncidentReportingSystem.Tests.Application.Common.Exceptions
 {

@@ -6,7 +6,6 @@ using IncidentReportingSystem.Infrastructure.Persistence;
 using Asp.Versioning;
 using IncidentReportingSystem.Application.Features.Comments.Dtos;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
-using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
 using IncidentReportingSystem.API.Auth;
@@ -42,7 +41,7 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken ct = default)
         {
-            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), ct);
+            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), ct).ConfigureAwait(false) ;
             return Ok(result);
         }
 
@@ -59,7 +58,7 @@ namespace IncidentReportingSystem.API.Controllers
         public async Task<IActionResult> CreateAsync(Guid incidentId, [FromBody] CreateCommentCommand body, CancellationToken ct = default)
         {
             var cmd = new CreateCommentCommand(incidentId, User.RequireUserId(), body.Text);
-            var created = await _mediator.Send(cmd, ct);
+            var created = await _mediator.Send(cmd, ct).ConfigureAwait(false);
 
             var apiVersion = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
             var location = $"/api/v{apiVersion}/incidentreports/{incidentId}/comments";
@@ -78,7 +77,7 @@ namespace IncidentReportingSystem.API.Controllers
         public async Task<IActionResult> DeleteAsync(Guid incidentId, Guid commentId, CancellationToken ct = default)
         {
             var isAdmin = User.IsInRole("Admin");
-            await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), ct);
+            await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), ct).ConfigureAwait(false);
             return NoContent();
         }
     }

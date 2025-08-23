@@ -9,7 +9,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using System.Net;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 
 namespace IncidentReportingSystem.IntegrationTests.Middleware
 {

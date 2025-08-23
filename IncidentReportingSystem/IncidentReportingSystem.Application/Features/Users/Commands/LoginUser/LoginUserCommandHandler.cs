@@ -1,6 +1,6 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
