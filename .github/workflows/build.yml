@@ -177,7 +177,7 @@ jobs:
           find "$GITHUB_WORKSPACE/coverage" -name "coverage.opencover.xml" -type f -maxdepth 4 -print || true
 
       - name: Generate HTML coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.1.26
+        uses: danielpalme/ReportGenerator-GitHub-Action@873ee34c88a6234bdab7fd264d3666fd1ab417f7
         with:
           reports: coverage/**/coverage.opencover.xml
           targetdir: IncidentReportingSystem/TestResults/CoverageReport
