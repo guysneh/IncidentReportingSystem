@@ -42,7 +42,8 @@ coverlet $unitTestDll `
   --exclude-by-file "**/*.g.cs" `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
-  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
+  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
+  --exclude-by-file "**/Persistence/DesignTimeApplicationDbContextFactory.cs"
 
 # Step 8: Run integration test coverage
 coverlet $integrationTestDll `
@@ -61,7 +62,8 @@ coverlet $integrationTestDll `
   --exclude-by-file "**/*.g.cs" `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
-  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
+  --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
+  --exclude-by-file "**/Persistence/DesignTimeApplicationDbContextFactory.cs"
 
 # Step 9: Merge both coverage files
 reportgenerator `

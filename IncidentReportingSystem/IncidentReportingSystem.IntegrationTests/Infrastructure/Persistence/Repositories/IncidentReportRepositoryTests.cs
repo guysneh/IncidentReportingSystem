@@ -256,3 +256,4 @@ namespace IncidentReportingSystem.IntegrationTests.Infrastructure.Persistence.Re
         }
     }
 }
+

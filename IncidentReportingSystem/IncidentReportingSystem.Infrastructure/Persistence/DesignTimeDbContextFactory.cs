@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 namespace IncidentReportingSystem.Infrastructure.Persistence
 {
     /// <summary>Ensures EF CLI uses the same config as the API at design-time.</summary>
-    public sealed class DesignTimeApplicationDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
+    public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
     {
         public ApplicationDbContext CreateDbContext(string[] args)
         {

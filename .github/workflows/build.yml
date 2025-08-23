@@ -126,7 +126,8 @@ jobs:
             --exclude-by-file "**/*.g.cs" \
             --exclude-by-attribute "GeneratedCodeAttribute" \
             --exclude-by-attribute "CompilerGeneratedAttribute" \
-            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
+            --exclude-by-file "**/Persistence/DesignTimeApplicationDbContextFactory.cs"
 
       - name: Wait for PostgreSQL
         shell: bash
@@ -164,7 +165,8 @@ jobs:
             --exclude-by-file "**/*.g.cs" \
             --exclude-by-attribute "GeneratedCodeAttribute" \
             --exclude-by-attribute "CompilerGeneratedAttribute" \
-            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute"
+            --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
+            --exclude-by-file "**/Persistence/DesignTimeApplicationDbContextFactory.cs"
 
       - name: List coverage files (debug)
         shell: bash
