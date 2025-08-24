@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.Tokens;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.Serialization;
@@ -78,8 +79,8 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
                         {
                             var failures = new[]
                             {
-                                new ValidationFailure("Email", "Invalid email format"),
-                                new ValidationFailure("Password", "Too short")
+                                new FluentValidation.Results.ValidationFailure("Email", "Invalid email format"),
+                                new FluentValidation.Results.ValidationFailure("Password", "Too short")
                             };
                             throw new ValidationException(failures);
                         });
@@ -236,6 +237,42 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
 
             var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
             pd!.Title.Should().Be("Conflict");
+        }
+
+        [Fact(DisplayName = "SecurityToken* maps to 401 Authentication failed")]
+        public async Task SecurityToken_branch_401()
+        {
+            var client = MakeClient(new SecurityTokenInvalidSignatureException("bad sig"));
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be("Authentication failed");
+        }
+
+        [Fact(DisplayName = "ArgumentException maps to 400 Invalid argument")]
+        public async Task ArgumentException_branch_400()
+        {
+            var client = MakeClient(new ArgumentException("bad arg"));
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be("Invalid argument");
+        }
+
+        [Fact(DisplayName = "UnauthorizedAccessException maps to 403 Forbidden")]
+        public async Task UnauthorizedAccess_branch_403()
+        {
+            var client = MakeClient(new UnauthorizedAccessException());
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be("Forbidden");
         }
     }
 }

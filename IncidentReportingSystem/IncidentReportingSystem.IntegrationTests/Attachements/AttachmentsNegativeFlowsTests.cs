@@ -66,5 +66,33 @@ namespace IncidentReportingSystem.IntegrationTests.Attachements
             var res = await client.PutAsync($"{apiRoot}/attachments/_loopback/upload?path={Uri.EscapeDataString(invalidPath)}", new ByteArrayContent(Encoding.UTF8.GetBytes("x")));
             await res.ShouldBeAsync(HttpStatusCode.Conflict, _output, "Invalid prefix");
         }
+
+        [Fact(DisplayName = "Start with empty fileName → 400")]
+        public async Task Start_Empty_FileName_400()
+        {
+            var client = AuthenticatedHttpClientFactory.CreateClientWithToken(_f);
+            var root = await ApiRootResolver.ResolveAsync(_f, client);
+            var incidentId = KnownIds.ExistingIncidentId(_f);
+
+            var res = await client.PostAsync($"{root}/incidentreports/{incidentId}/attachments/start",
+                new StringContent(JsonSerializer.Serialize(new { fileName = "", contentType = "image/jpeg" }),
+                Encoding.UTF8, "application/json"));
+
+            await res.ShouldBeAsync(HttpStatusCode.BadRequest, _output, "empty fileName must be rejected");
+        }
+
+        [Fact(DisplayName = "Start with missing contentType → 400")]
+        public async Task Start_No_ContentType_400()
+        {
+            var client = AuthenticatedHttpClientFactory.CreateClientWithToken(_f);
+            var root = await ApiRootResolver.ResolveAsync(_f, client);
+            var incidentId = KnownIds.ExistingIncidentId(_f);
+
+            var payload = new { fileName = $"file-{Guid.NewGuid():N}.jpg" }; // no contentType
+            var res = await client.PostAsync($"{root}/incidentreports/{incidentId}/attachments/start",
+                new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+
+            await res.ShouldBeAsync(HttpStatusCode.BadRequest, _output, "missing contentType must be rejected");
+        }
     }
 }

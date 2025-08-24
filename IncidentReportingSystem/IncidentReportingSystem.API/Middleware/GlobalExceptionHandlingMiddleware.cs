@@ -74,9 +74,6 @@ namespace IncidentReportingSystem.API.Middleware
             if (fullName.StartsWith("Microsoft.IdentityModel.Tokens.SecurityToken", StringComparison.Ordinal))
                 return (HttpStatusCode.Unauthorized, "Authentication failed", null, null);
 
-            if (ex.GetType().Name is "InvalidCredentialsException")
-                return (HttpStatusCode.Unauthorized, "Authentication failed", null, null);
-
             return ex switch
             {
                 ValidationException fv when fv.Errors is not null => (
@@ -105,10 +102,10 @@ namespace IncidentReportingSystem.API.Middleware
                     null),
 
                 InvalidCredentialsException => (
-                   HttpStatusCode.Unauthorized,
-                   "Invalid credentials",
-                   null,
-                   null),
+                    HttpStatusCode.Unauthorized,
+                    "Authentication failed",   
+                    null,
+                    null),
 
                 UnauthorizedAccessException => (
                     HttpStatusCode.Forbidden,

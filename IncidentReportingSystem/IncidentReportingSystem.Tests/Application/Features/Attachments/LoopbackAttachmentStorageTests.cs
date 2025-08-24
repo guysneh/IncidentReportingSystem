@@ -118,5 +118,66 @@ namespace IncidentReportingSystem.Tests.Application.Features.Attachments
             var props = await storage.TryGetUploadedAsync("incidents/none/none/missing.jpg", CancellationToken.None);
             props.Should().BeNull();
         }
+
+        [Fact(DisplayName = "OpenRead throws on unknown path")]
+        public async Task OpenRead_Throws_When_Not_Found()
+        {
+            var storage = CreateStorage();
+            Func<Task> act = async () => await storage.OpenReadAsync("incidents/x/y/missing.jpg", CancellationToken.None);
+            await act.Should().ThrowAsync<FileNotFoundException>();
+        }
+
+        [Theory(DisplayName = "ReceiveUpload rejects invalid paths (absolute, leading slash, traversal, backslashes)")]
+        [InlineData("https://localhost/incidents/1/1/a.jpg")]
+        [InlineData("/incidents/1/1/a.jpg")]
+        [InlineData("incidents/../escape/a.jpg")]
+        [InlineData("comments\\1\\1\\a.jpg")]
+        public async Task ReceiveUpload_Rejects_Invalid_Paths(string bad)
+        {
+            var storage = CreateStorage();
+            Func<Task> act = async () => await storage.ReceiveUploadAsync(bad, new MemoryStream(Encoding.UTF8.GetBytes("x")), "image/jpeg", CancellationToken.None);
+            await act.Should().ThrowAsync<InvalidOperationException>();
+        }
+
+        [Fact(DisplayName = "ReceiveUpload respects provided content-type (not octet-stream)")]
+        public async Task ReceiveUpload_Respects_Provided_ContentType()
+        {
+            var storage = CreateStorage();
+            var path = "incidents/6/i/" + Guid.NewGuid().ToString() + "/file.png";
+            await storage.ReceiveUploadAsync(path, new MemoryStream(Encoding.UTF8.GetBytes("png-bytes")), "image/png", CancellationToken.None);
+
+            var props = await storage.TryGetUploadedAsync(path, CancellationToken.None);
+            props.Should().NotBeNull();
+            props!.ContentType.Should().Be("image/png");
+        }
+
+        [Fact(DisplayName = "CreateUploadSlot: basePath '/api' does not double /api")]
+        public async Task CreateSlot_Does_Not_Double_Api()
+        {
+            var storage = CreateStorage(basePath: "/api");
+            var req = new CreateUploadSlotRequest(
+                AttachmentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                FileName: "a.jpg",
+                ContentType: "image/jpeg",
+                PathPrefix: "incidents/6/i");
+
+            var slot = await storage.CreateUploadSlotAsync(req, CancellationToken.None);
+            slot.UploadUrl.AbsoluteUri.Should().Contain("/api/v1/attachments/_loopback/upload?");
+            slot.UploadUrl.AbsoluteUri.Should().NotContain("/api/api/");
+        }
+
+        [Fact(DisplayName = "CreateUploadSlot: basePath '/' adds /api segment")]
+        public async Task CreateSlot_Adds_Api_When_Base_Is_Root()
+        {
+            var storage = CreateStorage(basePath: "/");
+            var req = new CreateUploadSlotRequest(
+                AttachmentId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                FileName: "b.png",
+                ContentType: "image/png",
+                PathPrefix: "incidents/7/i");
+
+            var slot = await storage.CreateUploadSlotAsync(req, CancellationToken.None);
+            slot.UploadUrl.AbsoluteUri.Should().Contain("/api/v1/attachments/_loopback/upload?");
+        }
     }
 }
