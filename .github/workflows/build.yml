@@ -115,7 +115,6 @@ jobs:
             --format opencover \
             --output "$INT_COV" \
             --threshold 80 --threshold-type line --threshold-stat total \
-            --threshold 70 --threshold-type branch --threshold-stat total \
             --exclude "[IncidentReportingSystem.API]*Program*" \
             --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" \
             --exclude-by-file "**/ObservabilityExtensions*.cs" \

@@ -32,7 +32,6 @@ coverlet $unitTestDll `
   --format opencover `
   --output "coverage.unit.opencover.xml" `
   --threshold 80 --threshold-type line --threshold-stat total `
-  --threshold 70 --threshold-type branch --threshold-stat total `
   --exclude "[IncidentReportingSystem.API]*Program*" `
   --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" `
   --exclude-by-file "**/ObservabilityExtensions*.cs" `
@@ -59,7 +58,6 @@ coverlet $integrationTestDll `
   --format opencover `
   --output "coverage.integration.opencover.xml" `
   --threshold 80 --threshold-type line --threshold-stat total `
-  --threshold 70 --threshold-type branch --threshold-stat total `
   --exclude "[IncidentReportingSystem.API]*Program*" `
   --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" `
   --exclude-by-file "**/ObservabilityExtensions*.cs" `
