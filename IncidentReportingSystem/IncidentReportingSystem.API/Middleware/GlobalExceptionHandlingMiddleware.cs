@@ -110,12 +110,6 @@ namespace IncidentReportingSystem.API.Middleware
                    null,
                    null),
 
-                EmailAlreadyExistsException => (
-                   HttpStatusCode.Conflict,
-                   "Email already exists",
-                   null,
-                   null),
-
                 UnauthorizedAccessException => (
                     HttpStatusCode.Forbidden,
                     "Forbidden",
@@ -148,11 +142,17 @@ namespace IncidentReportingSystem.API.Middleware
                    null,
                    null),
 
-                var e2 when e2.GetType().Name.Contains("AlreadyExists", StringComparison.OrdinalIgnoreCase) => (
-                    HttpStatusCode.Conflict,
-                    "Email already exists",
-                    e2.Message,
-                    null),
+                EmailAlreadyExistsException => (
+                   HttpStatusCode.Conflict,
+                   "Email already exists",
+                   null,
+                   null),
+
+                AttachmentAlreadyExistsException => (         
+                   HttpStatusCode.Conflict,
+                   "Conflict",
+                   null,
+                   null),
 
                 AccountLockedException => (
                     HttpStatusCode.Locked,

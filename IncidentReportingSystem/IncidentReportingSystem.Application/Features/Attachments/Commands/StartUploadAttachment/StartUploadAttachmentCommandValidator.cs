@@ -15,11 +15,21 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Star
     {
         public StartUploadAttachmentCommandValidator(IAttachmentPolicy policy)
         {
-            RuleFor(x => x.FileName).NotEmpty().MaximumLength(255);
             RuleFor(x => x.ContentType)
                 .NotEmpty()
-                .Must(ct => policy.AllowedContentTypes.Contains(ct))
-                .WithMessage(AttachmentErrors.ContentTypeNotAllowed);
+                .Must(ct => policy.AllowedContentTypes.Contains(ct, StringComparer.OrdinalIgnoreCase))
+                .WithMessage("ContentType not allowed.");
+
+            RuleFor(x => x.FileName)
+                .NotEmpty()
+                .Must(fn =>
+                {
+                    var ext = Path.GetExtension(fn);
+                    return !string.IsNullOrWhiteSpace(ext) &&
+                           policy.AllowedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+                })
+                .WithMessage("File extension not allowed.");
         }
     }
+
 }

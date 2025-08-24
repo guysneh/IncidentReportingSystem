@@ -1,74 +1,186 @@
-﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
+﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using System.Collections.Concurrent;
 
 namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 {
     /// <summary>
-    /// Dev-only storage that returns a loopback API upload URL and keeps uploaded bytes in-memory.
-    /// All guards/validation live here (controllers stay thin).
+    /// Dev-only storage: persists files to local file-system under a safe root and exposes a loopback API upload URL.
+    /// All validations happen here; controllers stay thin.
     /// </summary>
     public sealed class LoopbackAttachmentStorage : IAttachmentStorage
     {
-        private readonly ConcurrentDictionary<string, (byte[] Data, string ContentType, string ETag)> _store = new();
-
-        private readonly string _publicBaseUrl;   // e.g. "https://localhost:7041" (no trailing slash)
-        private readonly string _apiVersion;      // e.g. "v1"
-        private readonly string _basePath;        // "/", "/api", "/irs", "/irs/api"
+        private readonly string _publicBaseUrl; // e.g. "https://localhost:7041" (no trailing slash)
+        private readonly string _apiVersion;    // e.g. "v1"
+        private readonly string _basePath;      // "/", "/api", "/irs", "/irs/api"
+        private readonly string _root;          // local storage root
+        private const string AllowedPrefix = "incidents/"; // keep in sync with tests
 
         public LoopbackAttachmentStorage(IConfiguration cfg)
         {
-            _publicBaseUrl = (cfg["Api:PublicBaseUrl"] ?? throw new InvalidOperationException("Missing Api:PublicBaseUrl for Loopback storage.")).TrimEnd('/');
-            _apiVersion = cfg["Api:DefaultVersion"] ?? "v1";
-            _basePath = (cfg["Api:BasePath"] ?? "/").TrimEnd('/'); // "/", "/api", "/irs", "/irs/api"
+            // API address parts used only to compose uploadUrl returned from Start.
+            _publicBaseUrl = (cfg["Api:PublicBaseUrl"] ?? string.Empty).TrimEnd('/');
+            _apiVersion = string.IsNullOrWhiteSpace(cfg["Api:DefaultVersion"]) ? "v1" : cfg["Api:DefaultVersion"]!;
+            _basePath = string.IsNullOrWhiteSpace(cfg["Api:BasePath"]) ? "/api" : cfg["Api:BasePath"]!;
+
+            if (string.IsNullOrWhiteSpace(_publicBaseUrl))
+                throw new InvalidOperationException("Missing Api:PublicBaseUrl for Loopback storage.");
+
+            // File-system root (default to temp if not set)
+            var configuredRoot = cfg["Attachments:Loopback:Root"];
+            _root = string.IsNullOrWhiteSpace(configuredRoot)
+                ? Path.Combine(Path.GetTempPath(), "irs-loopback")
+                : configuredRoot!;
+            Directory.CreateDirectory(_root);
         }
 
-        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken cancellationToken)
+        // ---------- Start -> upload slot ----------
+
+        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken ct)
         {
             var storagePath = $"{req.PathPrefix}/{req.AttachmentId}/{req.FileName}";
             storagePath = NormalizePath(storagePath);
             ValidateStoragePath(storagePath);
 
-            // Build final URL honoring BasePath that may already include "/api"
             var basePart = _basePath == "/" ? "" : _basePath; // "" or "/api" or "/irs" or "/irs/api"
             var needsApi = !basePart.EndsWith("/api", StringComparison.OrdinalIgnoreCase);
             var apiSegment = needsApi ? "/api" : string.Empty;
-            var uploadUrl = new Uri($"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload?path={Uri.EscapeDataString(storagePath)}");
+
+            var uploadUrl = new Uri(
+                $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload?path={Uri.EscapeDataString(storagePath)}");
 
             return Task.FromResult(new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
         }
 
-        public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken cancellationToken)
+        // ---------- Upload endpoints write to disk ----------
+
+        public async Task ReceiveUploadAsync(string relativePath, Stream body, string contentType, CancellationToken ct)
         {
-            storagePath = NormalizePath(storagePath);
-            return Task.FromResult(_store.TryGetValue(storagePath, out var p)
-                ? new UploadedBlobProps(p.Data.LongLength, p.ContentType, p.ETag)
-                : null);
+            var full = ResolvePath(relativePath);
+            EnsureUnderRoot(full);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            EnsureNotExists(full, relativePath);
+
+            await using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                await body.CopyToAsync(fs, 81920, ct);
+            }
+
+            var normalized = NormalizeContentType(contentType, relativePath);
+            await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
         }
 
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
+        public async Task ReceiveUploadAsync(string relativePath, IFormFile file, CancellationToken ct)
         {
-            storagePath = NormalizePath(storagePath);
-            if (!_store.TryGetValue(storagePath, out var p))
-                throw new FileNotFoundException(storagePath);
+            var full = ResolvePath(relativePath);
+            EnsureUnderRoot(full);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            EnsureNotExists(full, relativePath);
 
-            return Task.FromResult<Stream>(new MemoryStream(p.Data, writable: false));
+            await using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                await file.CopyToAsync(fs, ct);
+            }
+
+            var normalized = NormalizeContentType(file.ContentType, relativePath);
+            await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
         }
 
-        public Task DeleteAsync(string storagePath, CancellationToken cancellationToken)
+        // ---------- Query/Read/Delete over disk ----------
+
+        public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)
         {
-            storagePath = NormalizePath(storagePath);
-            _store.TryRemove(storagePath, out _);
+            var full = ResolvePath(storagePath);
+            EnsureUnderRoot(full);
+
+            if (!File.Exists(full))
+                return Task.FromResult<UploadedBlobProps?>(null);
+
+            var fi = new FileInfo(full);
+            var contentType = TryReadContentType(full) ?? NormalizeContentType(null, storagePath);
+
+            // cheap-etag: length ^ ticks -> SHA256 hex
+            var stamp = BitConverter.GetBytes(fi.Length ^ fi.LastWriteTimeUtc.Ticks);
+            var etag = Convert.ToHexString(SHA256.HashData(stamp));
+            return Task.FromResult<UploadedBlobProps?>(new UploadedBlobProps(fi.Length, contentType, etag));
+        }
+
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct)
+        {
+            var full = ResolvePath(storagePath);
+            EnsureUnderRoot(full);
+            if (!File.Exists(full)) throw new FileNotFoundException(storagePath);
+
+            Stream s = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous);
+            return Task.FromResult(s);
+        }
+
+        public Task DeleteAsync(string storagePath, CancellationToken ct)
+        {
+            var full = ResolvePath(storagePath);
+            EnsureUnderRoot(full);
+
+            if (File.Exists(full))
+                File.Delete(full);
+            var meta = full + ".contentType";
+            if (File.Exists(meta))
+                File.Delete(meta);
+
             return Task.CompletedTask;
+        }
+
+        // ---------- Helpers ----------
+
+        private string ResolvePath(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                throw new InvalidOperationException("Invalid storage path.");
+
+            if (relativePath.StartsWith('/') || relativePath.StartsWith('\\'))
+                throw new InvalidOperationException("Invalid storage path. Provide a relative path, not starting with '/'.");
+
+            if (Uri.TryCreate(relativePath, UriKind.Absolute, out _))
+                throw new InvalidOperationException("Invalid storage path. Provide a relative path, not a full URL.");
+
+            var normalizedRel = relativePath.Replace('\\', '/'); 
+            if (!normalizedRel.StartsWith(AllowedPrefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Invalid storage path prefix.");
+
+            var full = Path.Combine(_root, normalizedRel.Replace('/', Path.DirectorySeparatorChar));
+            full = Path.GetFullPath(full);
+            EnsureUnderRoot(full);
+            return full;
+        }
+
+        private void EnsureUnderRoot(string fullPath)
+        {
+            var rootFull = Path.GetFullPath(_root);
+            if (!fullPath.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Resolved path escapes storage root.");
+        }
+
+        private static void EnsureNotExists(string fullPath, string relativePath)
+        {
+            if (File.Exists(fullPath))
+                throw new AttachmentAlreadyExistsException($"Object already exists at path '{relativePath}'.");
+        }
+
+        private static string? TryReadContentType(string fullPath)
+        {
+            var meta = fullPath + ".contentType";
+            return File.Exists(meta) ? File.ReadAllText(meta) : null;
         }
 
         private static string NormalizePath(string path)
         {
-            if (string.IsNullOrEmpty(path)) return path ?? string.Empty;
-            // Decode once or twice to handle "%252F" -> "%2F" -> "/"
+            if (string.IsNullOrEmpty(path)) return string.Empty;
             var s = Uri.UnescapeDataString(path);
-            if (s.Contains('%')) s = Uri.UnescapeDataString(s);
+            if (s.Contains('%')) s = Uri.UnescapeDataString(s); // handle double-encoding
+            s = s.Replace('\\', '/');
             return s;
         }
 
@@ -77,28 +189,23 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             if (string.IsNullOrWhiteSpace(storagePath))
                 throw new InvalidOperationException("Missing storage path.");
 
-            // Must be *relative*
             if (storagePath.Contains("://", StringComparison.Ordinal) || storagePath.StartsWith('/'))
                 throw new InvalidOperationException("Invalid storage path. Provide a relative path, not a full URL.");
 
-            // Avoid traversal / wrong separators
             if (storagePath.Contains("..", StringComparison.Ordinal) || storagePath.Contains('\\'))
                 throw new InvalidOperationException("Invalid storage path.");
 
-            // Limit to known prefixes we generate
             if (!storagePath.StartsWith("incidents/", StringComparison.Ordinal) &&
                 !storagePath.StartsWith("comments/", StringComparison.Ordinal))
                 throw new InvalidOperationException("Invalid storage path prefix.");
         }
 
-        private static string NormalizeContentType(string contentType, string storagePath)
+        private static string NormalizeContentType(string? contentType, string storagePath)
         {
-            // if client sent octet-stream or empty, infer from file extension
             if (string.IsNullOrWhiteSpace(contentType) ||
                 contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase))
             {
-                var ext = Path.GetExtension(storagePath)?.ToLowerInvariant();
-                return ext switch
+                return (Path.GetExtension(storagePath)?.ToLowerInvariant()) switch
                 {
                     ".jpg" or ".jpeg" => "image/jpeg",
                     ".png" => "image/png",
@@ -107,37 +214,6 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
                 };
             }
             return contentType;
-        }
-
-        // PUT (binary)
-        public async Task ReceiveUploadAsync(string storagePath, Stream body, string contentType, CancellationToken cancellationToken)
-        {
-            storagePath = NormalizePath(storagePath);
-            ValidateStoragePath(storagePath);
-
-            using var ms = new MemoryStream();
-            await body.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            var bytes = ms.ToArray();
-
-            var normalizedCt = NormalizeContentType(contentType, storagePath);
-            var etag = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
-            _store[storagePath] = (bytes, normalizedCt, etag);
-        }
-
-        // multipart (form)
-        public async Task ReceiveUploadAsync(string storagePath, IFormFile file, CancellationToken cancellationToken)
-        {
-            storagePath = NormalizePath(storagePath);
-            ValidateStoragePath(storagePath);
-
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            var bytes = ms.ToArray();
-
-            var incoming = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
-            var normalizedCt = NormalizeContentType(incoming, storagePath);
-            var etag = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
-            _store[storagePath] = (bytes, normalizedCt, etag);
         }
     }
 }

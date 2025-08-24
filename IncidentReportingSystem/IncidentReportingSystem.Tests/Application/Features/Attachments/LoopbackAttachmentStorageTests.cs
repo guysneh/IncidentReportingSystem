@@ -21,12 +21,17 @@ namespace IncidentReportingSystem.Tests.Application.Features.Attachments
     {
         private static LoopbackAttachmentStorage CreateStorage(string basePath = "/api")
         {
+            var uniqueRoot = Path.Combine(Path.GetTempPath(), "irs-loopback-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(uniqueRoot);
+
             var dict = new Dictionary<string, string?>
             {
                 ["Api:PublicBaseUrl"] = "https://localhost:7041",
                 ["Api:DefaultVersion"] = "v1",
-                ["Api:BasePath"] = basePath
+                ["Api:BasePath"] = basePath,
+                ["Attachments:Loopback:Root"] = uniqueRoot
             };
+
             var cfg = new ConfigurationBuilder().AddInMemoryCollection(dict!).Build();
             return new LoopbackAttachmentStorage(cfg);
         }
