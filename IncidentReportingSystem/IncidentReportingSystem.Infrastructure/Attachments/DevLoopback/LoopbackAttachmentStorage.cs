@@ -1,10 +1,11 @@
-﻿using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
-using IncidentReportingSystem.Application.Abstractions.Attachments;
+﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
 using IncidentReportingSystem.Application.Common.Exceptions;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 {
@@ -57,18 +58,16 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
         }
 
         // ---------- Upload endpoints write to disk ----------
-
         public async Task ReceiveUploadAsync(string relativePath, Stream body, string contentType, CancellationToken ct)
         {
-            var full = ResolvePath(relativePath);
-            EnsureUnderRoot(full);
+            var full = CanonicalizeUnderRoot(_root, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-            EnsureNotExists(full, relativePath);
 
-            await using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
-            {
-                await body.CopyToAsync(fs, 81920, ct);
-            }
+            if (File.Exists(full))
+                throw new AttachmentAlreadyExistsException($"Object already exists at path '{relativePath}'.");
+
+            await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
+            await body.CopyToAsync(fs, 81920, ct);
 
             var normalized = NormalizeContentType(contentType, relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
@@ -76,44 +75,37 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
         public async Task ReceiveUploadAsync(string relativePath, IFormFile file, CancellationToken ct)
         {
-            var full = ResolvePath(relativePath);
-            EnsureUnderRoot(full);
+            var full = CanonicalizeUnderRoot(_root, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-            EnsureNotExists(full, relativePath);
 
-            await using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
-            {
-                await file.CopyToAsync(fs, ct);
-            }
+            if (File.Exists(full))
+                throw new AttachmentAlreadyExistsException($"Object already exists at path '{relativePath}'.");
 
-            var normalized = NormalizeContentType(file.ContentType, relativePath);
+            await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
+            await file.CopyToAsync(fs, ct);
+
+            var normalized = NormalizeContentType(file.ContentType ?? "application/octet-stream", relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
         }
 
         // ---------- Query/Read/Delete over disk ----------
-
         public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)
         {
-            var full = ResolvePath(storagePath);
-            EnsureUnderRoot(full);
-
+            var full = CanonicalizeUnderRoot(_root, storagePath);
             if (!File.Exists(full))
                 return Task.FromResult<UploadedBlobProps?>(null);
 
             var fi = new FileInfo(full);
-            var contentType = TryReadContentType(full) ?? NormalizeContentType(null, storagePath);
-
-            // cheap-etag: length ^ ticks -> SHA256 hex
-            var stamp = BitConverter.GetBytes(fi.Length ^ fi.LastWriteTimeUtc.Ticks);
-            var etag = Convert.ToHexString(SHA256.HashData(stamp));
-            return Task.FromResult<UploadedBlobProps?>(new UploadedBlobProps(fi.Length, contentType, etag));
+            var ctType = TryReadContentType(full) ?? "application/octet-stream";
+            var etag = $"{fi.Length:x}-{fi.LastWriteTimeUtc.Ticks:x}";
+            return Task.FromResult<UploadedBlobProps?>(new UploadedBlobProps(fi.Length, ctType, etag));
         }
 
         public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct)
         {
-            var full = ResolvePath(storagePath);
-            EnsureUnderRoot(full);
-            if (!File.Exists(full)) throw new FileNotFoundException(storagePath);
+            var full = CanonicalizeUnderRoot(_root, storagePath);
+            if (!File.Exists(full))
+                throw new FileNotFoundException(storagePath);
 
             Stream s = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous);
             return Task.FromResult(s);
@@ -121,17 +113,13 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
         public Task DeleteAsync(string storagePath, CancellationToken ct)
         {
-            var full = ResolvePath(storagePath);
-            EnsureUnderRoot(full);
-
-            if (File.Exists(full))
-                File.Delete(full);
+            var full = CanonicalizeUnderRoot(_root, storagePath);
+            if (File.Exists(full)) File.Delete(full);
             var meta = full + ".contentType";
-            if (File.Exists(meta))
-                File.Delete(meta);
-
+            if (File.Exists(meta)) File.Delete(meta);
             return Task.CompletedTask;
         }
+
 
         // ---------- Helpers ----------
 
@@ -200,12 +188,13 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
                 throw new InvalidOperationException("Invalid storage path prefix.");
         }
 
-        private static string NormalizeContentType(string? contentType, string storagePath)
+        private static string NormalizeContentType(string contentType, string storagePath)
         {
             if (string.IsNullOrWhiteSpace(contentType) ||
                 contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase))
             {
-                return (Path.GetExtension(storagePath)?.ToLowerInvariant()) switch
+                var ext = Path.GetExtension(storagePath)?.ToLowerInvariant();
+                return ext switch
                 {
                     ".jpg" or ".jpeg" => "image/jpeg",
                     ".png" => "image/png",
@@ -214,6 +203,49 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
                 };
             }
             return contentType;
+        }
+
+        private static string CanonicalizeUnderRoot(string root, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                throw new InvalidOperationException("Invalid storage path.");
+
+            if (relativePath.Contains('\\'))
+                throw new InvalidOperationException("Invalid storage path.");
+
+            if (relativePath.StartsWith("/") || relativePath.StartsWith("\\"))
+                throw new InvalidOperationException("Invalid storage path.");
+
+            if (Uri.TryCreate(relativePath, UriKind.Absolute, out _))
+                throw new InvalidOperationException("Invalid storage path. Provide a relative path, not a full URL.");
+
+            var normalizedRel = relativePath.Replace('\\', '/');
+
+            if (normalizedRel.Contains("..", StringComparison.Ordinal))
+                throw new InvalidOperationException("Invalid storage path.");
+
+            if (!normalizedRel.StartsWith("incidents/", StringComparison.OrdinalIgnoreCase) &&
+                !normalizedRel.StartsWith("comments/", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Invalid storage path prefix.");
+
+            var rootFull = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+
+            var candidate = Path.GetFullPath(
+                Path.Combine(rootFull, normalizedRel.Replace('/', Path.DirectorySeparatorChar)));
+
+            if (!candidate.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Resolved path escapes storage root.");
+
+            return candidate;
+        }
+
+        private static void EnsureNotExists(string root, string relativePath, string fullPath)
+        {
+            if (File.Exists(fullPath))
+                throw new AttachmentAlreadyExistsException(
+                    $"Object already exists at path '{relativePath}'.");
         }
     }
 }

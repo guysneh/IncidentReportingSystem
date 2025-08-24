@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace IncidentReportingSystem.IntegrationTests.Attachements
 {
-    [Trait("TestType", "Integration")]
+    [Trait("Category", "Integration")]
     public sealed class AttachmentsNegativeFlowsTests : IClassFixture<AttachmentsWebApplicationFactory>
     {
         private readonly AttachmentsWebApplicationFactory _f;

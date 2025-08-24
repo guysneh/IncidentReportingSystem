@@ -8,9 +8,11 @@ using IncidentReportingSystem.Application.Features.Attachments.Queries;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentConstraints;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentMetedata;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.OpenAttachmentStream;
+using IncidentReportingSystem.Infrastructure.Attachments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,10 +83,17 @@ namespace IncidentReportingSystem.API.Controllers
         /// <summary>Get attachment constraints (allowed content types, max size, etc.).</summary>
         [HttpGet("constraints")]
         [AllowAnonymous]
-        public async Task<ActionResult<AttachmentConstraintsDto>> Constraints(CancellationToken cancellationToken)
+        public IActionResult Get([FromServices] IOptions<AttachmentOptions> opts)
         {
-            var dto = await _sender.Send(new GetAttachmentConstraintsQuery(), cancellationToken).ConfigureAwait(false);
-            return Ok(dto);
+            var o = opts.Value;
+            return Ok(new
+            {
+                maxSizeBytes = o.MaxSizeBytes,
+                allowedContentTypes = o.AllowedContentTypes,
+                allowedExtensions = o.AllowedExtensions,
+                uploadUrlTtlMinutes = o.SasMinutesToLive  
+            });
         }
+
     }
 }

@@ -14,18 +14,19 @@ public sealed class AttachmentsStartValidationTests : IClassFixture<AttachmentsW
     private readonly ITestOutputHelper _o;
     public AttachmentsStartValidationTests(AttachmentsWebApplicationFactory f, ITestOutputHelper o) { _f = f; _o = o; }
 
-    [Fact(DisplayName = "Start with disallowed contentType → 400")]
+    [Fact(DisplayName = "Start with disallowed content-type → 400")]
     public async Task Start_Disallowed_ContentType_400()
     {
         var client = AuthenticatedHttpClientFactory.CreateClientWithToken(_f);
         var root = await ApiRootResolver.ResolveAsync(_f, client);
         var incidentId = KnownIds.ExistingIncidentId(_f);
 
-        var res = await client.PostAsync($"{root}/incidentreports/{incidentId}/attachments/start",
-            new StringContent(JsonSerializer.Serialize(new { fileName = $"x-{Guid.NewGuid():N}.bin", contentType = "text/plain" }),
-            Encoding.UTF8, "application/json"));
+        var payload = new { fileName = $"bad-{Guid.NewGuid():N}.zip", contentType = "application/zip" };
+        var res = await client.PostAsync(
+            $"{root}/incidentreports/{incidentId}/attachments/start",
+            new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
-        await res.ShouldBeAsync(HttpStatusCode.BadRequest, _o, "disallowed content type must 400");
+        await res.ShouldBeAsync(HttpStatusCode.BadRequest, _o, "disallowed content-type must be rejected");
     }
 
     [Fact(DisplayName = "Start with mismatched extension → 400")]

@@ -21,7 +21,7 @@ public sealed class AttachmentContentTypeSchemaFilterTests
     {
         var opts = Options.Create(new AttachmentOptions
         {
-            AllowedContentTypes = new[] { "image/png", "image/jpeg" }
+            AllowedContentTypes = new List<string> { "image/png", "image/jpeg" }
         });
 
         var filter = new AttachmentContentTypeSchemaFilter(opts);
@@ -40,7 +40,7 @@ public sealed class AttachmentContentTypeSchemaFilterTests
         var opts = Options.Create(new AttachmentOptions
         {
             // explicitly empty so the filter sees no values
-            AllowedContentTypes = Array.Empty<string>()
+            AllowedContentTypes = new List<string>()
         });
 
         var filter = new AttachmentContentTypeSchemaFilter(opts);

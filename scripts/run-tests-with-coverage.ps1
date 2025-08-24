@@ -50,8 +50,7 @@ coverlet $unitTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
-  || echo "Coverage under threshold — continuing for Sonar END"
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
 
 # -------- Integration --------
 coverlet $integrationTestDll `
@@ -78,8 +77,7 @@ coverlet $integrationTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
-  || echo "Coverage under threshold — continuing for Sonar END"
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
 
 
 # Step 9: Merge both coverage files
