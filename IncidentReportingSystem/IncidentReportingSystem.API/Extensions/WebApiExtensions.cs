@@ -42,6 +42,7 @@ public static class WebApiExtensions
         services.ConfigureOptions<ConfigureSwaggerOptions>();
         services.AddSwaggerGen(c =>
         {
+            c.SchemaFilter<AttachmentContentTypeSchemaFilter>();
             c.SupportNonNullableReferenceTypes();
             c.UseInlineDefinitionsForEnums();
 

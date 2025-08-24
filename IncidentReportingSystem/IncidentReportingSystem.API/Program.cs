@@ -11,7 +11,9 @@ builder.Services
     .AddCorsPolicy(builder.Configuration)
     .AddHealthAndRateLimiting(builder.Configuration)
     .AddPersistence(builder.Configuration)
-    .AddJwtAuth(builder.Configuration);
+    .AddJwtAuth(builder.Configuration)
+    .AddCurrentUserAccessor()
+    .AddAttachmentsModule(builder.Configuration);
 
 // Telemetry (OpenTelemetry + Azure Monitor) 
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
