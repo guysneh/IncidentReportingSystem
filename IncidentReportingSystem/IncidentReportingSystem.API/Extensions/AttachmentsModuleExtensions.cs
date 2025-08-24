@@ -38,6 +38,7 @@ namespace IncidentReportingSystem.API.Extensions
             else
             {
                 services.AddScoped<IAttachmentStorage, FakeAttachmentStorage>();
+                services.AddScoped<LoopbackAttachmentStorage>();
             }
 
             return services;
