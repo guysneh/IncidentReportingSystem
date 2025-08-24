@@ -37,6 +37,14 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 10000:10000
+        options: >-
+          --health-cmd="bash -c 'sleep 1; curl -fsS http://localhost:10000/devstoreaccount1?comp=list || exit 1'"
+          --health-interval=5s --health-timeout=3s --health-retries=60
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,6 +111,12 @@ jobs:
       # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
       - name: Test (Unit) with coverlet.console + thresholds
         shell: bash
+        env:
+          Attachments__Storage: Azurite
+          Attachments__Container: attachments
+          Storage__Blob__Endpoint: http://127.0.0.1:10000/devstoreaccount1
+          Storage__Blob__AccountName: devstoreaccount1
+          Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
         run: |
           set -euxo pipefail
           INT_TRX="IncidentReportingSystem/TestResults/Unit"
@@ -149,6 +163,12 @@ jobs:
       # ---------- Integration tests via coverlet.console ----------
       - name: Test (Integration) with coverlet.console + thresholds
         shell: bash
+        env:
+          Attachments__Storage: Azurite
+          Attachments__Container: attachments
+          Storage__Blob__Endpoint: http://127.0.0.1:10000/devstoreaccount1
+          Storage__Blob__AccountName: devstoreaccount1
+          Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
         run: |
           set -euxo pipefail
           INT_TRX="IncidentReportingSystem/TestResults/Integration"

@@ -18,6 +18,42 @@ docker run --name irs_testdb -d -p 5444:5432 `
   -e POSTGRES_DB=testdb `
   postgres:15-alpine
 
+# === START: Azurite (Blob) for integration tests ===
+$azuriteName = "irs_azurite_test"
+
+# Clean any stale container
+docker rm -f $azuriteName | Out-Null 2>$null
+
+# Run full 'azurite' (not 'azurite-blob') and bind to 0.0.0.0
+docker run --name $azuriteName -d -p 10000:10000 `
+  -v azurite_data:/data `
+  mcr.microsoft.com/azure-storage/azurite `
+  azurite --blobHost 0.0.0.0 --location /data --debug /data/debug.log | Out-Null
+
+Write-Host "Waiting for Azurite (TCP 10000) up to 120s..." -ForegroundColor Cyan
+$ok = $false
+$deadline = (Get-Date).AddSeconds(120)
+
+while ((Get-Date) -lt $deadline) {
+  # Ensure container is running
+  $state = (docker inspect -f "{{.State.Status}}" $azuriteName 2>$null)
+  if ($state -ne "running") { Start-Sleep -Seconds 1; continue }
+
+  # TCP check only (more reliable than HTTP probe for Azurite)
+  $tcp = Test-NetConnection -ComputerName 127.0.0.1 -Port 10000 -InformationLevel Quiet
+  if ($tcp) { $ok = $true; break }
+
+  Start-Sleep -Seconds 1
+}
+
+if (-not $ok) {
+  Write-Host "Azurite did not become healthy in time. Dumping recent logs:" -ForegroundColor Yellow
+  docker logs --tail 200 $azuriteName 2>&1 | Write-Host
+  throw "Azurite did not become healthy in time."
+}
+# === END: Azurite ===
+
+
 # Step 5: Wait for DB to be ready
 Write-Host "Waiting for PostgreSQL to be ready..."
 Start-Sleep -Seconds 5
@@ -52,6 +88,14 @@ coverlet $unitTestDll `
   --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
 
 # -------- Integration --------
+# === START: Azurite env for integration tests ===
+$env:Attachments__Storage = "Azurite"
+$env:Attachments__Container = "attachments"
+$env:Storage__Blob__Endpoint = "http://127.0.0.1:10000/devstoreaccount1"
+$env:Storage__Blob__AccountName = "devstoreaccount1"
+$env:Storage__Blob__AccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG=="
+# === END: Azurite env ===
+
 coverlet $integrationTestDll `
   --target "dotnet" `
   --targetargs "test IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --verbosity normal" `
@@ -77,7 +121,6 @@ coverlet $integrationTestDll `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
   --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
 
-
 # Step 9: Merge both coverage files
 reportgenerator `
   -reports:"coverage.unit.opencover.xml;coverage.integration.opencover.xml" `
@@ -90,3 +133,8 @@ Start-Process "coveragereport\index.html"
 # Step 11: Stop and remove container
 docker stop irs_testdb | Out-Null
 docker rm irs_testdb | Out-Null
+
+# === START: Cleanup Azurite ===
+docker stop $azuriteName | Out-Null 2>$null
+docker rm $azuriteName | Out-Null 2>$null
+# === END: Cleanup Azurite ===

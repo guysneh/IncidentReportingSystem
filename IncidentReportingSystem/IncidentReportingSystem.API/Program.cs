@@ -13,7 +13,8 @@ builder.Services
     .AddPersistence(builder.Configuration)
     .AddJwtAuth(builder.Configuration)
     .AddCurrentUserAccessor()
-    .AddAttachmentsModule(builder.Configuration, builder.Environment);
+    .AddAttachmentsModule(builder.Configuration, builder.Environment)
+    .AddAttachmentsStorage(builder.Configuration);
 
 // Telemetry (OpenTelemetry + Azure Monitor) 
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
