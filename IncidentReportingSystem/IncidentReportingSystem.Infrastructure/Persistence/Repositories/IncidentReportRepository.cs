@@ -102,11 +102,11 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
         public async Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(
             IReadOnlyList<Guid> ids,
             IncidentStatus newStatus,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
             if (ids is null || ids.Count == 0) return (0, new List<Guid>());
 
-            var incidents = await _context.IncidentReports.Where(i => ids.Contains(i.Id)).ToListAsync(ct);
+            var incidents = await _context.IncidentReports.Where(i => ids.Contains(i.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
             var foundIds = incidents.Select(i => i.Id).ToHashSet();
             var notFound = ids.Where(id => !foundIds.Contains(id)).ToList();
 
@@ -116,14 +116,14 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
                 _context.IncidentReports.Update(inc);
             }
 
-            var updated = await _context.SaveChangesAsync(ct);
+            var updated = await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return (updated, notFound);
         }
 
         /// <inheritdoc />
-        public async Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct)
+        public async Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken cancellationToken)
         {
-            var entity = await _context.IncidentReports.FirstOrDefaultAsync(x => x.Id == incidentId, ct);
+            var entity = await _context.IncidentReports.FirstOrDefaultAsync(x => x.Id == incidentId, cancellationToken).ConfigureAwait(false);
             if (entity is null)
                 throw new KeyNotFoundException($"Incident {incidentId} not found.");
 

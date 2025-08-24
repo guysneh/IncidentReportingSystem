@@ -18,7 +18,7 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
         }
 
         /// <inheritdoc />
-        public async Task<BulkStatusUpdateResultDto> Handle(BulkUpdateIncidentStatusCommand req, CancellationToken ct)
+        public async Task<BulkStatusUpdateResultDto> Handle(BulkUpdateIncidentStatusCommand req, CancellationToken cancellationToken)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(req.IdempotencyKey);
             if (req.Ids is null || req.Ids.Count == 0)
@@ -26,11 +26,11 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
 
             // 1) Return a prior response for identical key+payload if present
             var cached = await _idemp.TryGetAsync<BulkPayload, BulkStatusUpdateResultDto>(
-                req.IdempotencyKey, new BulkPayload(req.Ids, req.NewStatus), ct);
+                req.IdempotencyKey, new BulkPayload(req.Ids, req.NewStatus), cancellationToken).ConfigureAwait(false);
             if (cached is not null) return cached;
 
             // 2) Execute transactional bulk update
-            var (updated, notFound) = await _repo.BulkUpdateStatusAsync(req.Ids, req.NewStatus, ct);
+            var (updated, notFound) = await _repo.BulkUpdateStatusAsync(req.Ids, req.NewStatus, cancellationToken).ConfigureAwait(false);
             var result = new BulkStatusUpdateResultDto
             {
                 Updated = updated,
@@ -44,7 +44,7 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
                 new BulkPayload(req.Ids, req.NewStatus),
                 result,
                 TimeSpan.FromHours(24),
-                ct);
+                cancellationToken);
             return result;
         }
 

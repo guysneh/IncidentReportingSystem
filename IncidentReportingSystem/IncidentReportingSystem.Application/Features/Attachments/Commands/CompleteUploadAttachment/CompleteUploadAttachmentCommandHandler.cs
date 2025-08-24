@@ -36,15 +36,15 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
         }
 
         /// <inheritdoc />
-        public async Task Handle(CompleteUploadAttachmentCommand request, CancellationToken ct)
+        public async Task Handle(CompleteUploadAttachmentCommand request, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetAsync(request.AttachmentId, ct).ConfigureAwait(false)
+            var entity = await _repo.GetAsync(request.AttachmentId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException(AttachmentErrors.AttachmentNotFound);
 
             if (entity.Status != AttachmentStatus.Pending)
                 throw new InvalidOperationException(AttachmentErrors.AttachmentNotPending);
 
-            var props = await _storage.TryGetUploadedAsync(entity.StoragePath, ct).ConfigureAwait(false);
+            var props = await _storage.TryGetUploadedAsync(entity.StoragePath, cancellationToken).ConfigureAwait(false);
             if (props is null)
                 throw new InvalidOperationException(AttachmentErrors.UploadedObjectMissing);
 
@@ -55,7 +55,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
                 throw new InvalidOperationException(AttachmentErrors.ContentTypeMismatch);
 
             entity.MarkCompleted(props.Length);
-            await _uow.SaveChangesAsync(ct).ConfigureAwait(false);
+            await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }

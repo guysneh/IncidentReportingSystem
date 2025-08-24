@@ -22,7 +22,7 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
         Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(
             IReadOnlyList<Guid> ids,
             IncidentStatus newStatus,
-            CancellationToken ct);
+            CancellationToken ctcancellationToken);
 
         Task<IncidentReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default);
@@ -31,6 +31,6 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
         /// <summary>
         /// Updates the ModifiedAt (UTC) of the incident. Throws KeyNotFoundException if the incident does not exist.
         /// </summary>
-        Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct);
+        Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken cancellationToken);
     }
 }

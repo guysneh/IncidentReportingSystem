@@ -28,9 +28,9 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(RegisterUserResult), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken ct)
+        public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken cancellationToken)
         {
-            var result = await _sender.Send(command, ct).ConfigureAwait(false);
+            var result = await _sender.Send(command, cancellationToken).ConfigureAwait(false);
             return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
         }
 
@@ -40,9 +40,9 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest body, CancellationToken ct)
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest body, CancellationToken cancellationToken)
         {
-            var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), ct)
+            var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken)
                                       .ConfigureAwait(false);
 
             return Ok(new LoginResponse

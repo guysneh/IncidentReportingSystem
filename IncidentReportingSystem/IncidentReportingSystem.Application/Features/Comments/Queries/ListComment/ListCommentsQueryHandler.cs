@@ -11,13 +11,13 @@ public sealed class ListCommentsQueryHandler : IRequestHandler<ListCommentsQuery
     public ListCommentsQueryHandler(IIncidentCommentsRepository repo)
         => _repo = repo;
 
-    public async Task<IReadOnlyList<IncidentComment>> Handle(ListCommentsQuery request, CancellationToken ct)
+    public async Task<IReadOnlyList<IncidentComment>> Handle(ListCommentsQuery request, CancellationToken cancellationToken)
     {
         // Explicit 404 when the incident doesn't exist
-        if (!await _repo.IncidentExistsAsync(request.IncidentId, ct))
+        if (!await _repo.IncidentExistsAsync(request.IncidentId, cancellationToken).ConfigureAwait(false))
             throw new KeyNotFoundException($"Incident {request.IncidentId} not found.");
 
-        return await _repo.ListAsync(request.IncidentId, request.Skip, request.Take, ct);
+        return await _repo.ListAsync(request.IncidentId, request.Skip, request.Take, cancellationToken).ConfigureAwait(false);
     }
 }
 

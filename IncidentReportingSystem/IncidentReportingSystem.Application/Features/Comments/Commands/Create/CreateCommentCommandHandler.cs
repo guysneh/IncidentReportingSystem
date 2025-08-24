@@ -21,7 +21,7 @@ public sealed class CreateCommentCommandHandler : IRequestHandler<CreateCommentC
         _uow = uow;
     }
 
-    public async Task<CommentDto> Handle(CreateCommentCommand request, CancellationToken ct)
+    public async Task<CommentDto> Handle(CreateCommentCommand request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
 
@@ -34,12 +34,12 @@ public sealed class CreateCommentCommandHandler : IRequestHandler<CreateCommentC
             CreatedAtUtc = now
         };
 
-        await _comments.AddAsync(entity, ct);
+        await _comments.AddAsync(entity, cancellationToken);
 
         // Keep incident's ModifiedAt in sync:
-        await _incidents.TouchModifiedAtAsync(request.IncidentId, now, ct);
+        await _incidents.TouchModifiedAtAsync(request.IncidentId, now, cancellationToken);
 
-        await _uow.SaveChangesAsync(ct);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return new CommentDto
         {

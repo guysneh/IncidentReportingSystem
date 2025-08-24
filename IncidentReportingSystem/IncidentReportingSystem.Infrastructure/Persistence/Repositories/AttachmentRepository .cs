@@ -13,19 +13,19 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
         private readonly ApplicationDbContext _db;
         public AttachmentRepository(ApplicationDbContext db) => _db = db;
 
-        public async Task AddAsync(Attachment entity, CancellationToken ct)
+        public async Task AddAsync(Attachment entity, CancellationToken cancellationToken)
         {
-            await _db.Attachments.AddAsync(entity, ct).ConfigureAwait(false);
+            await _db.Attachments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task<Attachment?> GetAsync(Guid id, CancellationToken ct)
+        public Task<Attachment?> GetAsync(Guid id, CancellationToken cancellationToken)
         {
-            return _db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct);
+            return _db.Attachments.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         }
 
-        public Task<Attachment?> GetReadOnlyAsync(Guid id, CancellationToken ct)
+        public Task<Attachment?> GetReadOnlyAsync(Guid id, CancellationToken cancellationToken)
         {
-            return _db.Attachments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, ct);
+            return _db.Attachments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         }
     }
 }

@@ -58,9 +58,9 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), ct);
+            var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken).ConfigureAwait(false);
             return Ok(result.ToDto());
         }
 
@@ -113,9 +113,9 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken ct)
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken cancellationToken)
         {
-            await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), ct);
+            await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken).ConfigureAwait(false);
             return NoContent();
         }
 
@@ -130,10 +130,10 @@ namespace IncidentReportingSystem.API.Controllers
         public async Task<IActionResult> BulkStatus(
             [FromBody] BulkStatusUpdateRequest request,
             [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
             var cmd = new BulkUpdateIncidentStatusCommand(idempotencyKey, request.Ids, request.NewStatus);
-            var result = await _mediator.Send(cmd, ct);
+            var result = await _mediator.Send(cmd, cancellationToken).ConfigureAwait(false);
             return Ok(result);
         }
 

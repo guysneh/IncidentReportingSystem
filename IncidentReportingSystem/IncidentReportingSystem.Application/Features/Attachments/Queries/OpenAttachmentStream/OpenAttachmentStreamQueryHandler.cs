@@ -21,15 +21,15 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.OpenA
             _repo = repo; _storage = storage;
         }
 
-        public async Task<OpenAttachmentStreamResponse> Handle(OpenAttachmentStreamQuery request, CancellationToken ct)
+        public async Task<OpenAttachmentStreamResponse> Handle(OpenAttachmentStreamQuery request, CancellationToken cancellationToken)
         {
-            var a = await _repo.GetReadOnlyAsync(request.AttachmentId, ct).ConfigureAwait(false)
+            var a = await _repo.GetReadOnlyAsync(request.AttachmentId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException(AttachmentErrors.AttachmentNotFound);
 
             if (a.Size is null)
                 throw new InvalidOperationException(AttachmentErrors.AttachmentNotCompleted);
 
-            var stream = await _storage.OpenReadAsync(a.StoragePath, ct).ConfigureAwait(false);
+            var stream = await _storage.OpenReadAsync(a.StoragePath, cancellationToken).ConfigureAwait(false);
             return new OpenAttachmentStreamResponse(stream, a.ContentType, a.FileName);
         }
     }

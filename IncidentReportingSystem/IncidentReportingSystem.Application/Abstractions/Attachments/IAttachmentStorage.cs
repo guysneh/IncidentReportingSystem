@@ -8,10 +8,10 @@ namespace IncidentReportingSystem.Application.Abstractions.Attachments
     /// <summary>Abstraction over the underlying storage (Azure Blob / Fake in tests).</summary>
     public interface IAttachmentStorage
     {
-        Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken ct);
-        Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct);
-        Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct);
-        Task DeleteAsync(string storagePath, CancellationToken ct);
+        Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken cancellationToken);
+        Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken cancellationToken);
+        Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken);
+        Task DeleteAsync(string storagePath, CancellationToken cancellationToken);
     }
 
     /// <summary>Upload slot creation request (storage-agnostic).</summary>

@@ -14,27 +14,27 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Idempotency
         public IdempotencyStore(ApplicationDbContext db) => _db = db;
 
         /// <inheritdoc />
-        public async Task<TResponse?> TryGetAsync<TPayload, TResponse>(string key, TPayload payload, CancellationToken ct)
+        public async Task<TResponse?> TryGetAsync<TPayload, TResponse>(string key, TPayload payload, CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow;
             var hash = PayloadHash.ComputeStableHash(payload);
 
             var rec = await _db.Set<IdempotencyRecord>()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Key == key && r.PayloadHash == hash && r.ExpiresUtc > now, ct);
+                .FirstOrDefaultAsync(r => r.Key == key && r.PayloadHash == hash && r.ExpiresUtc > now, cancellationToken).ConfigureAwait(false);
 
             if (rec is null) return default;
             return JsonSerializer.Deserialize<TResponse>(rec.ResponseJson)!;
         }
 
         /// <inheritdoc />
-        public async Task<TResponse> PutIfAbsentAsync<TPayload, TResponse>(string key, TPayload payload, TResponse response, TimeSpan ttl, CancellationToken ct)
+        public async Task<TResponse> PutIfAbsentAsync<TPayload, TResponse>(string key, TPayload payload, TResponse response, TimeSpan ttl, CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow;
             var hash = PayloadHash.ComputeStableHash(payload);
             var json = JsonSerializer.Serialize(response);
 
-            var existing = await _db.Set<IdempotencyRecord>().FirstOrDefaultAsync(r => r.Key == key, ct);
+            var existing = await _db.Set<IdempotencyRecord>().FirstOrDefaultAsync(r => r.Key == key, cancellationToken).ConfigureAwait(false);
             if (existing is not null)
             {
                 return JsonSerializer.Deserialize<TResponse>(existing.ResponseJson)!; // First‑Write‑Wins
@@ -52,7 +52,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Idempotency
             };
 
             _db.Add(rec);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(cancellationToken);
             return response;
         }
     }

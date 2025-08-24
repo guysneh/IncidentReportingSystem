@@ -16,9 +16,9 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAt
 
         public GetAttachmentMetadataHandler(IAttachmentRepository repo) => _repo = repo;
 
-        public async Task<AttachmentDto> Handle(GetAttachmentMetadataQuery request, CancellationToken ct)
+        public async Task<AttachmentDto> Handle(GetAttachmentMetadataQuery request, CancellationToken cancellationToken)
         {
-            var a = await _repo.GetReadOnlyAsync(request.AttachmentId, ct).ConfigureAwait(false)
+            var a = await _repo.GetReadOnlyAsync(request.AttachmentId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException(AttachmentErrors.AttachmentNotFound);
 
             return new AttachmentDto

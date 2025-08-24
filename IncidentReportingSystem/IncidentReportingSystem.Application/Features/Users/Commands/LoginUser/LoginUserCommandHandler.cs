@@ -21,12 +21,12 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
             _jwt = jwt;
         }
 
-        public async Task<LoginResultDto> Handle(LoginUserCommand request, CancellationToken ct)
+        public async Task<LoginResultDto> Handle(LoginUserCommand request, CancellationToken cancellationToken)
         {
-            ct.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
             var normalized = request.Email.Trim().ToUpperInvariant();
-            var user = await _users.FindByNormalizedEmailAsync(normalized, ct).ConfigureAwait(false);
+            var user = await _users.FindByNormalizedEmailAsync(normalized, cancellationToken).ConfigureAwait(false);
             if (user is null)
                 throw new InvalidCredentialsException();
             if (!_hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt))

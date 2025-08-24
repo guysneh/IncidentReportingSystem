@@ -24,7 +24,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             _basePath = (cfg["Api:BasePath"] ?? "/").TrimEnd('/'); // "/", "/api", "/irs", "/irs/api"
         }
 
-        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken ct)
+        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken cancellationToken)
         {
             var storagePath = $"{req.PathPrefix}/{req.AttachmentId}/{req.FileName}";
             storagePath = NormalizePath(storagePath);
@@ -39,7 +39,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             return Task.FromResult(new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
         }
 
-        public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)
+        public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken cancellationToken)
         {
             storagePath = NormalizePath(storagePath);
             return Task.FromResult(_store.TryGetValue(storagePath, out var p)
@@ -47,7 +47,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
                 : null);
         }
 
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct)
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
         {
             storagePath = NormalizePath(storagePath);
             if (!_store.TryGetValue(storagePath, out var p))
@@ -56,7 +56,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             return Task.FromResult<Stream>(new MemoryStream(p.Data, writable: false));
         }
 
-        public Task DeleteAsync(string storagePath, CancellationToken ct)
+        public Task DeleteAsync(string storagePath, CancellationToken cancellationToken)
         {
             storagePath = NormalizePath(storagePath);
             _store.TryRemove(storagePath, out _);
@@ -110,13 +110,13 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
         }
 
         // PUT (binary)
-        public async Task ReceiveUploadAsync(string storagePath, Stream body, string contentType, CancellationToken ct)
+        public async Task ReceiveUploadAsync(string storagePath, Stream body, string contentType, CancellationToken cancellationToken)
         {
             storagePath = NormalizePath(storagePath);
             ValidateStoragePath(storagePath);
 
             using var ms = new MemoryStream();
-            await body.CopyToAsync(ms, ct).ConfigureAwait(false);
+            await body.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
             var bytes = ms.ToArray();
 
             var normalizedCt = NormalizeContentType(contentType, storagePath);
@@ -125,13 +125,13 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
         }
 
         // multipart (form)
-        public async Task ReceiveUploadAsync(string storagePath, IFormFile file, CancellationToken ct)
+        public async Task ReceiveUploadAsync(string storagePath, IFormFile file, CancellationToken cancellationToken)
         {
             storagePath = NormalizePath(storagePath);
             ValidateStoragePath(storagePath);
 
             using var ms = new MemoryStream();
-            await file.CopyToAsync(ms, ct).ConfigureAwait(false);
+            await file.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
             var bytes = ms.ToArray();
 
             var incoming = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;

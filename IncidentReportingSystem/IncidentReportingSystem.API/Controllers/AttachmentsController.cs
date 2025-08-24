@@ -35,55 +35,55 @@ namespace IncidentReportingSystem.API.Controllers
         /// <summary>Start an attachment upload for a specific incident.</summary>
         [HttpPost("~/"+RouteConstants.Incidents+"/{incidentId:guid}/attachments/start")]
         public async Task<ActionResult<StartUploadAttachmentResponse>> StartForIncident(
-            Guid incidentId, [FromBody] StartUploadBody body, CancellationToken ct)
+            Guid incidentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
             var res = await _sender.Send(new StartUploadAttachmentCommand(
                 Domain.Enums.AttachmentParentType.Incident,
-                incidentId, body.FileName, body.ContentType), ct).ConfigureAwait(false);
+                incidentId, body.FileName, body.ContentType), cancellationToken).ConfigureAwait(false);
             return Ok(res);
         }
 
         /// <summary>Start an attachment upload for a specific comment.</summary>
         [HttpPost("~/"+RouteConstants.Comments+"/{commentId:guid}/attachments/start")]
         public async Task<ActionResult<StartUploadAttachmentResponse>> StartForComment(
-            Guid commentId, [FromBody] StartUploadBody body, CancellationToken ct)
+            Guid commentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
             var res = await _sender.Send(new StartUploadAttachmentCommand(
                 Domain.Enums.AttachmentParentType.Comment,
-                commentId, body.FileName, body.ContentType), ct).ConfigureAwait(false);
+                commentId, body.FileName, body.ContentType), cancellationToken).ConfigureAwait(false);
             return Ok(res);
         }
 
         /// <summary>Complete an upload by validating stored object and finalizing metadata.</summary>
         [HttpPost("{attachmentId:guid}/complete")]
-        public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken ct)
+        public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken cancellationToken)
         {
-            await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), ct).ConfigureAwait(false);
+            await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
             return NoContent();
         }
 
         /// <summary>Get attachment metadata.</summary>
         [HttpGet("{attachmentId:guid}")]
-        public async Task<IActionResult> Metadata(Guid attachmentId, CancellationToken ct)
+        public async Task<IActionResult> Metadata(Guid attachmentId, CancellationToken cancellationToken)
         {
-            var dto = await _sender.Send(new GetAttachmentMetadataQuery(attachmentId), ct).ConfigureAwait(false);
+            var dto = await _sender.Send(new GetAttachmentMetadataQuery(attachmentId), cancellationToken).ConfigureAwait(false);
             return Ok(dto);
         }
 
         /// <summary>Download attachment content (only for completed attachments).</summary>
         [HttpGet("{attachmentId:guid}/download")]
-        public async Task<IActionResult> Download(Guid attachmentId, CancellationToken ct)
+        public async Task<IActionResult> Download(Guid attachmentId, CancellationToken cancellationToken)
         {
-            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), ct).ConfigureAwait(false);
+            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken).ConfigureAwait(false);
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
 
         /// <summary>Get attachment constraints (allowed content types, max size, etc.).</summary>
         [HttpGet("constraints")]
         [AllowAnonymous]
-        public async Task<ActionResult<AttachmentConstraintsDto>> Constraints(CancellationToken ct)
+        public async Task<ActionResult<AttachmentConstraintsDto>> Constraints(CancellationToken cancellationToken)
         {
-            var dto = await _sender.Send(new GetAttachmentConstraintsQuery(), ct).ConfigureAwait(false);
+            var dto = await _sender.Send(new GetAttachmentConstraintsQuery(), cancellationToken).ConfigureAwait(false);
             return Ok(dto);
         }
     }

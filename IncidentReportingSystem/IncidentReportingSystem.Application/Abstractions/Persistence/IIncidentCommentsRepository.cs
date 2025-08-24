@@ -8,17 +8,17 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence;
 public interface IIncidentCommentsRepository
 {
     /// <summary>Returns true if the incident exists.</summary>
-    Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken ct);
+    Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken cancellationToken);
 
     /// <summary>Adds a new comment entity to the persistence context.</summary>
-    Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken ct);
+    Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken cancellationToken);
 
     /// <summary>Fetches a single comment for a given incident.</summary>
-    Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken ct);
+    Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken cancellationToken);
 
     /// <summary>Removes a comment from the persistence context.</summary>
-    Task RemoveAsync(IncidentComment comment, CancellationToken ct);
+    Task RemoveAsync(IncidentComment comment, CancellationToken cancellationToken);
 
     /// <summary>Lists comments for an incident, newest-first with pagination.</summary>
-    Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken ct);
+    Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken);
 }

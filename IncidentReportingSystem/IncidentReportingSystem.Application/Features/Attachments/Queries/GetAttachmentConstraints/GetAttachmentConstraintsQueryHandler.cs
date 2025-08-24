@@ -15,7 +15,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAt
 
         public GetAttachmentConstraintsHandler(IAttachmentPolicy policy) => _policy = policy;
 
-        public Task<AttachmentConstraintsDto> Handle(GetAttachmentConstraintsQuery request, CancellationToken ct)
+        public Task<AttachmentConstraintsDto> Handle(GetAttachmentConstraintsQuery request, CancellationToken cancellationToken)
         {
             var dto = new AttachmentConstraintsDto
             {

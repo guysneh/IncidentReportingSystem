@@ -15,12 +15,12 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Services
         private readonly ApplicationDbContext _db;
         public AttachmentParentReadService(ApplicationDbContext db) => _db = db;
 
-        public Task<bool> ExistsAsync(AttachmentParentType parentType, Guid parentId, CancellationToken ct)
+        public Task<bool> ExistsAsync(AttachmentParentType parentType, Guid parentId, CancellationToken cancellationToken)
         {
             return parentType switch
             {
-                AttachmentParentType.Incident => _db.IncidentReports.AnyAsync(i => i.Id == parentId, ct),
-                AttachmentParentType.Comment => _db.IncidentComments.AnyAsync(c => c.Id == parentId, ct),
+                AttachmentParentType.Incident => _db.IncidentReports.AnyAsync(i => i.Id == parentId, cancellationToken),
+                AttachmentParentType.Comment => _db.IncidentComments.AnyAsync(c => c.Id == parentId, cancellationToken),
                 _ => Task.FromResult(false)
             };
         }

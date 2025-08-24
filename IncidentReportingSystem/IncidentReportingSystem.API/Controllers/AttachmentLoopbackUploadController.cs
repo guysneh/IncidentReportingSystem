@@ -19,10 +19,10 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpPut("upload")]
         [Consumes("application/octet-stream", "image/png", "image/jpeg", "application/pdf")]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<IActionResult> UploadBinary([FromQuery] string path, CancellationToken ct)
+        public async Task<IActionResult> UploadBinary([FromQuery] string path, CancellationToken cancellationToken)
         {
             var contentType = Request.ContentType ?? "application/octet-stream";
-            await _loopback.ReceiveUploadAsync(path, Request.Body, contentType, ct).ConfigureAwait(false);
+            await _loopback.ReceiveUploadAsync(path, Request.Body, contentType, cancellationToken).ConfigureAwait(false);
             return Created($"{Request.Path}?path={Uri.EscapeDataString(path)}", null);
         }
 
@@ -32,9 +32,9 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpPost("upload-form")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<IActionResult> UploadForm([FromForm] LoopbackUploadForm form, CancellationToken ct)
+        public async Task<IActionResult> UploadForm([FromForm] LoopbackUploadForm form, CancellationToken cancellationToken)
         {
-            await _loopback.ReceiveUploadAsync(form.Path, form.File, ct).ConfigureAwait(false);
+            await _loopback.ReceiveUploadAsync(form.Path, form.File, cancellationToken).ConfigureAwait(false);
             return Created($"{Request.Path}?path={Uri.EscapeDataString(form.Path)}", null);
         }
     }
