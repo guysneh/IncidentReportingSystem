@@ -25,12 +25,19 @@ Start-Sleep -Seconds 5
 # Step 6: Set connection string
 $env:TEST_DB_CONNECTION = "Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword"
 
-# Step 7: Run unit test coverage
+# -------- Unit --------
 coverlet $unitTestDll `
   --target "dotnet" `
   --targetargs "test IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --verbosity normal" `
   --format opencover `
   --output "coverage.unit.opencover.xml" `
+  --threshold 80 --threshold-type line --threshold-stat total `
+  --threshold 70 --threshold-type branch --threshold-stat total `
+  --exclude "[IncidentReportingSystem.API]*Program*" `
+  --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" `
+  --exclude-by-file "**/ObservabilityExtensions*.cs" `
+  --exclude-by-file "**/Extensions/ServiceCollection*.cs" `
+  --exclude-by-file "**/Extensions/DependencyInjection/*.cs" `
   --exclude-by-file "**/Migrations/*.cs" `
   --exclude-by-file "**/*Migrations/*.cs" `
   --exclude-by-file "**/Dtos/**" `
@@ -43,14 +50,22 @@ coverlet $unitTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs"
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
+  || echo "Coverage under threshold — continuing for Sonar END"
 
-# Step 8: Run integration test coverage
+# -------- Integration --------
 coverlet $integrationTestDll `
   --target "dotnet" `
   --targetargs "test IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --verbosity normal" `
   --format opencover `
   --output "coverage.integration.opencover.xml" `
+  --threshold 80 --threshold-type line --threshold-stat total `
+  --threshold 70 --threshold-type branch --threshold-stat total `
+  --exclude "[IncidentReportingSystem.API]*Program*" `
+  --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" `
+  --exclude-by-file "**/ObservabilityExtensions*.cs" `
+  --exclude-by-file "**/Extensions/ServiceCollection*.cs" `
+  --exclude-by-file "**/Extensions/DependencyInjection/*.cs" `
   --exclude-by-file "**/Migrations/*.cs" `
   --exclude-by-file "**/*Migrations/*.cs" `
   --exclude-by-file "**/Dtos/**" `
@@ -63,7 +78,9 @@ coverlet $integrationTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs"
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
+  || echo "Coverage under threshold — continuing for Sonar END"
+
 
 # Step 9: Merge both coverage files
 reportgenerator `

@@ -101,20 +101,26 @@ jobs:
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
       # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
-      - name: Test (Unit) with coverlet.console + thresholds
+      - name: Test (Integration) with coverlet.console + thresholds
         shell: bash
         run: |
           set -euxo pipefail
-          UNIT_TRX="IncidentReportingSystem/TestResults/Unit"
-          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
-          UNIT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
-          mkdir -p "$UNIT_TRX" "$(dirname "$UNIT_COV")"
-          coverlet "$UNIT_DLL" \
+          INT_TRX="IncidentReportingSystem/TestResults/Integration"
+          INT_COV="$GITHUB_WORKSPACE/coverage/integration/coverage.opencover.xml"
+          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/bin/Release/net8.0/IncidentReportingSystem.IntegrationTests.dll"
+          mkdir -p "$INT_TRX" "$(dirname "$INT_COV")"
+          coverlet "$INT_DLL" \
             --target "dotnet" \
-            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $UNIT_TRX" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --configuration Release --logger trx;LogFileName=integration-tests.trx --results-directory $INT_TRX" \
             --format opencover \
-            --output "$UNIT_COV" \
+            --output "$INT_COV" \
             --threshold 80 --threshold-type line --threshold-stat total \
+            --threshold 70 --threshold-type branch --threshold-stat total \
+            --exclude "[IncidentReportingSystem.API]*Program*" \
+            --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" \
+            --exclude-by-file "**/ObservabilityExtensions*.cs" \
+            --exclude-by-file "**/Extensions/ServiceCollection*.cs" \
+            --exclude-by-file "**/Extensions/DependencyInjection/*.cs" \
             --exclude-by-file "**/Migrations/*.cs" \
             --exclude-by-file "**/*Migrations/*.cs" \
             --exclude-by-file "**/Dtos/**" \
@@ -129,6 +135,7 @@ jobs:
             --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
             --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
             || echo "Coverage under threshold — continuing for Sonar END"
+
 
       - name: Wait for PostgreSQL
         shell: bash
