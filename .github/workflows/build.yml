@@ -101,17 +101,17 @@ jobs:
         run: dotnet build IncidentReportingSystem/IncidentReportingSystem.sln --no-restore --configuration Release
 
       # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
-      - name: Test (Integration) with coverlet.console + thresholds
+      - name: Test (Unit) with coverlet.console + thresholds
         shell: bash
         run: |
           set -euxo pipefail
-          INT_TRX="IncidentReportingSystem/TestResults/Integration"
-          INT_COV="$GITHUB_WORKSPACE/coverage/integration/coverage.opencover.xml"
-          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/bin/Release/net8.0/IncidentReportingSystem.IntegrationTests.dll"
+          INT_TRX="IncidentReportingSystem/TestResults/Unit"
+          INT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
+          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
           mkdir -p "$INT_TRX" "$(dirname "$INT_COV")"
           coverlet "$INT_DLL" \
             --target "dotnet" \
-            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.IntegrationTests/IncidentReportingSystem.IntegrationTests.csproj --no-build --configuration Release --logger trx;LogFileName=integration-tests.trx --results-directory $INT_TRX" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $INT_TRX" \
             --format opencover \
             --output "$INT_COV" \
             --threshold 80 --threshold-type line --threshold-stat total \
