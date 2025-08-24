@@ -1,15 +1,16 @@
-﻿using FluentValidation;
+﻿using FluentAssertions;
+using FluentValidation;
 using FluentValidation.Results;
 using IncidentReportingSystem.API.Middleware;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.AspNetCore.Builder;
-using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
-using IncidentReportingSystem.Application.Common.Exceptions;
+using System.Net.Http.Json;
+using System.Runtime.Serialization;
 
 namespace IncidentReportingSystem.IntegrationTests.Middleware
 {
@@ -17,6 +18,51 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
         : IClassFixture<CustomWebApplicationFactory>
     {
         private readonly WebApplicationFactory<Program> _factory;
+
+        private static HttpClient MakeClient(Exception ex)
+        {
+            var app = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(b =>
+                {
+                    b.Configure(app =>
+                    {
+                        app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+                        app.Run(_ => throw ex);
+                    });
+                });
+            return app.CreateClient();
+        }
+
+        private static Exception CreateExceptionRobust(Type t)
+        {
+            try { return (Exception)Activator.CreateInstance(t)!; } catch { /* ignore */ }
+
+            var strCtor = t.GetConstructors()
+                .FirstOrDefault(c =>
+                {
+                    var ps = c.GetParameters();
+                    return ps.Length == 1 && ps[0].ParameterType == typeof(string);
+                });
+            if (strCtor != null) return (Exception)strCtor.Invoke(new object[] { "test" });
+
+            var strInner = t.GetConstructors()
+                .FirstOrDefault(c =>
+                {
+                    var ps = c.GetParameters();
+                    return ps.Length == 2 && ps[0].ParameterType == typeof(string) &&
+                           typeof(Exception).IsAssignableFrom(ps[1].ParameterType);
+                });
+            if (strInner != null) return (Exception)strInner.Invoke(new object[] { "test", new Exception("inner") });
+
+            return (Exception)FormatterServices.GetUninitializedObject(t);
+        }
+
+        public static IEnumerable<object[]> KnownCases() => new[]
+        {
+            new object[] { typeof(InvalidCredentialsException), HttpStatusCode.Unauthorized, "Authentication failed" },
+            new object[] { typeof(ForbiddenException),         HttpStatusCode.Forbidden,   "Forbidden" },
+            new object[] { typeof(NotFoundException),          HttpStatusCode.NotFound,    "Not found" },
+        };
 
         public ExceptionHandlingTests(CustomWebApplicationFactory baseFactory)
         {
@@ -150,6 +196,46 @@ namespace IncidentReportingSystem.IntegrationTests.Middleware
             problem!.Status.Should().Be((int)HttpStatusCode.InternalServerError);
             problem.Title.Should().Be("Unexpected error");
             problem.Extensions.Should().ContainKey("traceId");
+        }
+
+        [Theory(DisplayName = "Maps known exceptions to expected status/title")]
+        [MemberData(nameof(KnownCases))]
+        public async Task Maps_known_exceptions_to_expected_status(Type exType, HttpStatusCode expected, string title)
+        {
+            var ex = CreateExceptionRobust(exType);
+            var client = MakeClient(ex);
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(expected);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be(title);
+        }
+
+        [Fact(DisplayName = "DbUpdateException (no Postgres inner) => 503 ServiceUnavailable")]
+        public async Task DbUpdate_without_pg_inner_maps_to_503()
+        {
+            var ex = new Microsoft.EntityFrameworkCore.DbUpdateException("db down");
+            var client = MakeClient(ex);
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be("Database unavailable");
+        }
+
+        [Fact(DisplayName = "AttachmentAlreadyExistsException => 409 Conflict")]
+        public async Task AttachmentAlreadyExists_409()
+        {
+            var ex = new AttachmentAlreadyExistsException("dup");
+            var client = MakeClient(ex);
+
+            var res = await client.GetAsync("/");
+            res.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+            var pd = await res.Content.ReadFromJsonAsync<ProblemDetails>();
+            pd!.Title.Should().Be("Conflict");
         }
     }
 }

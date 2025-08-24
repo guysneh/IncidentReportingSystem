@@ -42,4 +42,27 @@ public sealed class AttachmentsStartValidationTests : IClassFixture<AttachmentsW
 
         await res.ShouldBeAsync(HttpStatusCode.BadRequest, _o, "mismatched extension must 400");
     }
+
+    [Trait("Category", "Integration")]
+    public sealed class AttachmentsStartMoreValidationTests : IClassFixture<AttachmentsWebApplicationFactory>
+    {
+        private readonly AttachmentsWebApplicationFactory _f;
+        private readonly ITestOutputHelper _o;
+        public AttachmentsStartMoreValidationTests(AttachmentsWebApplicationFactory f, ITestOutputHelper o)
+        { _f = f; _o = o; }
+
+        [Fact(DisplayName = "Start with disallowed content-type → 400")]
+        public async Task Start_Disallowed_ContentType_400()
+        {
+            var client = AuthenticatedHttpClientFactory.CreateClientWithToken(_f);
+            var root = await ApiRootResolver.ResolveAsync(_f, client);
+            var incidentId = KnownIds.ExistingIncidentId(_f);
+
+            var body = JsonSerializer.Serialize(new { fileName = $"img-{Guid.NewGuid():N}.jpg", contentType = "image/gif" });
+            var res = await client.PostAsync($"{root}/incidentreports/{incidentId}/attachments/start",
+                new StringContent(body, Encoding.UTF8, "application/json"));
+
+            await res.ShouldBeAsync(HttpStatusCode.BadRequest, _o, "gif should be rejected by policy");
+        }
+    }
 }

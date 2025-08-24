@@ -69,4 +69,23 @@ public sealed class AttachmentContentTypeSchemaFilterTests
         var prop = schema.Properties["contentType"];
         prop.Enum.Should().BeNullOrEmpty(); // no enum when list is null
     }
+
+    [Fact(DisplayName = "Trims whitespace and ignores empties")]
+    public void Trims_and_ignores_empty_values()
+    {
+        var options = Options.Create(new AttachmentOptions
+        {
+            AllowedContentTypes = new List<string> { " image/png ", " ", "\t", "image/jpeg" }
+        });
+
+        var filter = new AttachmentContentTypeSchemaFilter(options);
+        var schema = MakeSchemaWithContentType();
+
+        filter.Apply(schema, context: null!);
+
+        var prop = schema.Properties["contentType"];
+        prop.Enum.Should().NotBeNull();
+        prop.Enum!.Count.Should().Be(2);
+    }
+
 }
