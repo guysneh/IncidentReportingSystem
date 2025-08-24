@@ -20,6 +20,9 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Star
         string FileName,
         string ContentType) : IRequest<StartUploadAttachmentResponse>;
 
-    /// <summary>Response for <see cref="StartUploadAttachmentCommand"/>.</summary>
-    public sealed record StartUploadAttachmentResponse(Guid AttachmentId, Uri UploadUrl, DateTimeOffset ExpiresAt);
+    public sealed record StartUploadAttachmentResponse(
+        Guid AttachmentId,
+        Uri UploadUrl,
+        string StoragePath
+    );
 }

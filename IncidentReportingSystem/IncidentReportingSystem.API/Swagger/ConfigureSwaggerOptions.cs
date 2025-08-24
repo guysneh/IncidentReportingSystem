@@ -1,47 +1,53 @@
 ﻿using Asp.Versioning.ApiExplorer;
 using Microsoft.Extensions.Options;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace IncidentReportingSystem.API.Swagger;
 
-public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
+public sealed class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 {
     private readonly IApiVersionDescriptionProvider _provider;
+    private readonly IConfiguration _cfg;
 
-    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider)
+    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider, IConfiguration cfg)
     {
         _provider = provider;
+        _cfg = cfg;
     }
 
     public void Configure(SwaggerGenOptions options)
     {
-        // Create a Swagger doc per API version
-        foreach (var description in _provider.ApiVersionDescriptions)
+        var title = _cfg["App:Name"] ?? "Incident Reporting System API";
+
+        foreach (var d in _provider.ApiVersionDescriptions)
         {
-            options.SwaggerDoc(
-                description.GroupName,
-                new OpenApiInfo
-                {
-                    Title = $"Incident Reporting API {description.ApiVersion}",
-                    Version = description.ApiVersion.ToString()
-                });
+            options.SwaggerDoc(d.GroupName, new OpenApiInfo
+            {
+                Title = title,
+                Version = d.ApiVersion.ToString(),
+                Description = "REST API for Incident Reporting System." + (d.IsDeprecated ? " (DEPRECATED)" : "")
+            });
         }
 
-        // Key fix: include actions in the correct versioned doc,
-        // and include non-versioned endpoints (e.g., minimal APIs) in the default doc (usually v1).
-        options.DocInclusionPredicate((docName, apiDesc) =>
-        {
-            // Controllers with ApiVersion -> ApiExplorer sets GroupName (e.g., "v1")
-            if (!string.IsNullOrEmpty(apiDesc.GroupName))
-            {
-                return string.Equals(apiDesc.GroupName, docName, StringComparison.OrdinalIgnoreCase);
-            }
+        // Never throw if XML files are missing
+        TryXml(options, "IncidentReportingSystem.API");
+        TryXml(options, "IncidentReportingSystem.Application");
+        TryXml(options, "IncidentReportingSystem.Domain");
+        TryXml(options, "IncidentReportingSystem.Infrastructure");
 
-            // Minimal APIs or endpoints without ApiVersion metadata:
-            // include them in the first (default) document.
-            var defaultDoc = _provider.ApiVersionDescriptions.OrderBy(d => d.ApiVersion).First().GroupName;
-            return string.Equals(docName, defaultDoc, StringComparison.OrdinalIgnoreCase);
-        });
+        // Map tricky CLR types
+        options.MapType<Uri>(() => new OpenApiSchema { Type = "string", Format = "uri" });
+        options.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
+        options.SupportNonNullableReferenceTypes();
+        options.UseInlineDefinitionsForEnums();
+    }
+
+    private static void TryXml(SwaggerGenOptions options, string asm)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, $"{asm}.xml");
+        if (File.Exists(path))
+            options.IncludeXmlComments(path, includeControllerXmlComments: true);
     }
 }
+

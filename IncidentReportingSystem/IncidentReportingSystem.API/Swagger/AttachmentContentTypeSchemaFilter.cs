@@ -1,37 +1,40 @@
-﻿using System;
-using System.Linq;
-using IncidentReportingSystem.Infrastructure.Attachments;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using IncidentReportingSystem.Infrastructure.Attachments;
 
 namespace IncidentReportingSystem.API.Swagger
 {
     /// <summary>
-    /// Adds an enum (dropdown) to StartUploadBody.ContentType based on AttachmentOptions.AllowedContentTypes.
+    /// If a DTO has a 'contentType' property, projects allowed values from configuration as an enum.
+    /// Never throws if options are missing/empty.
     /// </summary>
     public sealed class AttachmentContentTypeSchemaFilter : ISchemaFilter
     {
-        private readonly IOptions<AttachmentOptions> _options;
-        public AttachmentContentTypeSchemaFilter(IOptions<AttachmentOptions> options) => _options = options;
+        private readonly string[] _allowedTypes;
+
+        public AttachmentContentTypeSchemaFilter(IOptions<AttachmentOptions> options)
+        {
+            _allowedTypes = options.Value?.AllowedContentTypes?
+                .Where(s => !string.IsNullOrWhiteSpace(s)).ToArray()
+                ?? Array.Empty<string>();
+        }
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
-            if (schema?.Properties == null) return;
+            if (schema?.Properties is null || schema.Properties.Count == 0)
+                return;
 
-            // Match the API body model name (nested type)
-            var isStartUploadBody = context.Type.FullName?.EndsWith("AttachmentsController+StartUploadBody", StringComparison.Ordinal) == true;
-            if (!isStartUploadBody) return;
-
-            if (schema.Properties.TryGetValue("contentType", out var ctSchema))
+            if (schema.Properties.TryGetValue("contentType", out var prop))
             {
-                var allowed = _options.Value.AllowedContentTypes?.ToArray() ?? Array.Empty<string>();
-                if (allowed.Length > 0)
+                prop.Type = "string";
+                prop.Format = null;
+
+                if (_allowedTypes.Length > 0)
                 {
-                    ctSchema.Enum = allowed.Select(v => (IOpenApiAny)new OpenApiString(v)).ToList();
-                    ctSchema.Example = new OpenApiString(allowed[0]);
-                    ctSchema.Description = (ctSchema.Description ?? string.Empty) + " (Allowed values)";
+                    prop.Enum = _allowedTypes.Select(v => (IOpenApiAny)new OpenApiString(v)).ToList();
+                    prop.Example = new OpenApiString(_allowedTypes[0]);
                 }
             }
         }

@@ -12,12 +12,6 @@ public static class MiddlewareExtensions
     {
         app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseDeveloperExceptionPage();
-        }
-
         app.UseHttpsRedirection();
         app.UseRouting();
 

@@ -160,6 +160,12 @@ namespace IncidentReportingSystem.API.Middleware
                     null,
                     null),
 
+                InvalidOperationException ioe => (
+                    HttpStatusCode.Conflict,
+                    "Conflict",
+                    ioe.Message,
+                    null),
+
                 _ => (
                     HttpStatusCode.InternalServerError,
                     "Unexpected error",

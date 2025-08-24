@@ -5,19 +5,17 @@ using IncidentReportingSystem.Application.Abstractions.Attachments;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using MediatR;
 
-namespace IncidentReportingSystem.Application.Features.Attachments.Queries
+namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentConstraints
 {
-    /// <summary>Retrieves attachment constraints for client consumption.</summary>
-    public sealed record GetAttachmentConstraintsQueryHandler : IRequest<AttachmentConstraintsDto>;
-
-    /// <summary>Maps <see cref="IAttachmentPolicy"/> to a DTO.</summary>
+    /// <summary>Maps <see cref="IAttachmentPolicy"/> to <see cref="AttachmentConstraintsDto"/>.</summary>
     public sealed class GetAttachmentConstraintsHandler
-        : IRequestHandler<GetAttachmentConstraintsQueryHandler, AttachmentConstraintsDto>
+        : IRequestHandler<GetAttachmentConstraintsQuery, AttachmentConstraintsDto>
     {
         private readonly IAttachmentPolicy _policy;
+
         public GetAttachmentConstraintsHandler(IAttachmentPolicy policy) => _policy = policy;
 
-        public Task<AttachmentConstraintsDto> Handle(GetAttachmentConstraintsQueryHandler request, CancellationToken cancellationToken)
+        public Task<AttachmentConstraintsDto> Handle(GetAttachmentConstraintsQuery request, CancellationToken ct)
         {
             var dto = new AttachmentConstraintsDto
             {
