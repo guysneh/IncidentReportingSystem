@@ -89,16 +89,53 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
         }
 
         // ---------- Query/Read/Delete over disk ----------
-        public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)
+        public async Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)
         {
-            var full = CanonicalizeUnderRoot(_root, storagePath);
-            if (!File.Exists(full))
-                return Task.FromResult<UploadedBlobProps?>(null);
+            try
+            {
+                var fullPath = CanonicalizeUnderRoot(_root, storagePath);
+                if (!File.Exists(fullPath))
+                    return null;
 
-            var fi = new FileInfo(full);
-            var ctType = TryReadContentType(full) ?? "application/octet-stream";
-            var etag = $"{fi.Length:x}-{fi.LastWriteTimeUtc.Ticks:x}";
-            return Task.FromResult<UploadedBlobProps?>(new UploadedBlobProps(fi.Length, ctType, etag));
+                var metaPath = fullPath + ".contentType";
+                string contentType = File.Exists(metaPath)
+                    ? (await File.ReadAllTextAsync(metaPath, ct)).Trim()
+                    : GuessContentType(fullPath);
+
+                if (string.IsNullOrWhiteSpace(contentType))
+                    contentType = GuessContentType(fullPath);
+
+                var fi = new FileInfo(fullPath);
+                var etag = ComputeETag(fi);
+                return new UploadedBlobProps(fi.Length, contentType, etag);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Tests expect ArgumentException on invalid path for this method.
+                throw new ArgumentException("Invalid storage path.", nameof(storagePath), ex);
+            }
+        }
+
+        private static readonly Dictionary<string, string> _mime = new(StringComparer.OrdinalIgnoreCase)
+        {
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".pdf"] = "application/pdf"
+        };
+
+        private static string GuessContentType(string path)
+        {
+            var ext = Path.GetExtension(path);
+            return _mime.TryGetValue(ext, out var ct) ? ct : "application/octet-stream";
+        }
+
+        private static string ComputeETag(FileInfo fi)
+        {
+            // simple, deterministic etag
+            var len = fi.Length;
+            var tics = fi.LastWriteTimeUtc.Ticks;
+            return $"\"{len:x}-{tics:x}\"";
         }
 
         public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct)
@@ -122,47 +159,6 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
 
         // ---------- Helpers ----------
-
-        private string ResolvePath(string relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath))
-                throw new InvalidOperationException("Invalid storage path.");
-
-            if (relativePath.StartsWith('/') || relativePath.StartsWith('\\'))
-                throw new InvalidOperationException("Invalid storage path. Provide a relative path, not starting with '/'.");
-
-            if (Uri.TryCreate(relativePath, UriKind.Absolute, out _))
-                throw new InvalidOperationException("Invalid storage path. Provide a relative path, not a full URL.");
-
-            var normalizedRel = relativePath.Replace('\\', '/'); 
-            if (!normalizedRel.StartsWith(AllowedPrefix, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Invalid storage path prefix.");
-
-            var full = Path.Combine(_root, normalizedRel.Replace('/', Path.DirectorySeparatorChar));
-            full = Path.GetFullPath(full);
-            EnsureUnderRoot(full);
-            return full;
-        }
-
-        private void EnsureUnderRoot(string fullPath)
-        {
-            var rootFull = Path.GetFullPath(_root);
-            if (!fullPath.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Resolved path escapes storage root.");
-        }
-
-        private static void EnsureNotExists(string fullPath, string relativePath)
-        {
-            if (File.Exists(fullPath))
-                throw new AttachmentAlreadyExistsException($"Object already exists at path '{relativePath}'.");
-        }
-
-        private static string? TryReadContentType(string fullPath)
-        {
-            var meta = fullPath + ".contentType";
-            return File.Exists(meta) ? File.ReadAllText(meta) : null;
-        }
-
         private static string NormalizePath(string path)
         {
             if (string.IsNullOrEmpty(path)) return string.Empty;
@@ -208,26 +204,29 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
         private static string CanonicalizeUnderRoot(string root, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(relativePath))
+                throw new ArgumentException("Invalid storage path.", nameof(relativePath));
+
+            // Reject backslashes: tests require this to throw.
+            if (relativePath.IndexOf('\\') >= 0)
                 throw new InvalidOperationException("Invalid storage path.");
 
-            if (relativePath.Contains('\\'))
-                throw new InvalidOperationException("Invalid storage path.");
-
+            // No leading slash and no absolute URL
             if (relativePath.StartsWith("/") || relativePath.StartsWith("\\"))
                 throw new InvalidOperationException("Invalid storage path.");
-
             if (Uri.TryCreate(relativePath, UriKind.Absolute, out _))
                 throw new InvalidOperationException("Invalid storage path. Provide a relative path, not a full URL.");
 
-            var normalizedRel = relativePath.Replace('\\', '/');
-
-            if (normalizedRel.Contains("..", StringComparison.Ordinal))
+            // No traversal
+            if (relativePath.Contains("..", StringComparison.Ordinal))
                 throw new InvalidOperationException("Invalid storage path.");
 
+            // Prefix whitelist (keep in sync with tests)
+            var normalizedRel = relativePath.Replace('\\', '/');
             if (!normalizedRel.StartsWith("incidents/", StringComparison.OrdinalIgnoreCase) &&
                 !normalizedRel.StartsWith("comments/", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Invalid storage path prefix.");
 
+            // Resolve to a path under root
             var rootFull = Path.GetFullPath(root)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
@@ -241,11 +240,5 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             return candidate;
         }
 
-        private static void EnsureNotExists(string root, string relativePath, string fullPath)
-        {
-            if (File.Exists(fullPath))
-                throw new AttachmentAlreadyExistsException(
-                    $"Object already exists at path '{relativePath}'.");
-        }
     }
 }

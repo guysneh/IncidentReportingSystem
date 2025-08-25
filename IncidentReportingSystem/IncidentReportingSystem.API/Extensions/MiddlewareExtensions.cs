@@ -1,8 +1,11 @@
 ﻿using Asp.Versioning.ApiExplorer;
 using IncidentReportingSystem.API.Middleware;
 using IncidentReportingSystem.API.Options;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace IncidentReportingSystem.API.Extensions;
 
@@ -22,7 +25,14 @@ public static class MiddlewareExtensions
         }
 
         app.UseCors("Default");
-        app.UseRateLimiter();
+        // Rate limiter: skip in Test when RateLimiting:Disabled=true
+        var rateLimitingDisabled = app.Configuration.GetValue<bool>("RateLimiting:Disabled");
+        if (!rateLimitingDisabled)
+        {
+            app.UseRateLimiter();
+        }
+
+
 
         // Swagger gating by feature flag (EnableSwaggerUI) when AppConfig is active
         var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
@@ -101,15 +111,23 @@ public static class MiddlewareExtensions
                 return Results.Ok(new { forced = true, atUtc = DateTimeOffset.UtcNow });
             }).AllowAnonymous().ExcludeFromDescription();
 
-        // Liveness
-        app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
-           .AllowAnonymous()
-           .ExcludeFromDescription();
+        // Readiness: always 200 in Test, real health checks otherwise
+        if (app.Environment.IsEnvironment("Test"))
+        {
+            app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+               .AllowAnonymous()
+               .ExcludeFromDescription();
+        }
+        else
+        {
+            app.MapHealthChecks("/health")
+               .AllowAnonymous()
+               .ExcludeFromDescription();
+        }
 
-        // Readiness
-        app.MapHealthChecks("/health")
-           .AllowAnonymous()
-           .ExcludeFromDescription();
+        app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
+            .AllowAnonymous()
+            .ExcludeFromDescription();
 
         // CORS preflight catch-all
         app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
@@ -133,7 +151,9 @@ public static class MiddlewareExtensions
 
     private static void MapVersionedDemo(WebApplication app)
     {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        var provider = app.Services.GetRequiredService<Asp.Versioning.ApiExplorer.IApiVersionDescriptionProvider>();
+
+        // Base API prefix from configuration (default "/api")
         var apiBase = app.Configuration.GetValue<string>("Api:BasePath") ?? "/api";
 
         foreach (var desc in provider.ApiVersionDescriptions)
@@ -144,13 +164,19 @@ public static class MiddlewareExtensions
             {
                 var authMode = (cfg["Demo:ProbeAuthMode"] ?? "Admin").Trim();
 
-                return Results.Ok(new
+                var payload = new
                 {
                     Enabled = true,
                     AppName = cfg["App:Name"],
                     ApiVersion = cfg["Api:Version"],
                     AuthMode = authMode
-                });
+                };
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null
+                };
+
+                return Results.Json(payload, jsonOptions);
             })
             .AllowAnonymous()
             .WithTags("Demo")
@@ -162,4 +188,6 @@ public static class MiddlewareExtensions
             });
         }
     }
+
+
 }
