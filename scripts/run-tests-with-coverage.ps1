@@ -60,6 +60,32 @@ Start-Sleep -Seconds 5
 
 # Step 6: Set connection string
 $env:TEST_DB_CONNECTION = "Host=localhost;Port=5444;Database=testdb;Username=testuser;Password=testpassword"
+# Step 6.1: Ensure Azurite is available on localhost:10000 (start if needed)
+$azuriteStarted = $false
+try {
+  $tcp = Test-NetConnection -ComputerName localhost -Port 10000 -WarningAction SilentlyContinue
+  if (-not $tcp.TcpTestSucceeded) {
+    Write-Host "Starting Azurite for tests..."
+    docker run --name irs_azurite -d -p 10000:10000 `
+      -e AZURITE_ACCOUNTS="devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==" `
+      mcr.microsoft.com/azure-storage/azurite `
+      azurite --blobHost 0.0.0.0 --loose --skipApiVersionCheck --location /data --debug /data/debug.log | Out-Null
+    $azuriteStarted = $true
+
+    Write-Host "Waiting for Azurite to listen on 10000..."
+    $waitOk = $false
+    for ($i=0; $i -lt 30; $i++) {
+      Start-Sleep -Seconds 1
+      $t = Test-NetConnection -ComputerName localhost -Port 10000 -WarningAction SilentlyContinue
+      if ($t.TcpTestSucceeded) { $waitOk = $true; break }
+    }
+    if (-not $waitOk) { throw "Azurite did not become ready on port 10000." }
+  } else {
+    Write-Host "Azurite already listening on 10000. Reusing."
+  }
+} catch {
+  throw $_
+}
 
 # -------- Unit --------
 coverlet $unitTestDll `
@@ -94,6 +120,7 @@ $env:Attachments__Container = "attachments"
 $env:Storage__Blob__Endpoint = "http://127.0.0.1:10000/devstoreaccount1"
 $env:Storage__Blob__AccountName = "devstoreaccount1"
 $env:Storage__Blob__AccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG=="
+
 # === END: Azurite env ===
 
 coverlet $integrationTestDll `
@@ -138,3 +165,7 @@ docker rm irs_testdb | Out-Null
 docker stop $azuriteName | Out-Null 2>$null
 docker rm $azuriteName | Out-Null 2>$null
 # === END: Cleanup Azurite ===
+if ($azuriteStarted) {
+  docker stop irs_azurite | Out-Null
+  docker rm irs_azurite   | Out-Null
+}
