@@ -7,7 +7,7 @@ builder.AddConfigurationAndBindOptions();
 
 // 2) Services & DI
 builder.Services
-    .AddWebApi()
+    .AddWebApi(builder.Environment)
     .AddCorsPolicy(builder.Configuration)
     .AddHealthAndRateLimiting(builder.Configuration, builder.Environment)   // <<< pass env
     .AddPersistence(builder.Configuration)
