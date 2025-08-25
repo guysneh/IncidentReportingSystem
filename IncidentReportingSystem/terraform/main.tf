@@ -150,7 +150,7 @@ data "azurerm_linux_web_app" "api" {
 
 module "storage" {
   source              = "./modules/storage"
-  name                = "${var.name_prefix}-sa"
+  name                = "${var.name_prefix}-guysne"
   resource_group_name = module.resource_group.name
   location            = var.location
   container_name      = "attachments"
