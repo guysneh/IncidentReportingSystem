@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using IncidentReportingSystem.API.Controllers.Models;
+using IncidentReportingSystem.API.Filters;
 using IncidentReportingSystem.Infrastructure.Attachments.DevLoopback;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ namespace IncidentReportingSystem.API.Controllers
         public AttachmentLoopbackUploadController(LoopbackAttachmentStorage loopback) => _loopback = loopback;
 
         [HttpPut("upload")]
+        [LoopbackOnly]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> UploadBinary([FromQuery(Name = "path")] string path, CancellationToken ct)
         {
@@ -26,6 +28,7 @@ namespace IncidentReportingSystem.API.Controllers
 
         [HttpPost("upload-form")]
         [Consumes("multipart/form-data")]
+        [LoopbackOnly]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> UploadForm([FromForm] LoopbackUploadForm form, CancellationToken ct)
         {

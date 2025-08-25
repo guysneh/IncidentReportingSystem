@@ -15,7 +15,7 @@ namespace IncidentReportingSystem.API.Extensions;
 
 public static class WebApiExtensions
 {
-    public static IServiceCollection AddWebApi(this IServiceCollection services)
+    public static IServiceCollection AddWebApi(this IServiceCollection services, IHostEnvironment env)
     {
         services.AddControllers()
             .AddJsonOptions(options =>
@@ -42,6 +42,10 @@ public static class WebApiExtensions
         services.ConfigureOptions<ConfigureSwaggerOptions>();
         services.AddSwaggerGen(c =>
         {
+            if (env.IsProduction()) 
+            {
+                c.DocumentFilter<HideLoopbackDocumentFilter>();
+            }
             c.SchemaFilter<AttachmentContentTypeSchemaFilter>();
             c.OperationFilter<LoopbackBinaryRequestFilter>();
             c.SupportNonNullableReferenceTypes();
