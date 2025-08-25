@@ -1,4 +1,6 @@
-﻿using IncidentReportingSystem.Infrastructure.Persistence;
+﻿using IncidentReportingSystem.Domain.Entities;
+using IncidentReportingSystem.Domain.Enums;
+using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace IncidentReportingSystem.IntegrationTests.Utils;
 
@@ -68,7 +71,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 db.Database.Migrate();
             }
-
+            
             // 6) Resolve BasePath
             BasePath = cfg["Api:BasePath"];
             BasePath = string.IsNullOrWhiteSpace(BasePath) || BasePath == "/" ? "/" : BasePath.TrimEnd('/');

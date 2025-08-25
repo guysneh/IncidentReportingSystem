@@ -2,10 +2,10 @@
 using IncidentReportingSystem.Domain.Entities;
 using Moq;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
-using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Domain;
+using IncidentReportingSystem.Application.Common.Exceptions;
 
 namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 {

@@ -17,7 +17,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
                 LastPutArgs
             { get; private set; }
 
-            public Task<TResponse?> TryGetAsync<TPayload, TResponse>(string key, TPayload payload, CancellationToken ct)
+            public Task<TResponse?> TryGetAsync<TPayload, TResponse>(string key, TPayload payload, CancellationToken cancellationToken)
                 => Task.FromResult((TResponse?)CachedResponse);
 
             public Task<TResponse> PutIfAbsentAsync<TPayload, TResponse>(string key, TPayload payload, TResponse response, TimeSpan ttl, CancellationToken ct)

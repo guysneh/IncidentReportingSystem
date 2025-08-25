@@ -467,3 +467,4 @@ INTERNAL_PLAN.md
 .sonarqube/conf/cs/SonarLint.xml
 .sonarqube/conf/vbnet/SonarLint.xml
 sonar-project.properties.ignore
+.azurite/

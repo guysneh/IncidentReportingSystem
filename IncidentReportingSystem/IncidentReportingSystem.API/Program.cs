@@ -9,9 +9,12 @@ builder.AddConfigurationAndBindOptions();
 builder.Services
     .AddWebApi()
     .AddCorsPolicy(builder.Configuration)
-    .AddHealthAndRateLimiting(builder.Configuration)
+    .AddHealthAndRateLimiting(builder.Configuration, builder.Environment)   // <<< pass env
     .AddPersistence(builder.Configuration)
-    .AddJwtAuth(builder.Configuration);
+    .AddJwtAuth(builder.Configuration)
+    .AddCurrentUserAccessor()
+    .AddAttachmentsModule(builder.Configuration, builder.Environment)
+    .AddAttachmentsStorage(builder.Configuration);
 
 // Telemetry (OpenTelemetry + Azure Monitor) 
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);

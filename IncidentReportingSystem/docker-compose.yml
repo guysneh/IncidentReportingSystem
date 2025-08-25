@@ -62,20 +62,53 @@ services:
         condition: service_healthy
       incidentreportingsystem-migrator:
         condition: service_completed_successfully
+      azurite:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       AppConfig__Enabled: ${APPCFG_ENABLED}
       AppConfig__Endpoint: ${APPCFG_ENDPOINT}
       Api__BasePath: ${API_BASEPATH}
       Api__Version: ${API_VERSION}
+      Api__PublicBaseUrl: ${API_PUBLICBASEURL}
       Demo__ProbeAuthMode: ${DEMO_PRBMODE}
       JWT__Secret: ${JWT_SECRET}
       JWT__Issuer: ${JWT_ISSUER}
       JWT__Audience: ${JWT_AUDIENCE}
       JWT__ExpiryMinutes: ${JWT_EXPIRY_MINUTES}
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_INTERNAL_PORT};Database=${POSTGRES_DATABASE};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}"
+      Attachments__Storage: Azurite
+      Attachments__Container: attachments
+      Storage__Blob__Endpoint: http://azurite:10000/devstoreaccount1
+      Storage__Blob__AccountName: devstoreaccount1
+      Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
+      Storage__Blob__PublicEndpoint: http://localhost:10000/devstoreaccount1
+      Storage__Blob__UploadSasTtlMinutes: "15"
     ports:
       - "${API_PORT}:8080"
 
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: incidentreportingsystem-azurite
+    restart: always
+    ports:
+      - "10000:10000"
+    environment:
+      - AZURITE_ACCOUNTS=devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --loose
+      --location /data
+      --debug /data/debug.log
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:10000/devstoreaccount1?comp=list"]
+      interval: 2s
+      timeout: 1s
+      retries: 30
+    volumes:
+      - azurite:/data
+
 volumes:
   pgdata: {}
+  azurite: {}

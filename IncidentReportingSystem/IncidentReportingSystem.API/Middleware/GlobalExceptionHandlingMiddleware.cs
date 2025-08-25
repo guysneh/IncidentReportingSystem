@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using FluentValidation;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -74,9 +74,6 @@ namespace IncidentReportingSystem.API.Middleware
             if (fullName.StartsWith("Microsoft.IdentityModel.Tokens.SecurityToken", StringComparison.Ordinal))
                 return (HttpStatusCode.Unauthorized, "Authentication failed", null, null);
 
-            if (ex.GetType().Name is "InvalidCredentialsException")
-                return (HttpStatusCode.Unauthorized, "Authentication failed", null, null);
-
             return ex switch
             {
                 ValidationException fv when fv.Errors is not null => (
@@ -105,16 +102,10 @@ namespace IncidentReportingSystem.API.Middleware
                     null),
 
                 InvalidCredentialsException => (
-                   HttpStatusCode.Unauthorized,
-                   "Invalid credentials",
-                   null,
-                   null),
-
-                EmailAlreadyExistsException => (
-                   HttpStatusCode.Conflict,
-                   "Email already exists",
-                   null,
-                   null),
+                    HttpStatusCode.Unauthorized,
+                    "Authentication failed",   
+                    null,
+                    null),
 
                 UnauthorizedAccessException => (
                     HttpStatusCode.Forbidden,
@@ -148,16 +139,28 @@ namespace IncidentReportingSystem.API.Middleware
                    null,
                    null),
 
-                var e2 when e2.GetType().Name.Contains("AlreadyExists", StringComparison.OrdinalIgnoreCase) => (
-                    HttpStatusCode.Conflict,
-                    "Email already exists",
-                    e2.Message,
-                    null),
+                EmailAlreadyExistsException => (
+                   HttpStatusCode.Conflict,
+                   "Email already exists",
+                   null,
+                   null),
+
+                AttachmentAlreadyExistsException => (         
+                   HttpStatusCode.Conflict,
+                   "Conflict",
+                   null,
+                   null),
 
                 AccountLockedException => (
                     HttpStatusCode.Locked,
                     "Account locked",
                     null,
+                    null),
+
+                InvalidOperationException ioe => (
+                    HttpStatusCode.Conflict,
+                    "Conflict",
+                    ioe.Message,
                     null),
 
                 _ => (

@@ -1,4 +1,4 @@
-﻿namespace IncidentReportingSystem.Application.Exceptions;
+﻿namespace IncidentReportingSystem.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a login attempt is made for an account currently under lockout.

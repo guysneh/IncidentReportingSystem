@@ -1,9 +1,9 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
-using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain;
 using MediatR;
+using IncidentReportingSystem.Application.Common.Exceptions;
 
 
 namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser
@@ -28,7 +28,7 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUs
 
         public async Task<RegisterUserResult> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
         {
-            if (request is null) throw new ArgumentNullException(nameof(request));
+            ArgumentNullException.ThrowIfNull(request);
 
             var normalized = request.Email.Trim().ToUpperInvariant();
 

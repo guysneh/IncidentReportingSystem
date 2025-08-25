@@ -6,7 +6,6 @@ using IncidentReportingSystem.Infrastructure.Persistence;
 using Asp.Versioning;
 using IncidentReportingSystem.Application.Features.Comments.Dtos;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
-using IncidentReportingSystem.Application.Exceptions;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
 using IncidentReportingSystem.API.Auth;
@@ -24,12 +23,10 @@ namespace IncidentReportingSystem.API.Controllers
     public sealed class IncidentCommentsController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly ApplicationDbContext _db;
 
-        public IncidentCommentsController(IMediator mediator, ApplicationDbContext db)
+        public IncidentCommentsController(IMediator mediator)
         {
             _mediator = mediator;
-            _db = db;
         }
 
         /// <summary>
@@ -40,9 +37,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize(Policy = PolicyNames.CanReadIncidents)] 
         [ProducesResponseType(typeof(IReadOnlyList<CommentDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken ct = default)
+        public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), ct);
+            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), cancellationToken).ConfigureAwait(false) ;
             return Ok(result);
         }
 
@@ -56,10 +53,10 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> CreateAsync(Guid incidentId, [FromBody] CreateCommentCommand body, CancellationToken ct = default)
+        public async Task<IActionResult> CreateAsync(Guid incidentId, [FromBody] CreateCommentCommand body, CancellationToken cancellationToken = default)
         {
             var cmd = new CreateCommentCommand(incidentId, User.RequireUserId(), body.Text);
-            var created = await _mediator.Send(cmd, ct);
+            var created = await _mediator.Send(cmd, cancellationToken).ConfigureAwait(false);
 
             var apiVersion = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
             var location = $"/api/v{apiVersion}/incidentreports/{incidentId}/comments";
@@ -75,10 +72,10 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteAsync(Guid incidentId, Guid commentId, CancellationToken ct = default)
+        public async Task<IActionResult> DeleteAsync(Guid incidentId, Guid commentId, CancellationToken cancellationToken = default)
         {
             var isAdmin = User.IsInRole("Admin");
-            await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), ct);
+            await _mediator.Send(new DeleteCommentCommand(incidentId, commentId, User.RequireUserId(), isAdmin), cancellationToken).ConfigureAwait(false);
             return NoContent();
         }
     }

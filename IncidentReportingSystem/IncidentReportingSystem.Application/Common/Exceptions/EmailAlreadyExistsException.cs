@@ -1,4 +1,4 @@
-﻿namespace IncidentReportingSystem.Application.Exceptions
+﻿namespace IncidentReportingSystem.Application.Common.Exceptions
 {
     public sealed class EmailAlreadyExistsException : Exception
     {

@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 
 namespace IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 
@@ -20,9 +20,9 @@ public sealed class DeleteCommentCommandHandler : IRequestHandler<DeleteCommentC
         _uow = uow;
     }
 
-    public async Task Handle(DeleteCommentCommand request, CancellationToken ct)
+    public async Task Handle(DeleteCommentCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _comments.GetAsync(request.IncidentId, request.CommentId, ct);
+        var entity = await _comments.GetAsync(request.IncidentId, request.CommentId, cancellationToken).ConfigureAwait(false);
         if (entity is null)
             throw new KeyNotFoundException($"Comment {request.CommentId} not found for incident {request.IncidentId}.");
 
@@ -31,12 +31,12 @@ public sealed class DeleteCommentCommandHandler : IRequestHandler<DeleteCommentC
         if (!isOwner && !isAdmin)
             throw new ForbiddenException("Only the author or an Admin may delete this comment.");
 
-        await _comments.RemoveAsync(entity, ct);
+        await _comments.RemoveAsync(entity, cancellationToken).ConfigureAwait(false);
 
         // Touch parent incident ModifiedAt in the same transaction.
         var now = DateTime.UtcNow;
-        await _incidents.TouchModifiedAtAsync(request.IncidentId, now, ct);
+        await _incidents.TouchModifiedAtAsync(request.IncidentId, now, cancellationToken).ConfigureAwait(false);
 
-        await _uow.SaveChangesAsync(ct);
+        await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

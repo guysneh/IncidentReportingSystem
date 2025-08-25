@@ -124,6 +124,11 @@ locals {
     "Jwt__Secret"                          = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-secret)"
     "AppConfig__Label"                     = var.app_config_label
     "AppConfig__CacheSeconds"              = tostring(var.app_config_cache_seconds)
+    "Attachments__Storage"                 = "Azure"
+    "Attachments__Container"               = module.storage.container_name
+    "Storage__Blob__Endpoint"              = module.storage.blob_endpoint
+    "Storage__Blob__AccountName"           = module.storage.account_name
+    # "Storage__Blob__PublicEndpoint" CDN/Front Door
   }
 }
 
@@ -141,4 +146,19 @@ resource "time_sleep" "appcfg_rbac_propagation" {
 data "azurerm_linux_web_app" "api" {
   name                = var.webapp_name
   resource_group_name = var.webapp_resource_group_name
+}
+
+module "storage" {
+  source              = "./modules/storage"
+  name                = "${var.name_prefix}-guysne"
+  resource_group_name = module.resource_group.name
+  location            = var.location
+  container_name      = "attachments"
+  default_tags        = var.default_tags
+}
+
+resource "azurerm_role_assignment" "webapp_blob_contributor" {
+  scope                = module.storage.account_id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_linux_web_app.api.identity[0].principal_id
 }

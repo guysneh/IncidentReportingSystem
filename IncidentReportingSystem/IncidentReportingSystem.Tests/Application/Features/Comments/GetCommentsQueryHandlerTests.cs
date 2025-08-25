@@ -11,16 +11,16 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
         {
             public List<IncidentComment> Data = new();
 
-            public Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken ct)
+            public Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken cancellationToken)
             { Data.Add(comment); return Task.FromResult(comment); }
 
-            public Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken ct)
+            public Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken cancellationToken)
                 => Task.FromResult<IncidentComment?>(null);
 
-            public Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken ct)
+            public Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken cancellationToken)
                 => Task.FromResult(true);
 
-            public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken ct)
+            public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
             {
                 var filtered = Data.FindAll(x => x.IncidentId == incidentId);
                 filtered.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));
@@ -32,7 +32,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
                 return Task.FromResult<IReadOnlyList<IncidentComment>>(slice);
             }
 
-            public Task RemoveAsync(IncidentComment comment, CancellationToken ct)
+            public Task RemoveAsync(IncidentComment comment, CancellationToken cancellationToken)
                 => Task.CompletedTask;
         }
 

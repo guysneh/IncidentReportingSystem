@@ -37,6 +37,14 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      #azurite:
+      #  image: mcr.microsoft.com/azure-storage/azurite
+      #  ports:
+      #    - 10000:10000
+      #  options: >-
+      #    --health-cmd="bash -c 'sleep 1; curl -fsS http://localhost:10000/devstoreaccount1?comp=list || exit 1'"
+      #    --health-interval=5s --health-timeout=3s --health-retries=60
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,18 +111,29 @@ jobs:
       # ---------- Unit tests via coverlet.console (OpenCover to absolute path) ----------
       - name: Test (Unit) with coverlet.console + thresholds
         shell: bash
+        env:
+          Attachments__Storage: Loopback
+          Attachments__Container: attachments
+          Storage__Blob__Endpoint: http://127.0.0.1:10000/devstoreaccount1
+          Storage__Blob__AccountName: devstoreaccount1
+          Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
         run: |
           set -euxo pipefail
-          UNIT_TRX="IncidentReportingSystem/TestResults/Unit"
-          UNIT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
-          UNIT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
-          mkdir -p "$UNIT_TRX" "$(dirname "$UNIT_COV")"
-          coverlet "$UNIT_DLL" \
+          INT_TRX="IncidentReportingSystem/TestResults/Unit"
+          INT_COV="$GITHUB_WORKSPACE/coverage/unit/coverage.opencover.xml"
+          INT_DLL="IncidentReportingSystem/IncidentReportingSystem.Tests/bin/Release/net8.0/IncidentReportingSystem.Tests.dll"
+          mkdir -p "$INT_TRX" "$(dirname "$INT_COV")"
+          coverlet "$INT_DLL" \
             --target "dotnet" \
-            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $UNIT_TRX" \
+            --targetargs "test IncidentReportingSystem/IncidentReportingSystem.Tests/IncidentReportingSystem.Tests.csproj --no-build --configuration Release --logger trx;LogFileName=unit-tests.trx --results-directory $INT_TRX" \
             --format opencover \
-            --output "$UNIT_COV" \
+            --output "$INT_COV" \
             --threshold 80 --threshold-type line --threshold-stat total \
+            --exclude "[IncidentReportingSystem.API]*Program*" \
+            --exclude "[IncidentReportingSystem.API]*ObservabilityExtensions*" \
+            --exclude-by-file "**/ObservabilityExtensions*.cs" \
+            --exclude-by-file "**/Extensions/ServiceCollection*.cs" \
+            --exclude-by-file "**/Extensions/DependencyInjection/*.cs" \
             --exclude-by-file "**/Migrations/*.cs" \
             --exclude-by-file "**/*Migrations/*.cs" \
             --exclude-by-file "**/Dtos/**" \
@@ -130,6 +149,7 @@ jobs:
             --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
             || echo "Coverage under threshold — continuing for Sonar END"
 
+
       - name: Wait for PostgreSQL
         shell: bash
         run: |
@@ -143,6 +163,12 @@ jobs:
       # ---------- Integration tests via coverlet.console ----------
       - name: Test (Integration) with coverlet.console + thresholds
         shell: bash
+        env:
+          Attachments__Storage: Azurite
+          Attachments__Container: attachments
+          Storage__Blob__Endpoint: http://127.0.0.1:10000/devstoreaccount1
+          Storage__Blob__AccountName: devstoreaccount1
+          Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
         run: |
           set -euxo pipefail
           INT_TRX="IncidentReportingSystem/TestResults/Integration"

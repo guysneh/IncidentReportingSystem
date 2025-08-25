@@ -42,6 +42,8 @@ public static class WebApiExtensions
         services.ConfigureOptions<ConfigureSwaggerOptions>();
         services.AddSwaggerGen(c =>
         {
+            c.SchemaFilter<AttachmentContentTypeSchemaFilter>();
+            c.OperationFilter<LoopbackBinaryRequestFilter>();
             c.SupportNonNullableReferenceTypes();
             c.UseInlineDefinitionsForEnums();
 
@@ -95,7 +97,16 @@ public static class WebApiExtensions
             options.SubstituteApiVersionInUrl = true;
         });
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationAssemblyReference).Assembly));
+        services.AddMediatR(cfg =>
+        {
+            var assemblies = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Where(a => a.FullName != null &&
+                            a.FullName.StartsWith("IncidentReportingSystem.", StringComparison.Ordinal))
+                .ToArray();
+
+            cfg.RegisterServicesFromAssemblies(assemblies);
+        });
         services.AddValidatorsFromAssembly(typeof(ApplicationAssemblyReference).Assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 

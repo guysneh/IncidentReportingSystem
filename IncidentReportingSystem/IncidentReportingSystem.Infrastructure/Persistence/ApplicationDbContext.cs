@@ -24,6 +24,11 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
         public DbSet<User> Users => Set<User>();
 
         /// <summary>
+        /// Attachments aggregate root set.
+        /// </summary>
+        public DbSet<Attachment> Attachments => Set<Attachment>();
+
+        /// <summary>
         /// Table for incident comments.
         /// </summary>
         public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();

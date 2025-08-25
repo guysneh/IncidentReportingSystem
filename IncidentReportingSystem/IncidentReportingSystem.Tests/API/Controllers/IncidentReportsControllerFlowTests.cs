@@ -61,7 +61,7 @@ namespace IncidentReportingSystem.Tests.API.Controllers
             var ctrl = Ctrl(m);
             var res = await ctrl.BulkStatus(
                 new IncidentReportsController.BulkStatusUpdateRequest(ids, IncidentStatus.Closed),
-                idempotencyKey: "k1", ct: CancellationToken.None);
+                idempotencyKey: "k1", cancellationToken: CancellationToken.None);
 
             res.Should().BeOfType<OkObjectResult>();
             sent.Should().NotBeNull();

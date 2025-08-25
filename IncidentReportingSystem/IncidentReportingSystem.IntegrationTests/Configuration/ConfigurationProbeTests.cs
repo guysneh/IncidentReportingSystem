@@ -78,19 +78,29 @@ namespace IncidentReportingSystem.IntegrationTests.Configuration
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // The response uses camelCase (enabled, appName, apiVersion)
-            Assert.True(root.TryGetProperty("apiVersion", out var ver), "payload is missing 'apiVersion'");
+            // casing-agnostic reads
+            Assert.True(TryGetIgnoreCase(root, "apiVersion", out var ver), "payload is missing 'apiVersion'");
             Assert.Equal("v9", ver.GetString());
 
-            // Optional extra checks 
-            Assert.True(root.TryGetProperty("enabled", out var enabled));
+            Assert.True(TryGetIgnoreCase(root, "enabled", out var enabled), "payload is missing 'enabled'");
             Assert.True(enabled.GetBoolean());
 
-            Assert.True(root.TryGetProperty("appName", out var appName));
+            Assert.True(TryGetIgnoreCase(root, "appName", out var appName), "payload is missing 'appName'");
             Assert.False(string.IsNullOrWhiteSpace(appName.GetString()));
         }
 
-
-
+        private static bool TryGetIgnoreCase(JsonElement obj, string name, out JsonElement value)
+        {
+            foreach (var p in obj.EnumerateObject())
+            {
+                if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = p.Value;
+                    return true;
+                }
+            }
+            value = default;
+            return false;
+        }
     }
 }

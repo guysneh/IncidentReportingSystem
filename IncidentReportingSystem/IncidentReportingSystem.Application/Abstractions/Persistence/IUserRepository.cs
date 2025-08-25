@@ -4,11 +4,11 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
 {
     public interface IUserRepository
     {
-        Task<bool> ExistsByNormalizedEmailAsync(string normalizedEmail, CancellationToken ct);
-        Task<User?> FindByNormalizedEmailAsync(string normalizedEmail, CancellationToken ct);
-        Task<User?> GetByIdAsync(Guid id, CancellationToken ct);
-        Task<User?> GetByEmailAsync(string email, CancellationToken ct);
-        Task AddAsync(User user, CancellationToken ct);
-        Task<bool> ExistsByIdAsync(Guid id, CancellationToken ct);
+        Task<bool> ExistsByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
+        Task<User?> FindByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
+        Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+        Task<User?> GetByEmailAsync(string email, CancellationToken ctcancellationToken);
+        Task AddAsync(User user, CancellationToken ctcancellationToken);
+        Task<bool> ExistsByIdAsync(Guid id, CancellationToken ctcancellationToken);
     }
 }

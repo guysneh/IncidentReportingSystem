@@ -1,5 +1,5 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Exceptions;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
@@ -13,19 +13,19 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
         {
             public IncidentComment? Stored;
 
-            public Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken ct)
+            public Task<IncidentComment> AddAsync(IncidentComment comment, CancellationToken cancellationToken)
             { Stored = comment; return Task.FromResult(comment); }
 
-            public Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken ct)
+            public Task<IncidentComment?> GetAsync(Guid incidentId, Guid commentId, CancellationToken cancellationToken)
                 => Task.FromResult(Stored is not null && Stored.IncidentId == incidentId && Stored.Id == commentId ? Stored : null);
 
-            public Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken ct)
+            public Task<bool> IncidentExistsAsync(Guid incidentId, CancellationToken cancellationToken)
                 => Task.FromResult(Stored?.IncidentId == incidentId);
 
-            public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken ct)
+            public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
                 => Task.FromResult<IReadOnlyList<IncidentComment>>(Array.Empty<IncidentComment>());
 
-            public Task RemoveAsync(IncidentComment comment, CancellationToken ct)
+            public Task RemoveAsync(IncidentComment comment, CancellationToken cancellationToken)
             { Stored = null; return Task.CompletedTask; }
         }
 
@@ -36,7 +36,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
 
             public void Seed(Guid id) => _existing.Add(id);
 
-            public Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken ct)
+            public Task TouchModifiedAtAsync(Guid incidentId, DateTime utcNow, CancellationToken cancellationToken)
             {
                 if (!_existing.Contains(incidentId))
                     throw new KeyNotFoundException($"Incident {incidentId} not found.");
@@ -72,7 +72,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
 
         private sealed class FakeUow : IUnitOfWork
         {
-            public Task<int> SaveChangesAsync(CancellationToken ct) => Task.FromResult(1);
+            public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(1);
         }
 
         [Fact]
