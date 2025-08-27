@@ -1,5 +1,7 @@
 ﻿using Asp.Versioning;
 using IncidentReportingSystem.API.Common;
+using IncidentReportingSystem.API.Contracts.Paging;
+using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment;
@@ -7,7 +9,9 @@ using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using IncidentReportingSystem.Application.Features.Attachments.Queries;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentConstraints;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentMetedata;
+using IncidentReportingSystem.Application.Features.Attachments.Queries.ListAttachmentsByParent;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.OpenAttachmentStream;
+using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Infrastructure.Attachments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -95,5 +99,57 @@ namespace IncidentReportingSystem.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Lists attachments for an incident, newest-first, with paging metadata.
+        /// Route note: we keep existing naming convention 'incidentreports'.
+        /// </summary>
+        [Authorize(Policy = PolicyNames.CanReadIncidents)]
+        [HttpGet("~/api/v{version:apiVersion}/incidentreports/{incidentId:guid}/attachments")]
+        public async Task<IActionResult> ListByIncident(
+            Guid incidentId,
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var paged = await _sender.Send(
+                new ListAttachmentsByParentQuery(AttachmentParentType.Incident, incidentId, skip, take),
+                cancellationToken).ConfigureAwait(false);
+
+            var response = new PagedResponse<AttachmentDto>
+            {
+                Total = paged.Total,
+                Skip = paged.Skip,
+                Take = paged.Take,
+                Items = paged.Items
+            };
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Lists attachments for a comment, newest-first, with paging metadata.
+        /// </summary>
+        [Authorize(Policy = PolicyNames.CanReadIncidents)]
+        [HttpGet("~/api/v{version:apiVersion}/comments/{commentId:guid}/attachments")]
+        public async Task<IActionResult> ListByComment(
+            Guid commentId,
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var paged = await _sender.Send(
+                new ListAttachmentsByParentQuery(AttachmentParentType.Comment, commentId, skip, take),
+                cancellationToken).ConfigureAwait(false);
+
+            var response = new PagedResponse<AttachmentDto>
+            {
+                Total = paged.Total,
+                Skip = paged.Skip,
+                Take = paged.Take,
+                Items = paged.Items
+            };
+
+            return Ok(response);
+        }
     }
 }
