@@ -40,7 +40,7 @@ public sealed class AttachmentsListTests : IClassFixture<CustomWebApplicationFac
     [Fact, Trait("Category", "Integration")]
     public async Task List_ByIncident_Returns_Paged_NewestFirst()
     {
-        // Arrange: register+login & create an incident (כמו שיש לך)
+        // Arrange: register+login & create an incident 
         var client = await RegisterAndLoginAsync("Admin");
         var incidentId = await CreateIncidentAsync(client);
 

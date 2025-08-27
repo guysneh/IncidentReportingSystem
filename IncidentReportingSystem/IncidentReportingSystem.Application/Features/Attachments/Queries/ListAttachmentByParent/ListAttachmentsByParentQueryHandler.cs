@@ -7,6 +7,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
 {
     /// <summary>
     /// Delegates list+count to repository and maps to DTOs.
+    /// Ensures paging values (skip/take) are sanitized and reflected in the response.
     /// </summary>
     public sealed class ListAttachmentsByParentQueryHandler
         : IRequestHandler<ListAttachmentsByParentQuery, PagedResult<AttachmentDto>>
@@ -18,8 +19,13 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
             ListAttachmentsByParentQuery request,
             CancellationToken ct)
         {
+            // Sanitize incoming paging before delegating to the repository
+            var effectiveSkip = request.Skip < 0 ? 0 : request.Skip;
+            var effectiveTake = request.Take <= 0 ? 100 : request.Take; // default page size
+
             var (entities, total) = await _repo.ListByParentAsync(
-                request.ParentType, request.ParentId, request.Skip, request.Take, ct).ConfigureAwait(false);
+                request.ParentType, request.ParentId, effectiveSkip, effectiveTake, ct)
+                .ConfigureAwait(false);
 
             var items = entities.Select(a => new AttachmentDto
             {
@@ -35,7 +41,8 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
                 HasThumbnail = a.HasThumbnail
             }).ToList();
 
-            return new PagedResult<AttachmentDto>(items, total, request.Skip, request.Take);
+            // Return the effective values (post-clamp) so clients/tests see the real paging contract.
+            return new PagedResult<AttachmentDto>(items, total, effectiveSkip, effectiveTake);
         }
     }
 }
