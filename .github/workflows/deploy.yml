@@ -247,11 +247,23 @@ jobs:
           done
 
       # ----- Mark last-good (update tag) on success -----
-      - name: Move 'prod' tag to this commit (on success)
+      - name: Create immutable deploy tag
         if: success()
         run: |
-          git tag -f prod "${{ steps.rev.outputs.sha }}"
-          git push origin -f refs/tags/prod
+          set -e
+          TS=$(date -u +'%Y-%m-%dT%H-%MZ')
+          SHA="${{ steps.rev.outputs.sha }}"
+          SHA7=$(echo "$SHA" | cut -c1-7)
+          TAG="deploy/prod/${TS}-${SHA7}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          git tag -a "$TAG" "$SHA" -m "Production deploy $TS"
+          git push origin "refs/tags/$TAG"
+      
+      - name: Update prod branch pointer (on success)
+        if: success()
+        run: |
+          SHA="${{ steps.rev.outputs.sha }}"
+          git push origin "$SHA:refs/heads/prod" -f
 
       # ----- Extra diagnostics on failure -----
       - name: Dump last logs on failure
