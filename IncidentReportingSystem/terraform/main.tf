@@ -80,32 +80,32 @@ module "monitoring" {
   action_group_email  = var.action_group_email
 }
 
-module "app_configuration" {
-  source              = "./modules/app_configuration"
-  name                = var.app_config_name
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  tags                = var.default_tags
-
-  app_name     = var.app_name
-  api_basepath = var.api_basepath
-  api_version  = var.api_version
-
-  enable_swagger           = true
-  demo_enable_config_probe = var.demo_enable_config_probe
-  demo_probe_auth_mode     = var.demo_probe_auth_mode
-
-  stabilization_delay    = var.stabilization_delay
-  default_tags           = var.default_tags
-  web_app_name           = var.web_app_name
-  app_config_name        = var.app_config_name
-  app_config_label       = var.app_config_label
-  telemetry_sample_ratio = var.telemetry_sample_ratio
-  depends_on = [
-    time_sleep.appcfg_rbac_propagation
-  ]
-  webapp_identity_object_id = one(data.azurerm_linux_web_app.api.identity[*].principal_id)
-}
+#module "app_configuration" {
+#  source              = "./modules/app_configuration"
+#  name                = var.app_config_name
+#  resource_group_name = module.resource_group.name
+#  location            = module.resource_group.location
+#  tags                = var.default_tags
+#
+#  app_name     = var.app_name
+#  api_basepath = var.api_basepath
+#  api_version  = var.api_version
+#
+#  enable_swagger           = true
+#  demo_enable_config_probe = var.demo_enable_config_probe
+#  demo_probe_auth_mode     = var.demo_probe_auth_mode
+#
+#  stabilization_delay    = var.stabilization_delay
+#  default_tags           = var.default_tags
+#  web_app_name           = var.web_app_name
+#  app_config_name        = var.app_config_name
+#  app_config_label       = var.app_config_label
+#  telemetry_sample_ratio = var.telemetry_sample_ratio
+#  depends_on = [
+#    time_sleep.appcfg_rbac_propagation
+#  ]
+#  webapp_identity_object_id = one(data.azurerm_linux_web_app.api.identity[*].principal_id)
+#}
 
 
 
@@ -117,8 +117,8 @@ resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
 
 locals {
   app_settings = {
-    "AppConfig__Enabled"                   = "true"
-    "AppConfig__Endpoint"                  = module.app_configuration.endpoint
+    "AppConfig__Enabled"                   = "false"
+   # "AppConfig__Endpoint"                  = module.app_configuration.endpoint
     "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/PostgreSqlConnectionString)"
     "Telemetry__SamplingRatio"             = var.telemetry_sample_ratio
     "Jwt__Secret"                          = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-secret)"
@@ -129,6 +129,10 @@ locals {
     "Storage__Blob__Endpoint"              = module.storage.blob_endpoint
     "Storage__Blob__AccountName"           = module.storage.account_name
     # "Storage__Blob__PublicEndpoint" CDN/Front Door
+    "Jwt__Issuer"   = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-issuer)"
+    "Jwt__Audience" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-audience)"
+    "ASPNETCORE_URLS" = "http://0.0.0.0:8080"
+    "WEBSITES_PORT"    = "8080" 
   }
 }
 
