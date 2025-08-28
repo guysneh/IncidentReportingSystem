@@ -34,7 +34,7 @@ jobs:
       # ----- Build artifacts -----
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Capture current revision
         id: rev
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -147,7 +147,7 @@ jobs:
           echo "endpoint=$EP" >> "$GITHUB_OUTPUT"
           echo "AppConfig endpoint: $EP"
 
-      # ----- Ensure AppConfig app settings -----
+      # ----- Ensure AppConfig app settings on Web App -----
       - name: Ensure AppConfig bootstrap settings on Web App
         run: |
           set -e
@@ -167,26 +167,34 @@ jobs:
           echo "Verifying keys..."
           az webapp config appsettings list -g "$RG" -n "$APP" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint' || true
 
-      - name: Cleanup legacy colon-based keys
+      # ----- Cleanup legacy colon-based keys (do NOT delete '__' keys) -----
+      - name: Cleanup legacy colon-based keys (correct)
         run: |
           az webapp config appsettings delete \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
-            --setting-names "AppConfig__Enabled" "AppConfig__Endpoint" || true
+            --setting-names "AppConfig:Enabled" "AppConfig:Endpoint" || true
 
-      # ----- Deploy ZIP to Web App -----
-      - name: Deploy ZIP to Web App
+      # ===== (3) Enforce runtime app settings (PORT + startup behavior) =====
+      - name: Ensure runtime app settings (port + startup behavior)
         run: |
-          az webapp deploy \
-            --resource-group incident-rg \
-            --name incident-api \
-            --type zip \
-            --src-path app.zip \
-            --restart true \
-            --async true
+          az webapp config appsettings set \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --settings \
+              ASPNETCORE_URLS="http://0.0.0.0:8080" \
+              WEBSITES_PORT="8080" \
+              App__RunMigrationsOnStartup="false"
 
+      - name: Print effective app settings (sanitized)
+        run: |
+          az webapp config appsettings list \
+            -g "${{ env.RESOURCE_GROUP }}" \
+            -n "${{ env.WEBAPP_NAME }}" \
+            --query "[?name=='ASPNETCORE_URLS' || name=='WEBSITES_PORT' || name=='App__RunMigrationsOnStartup' || name=='AppConfig__Enabled' || name=='AppConfig__Endpoint']" -o table
 
-      - name: Enable application logs (once)
+      # ----- Enable application logs (once) -----
+      - name: Enable application logs
         run: |
           az webapp log config \
             -g "${{ env.RESOURCE_GROUP }}" \
@@ -194,42 +202,88 @@ jobs:
             --application-logging filesystem \
             --level information
 
-      # ----- Post-deploy checks -----
-      - name: Wait for /health 200 (max 120s, backoff)
+      # ----- Deploy ZIP to Web App -----
+      - name: Deploy ZIP to Web App
+        run: |
+          az webapp deploy \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --type zip \
+            --src-path app.zip \
+            --restart true \
+            --async true
+
+      # ===== (2) Extended health check with state/backoff (up to 600s) =====
+      - name: Wait for /health 200 (max 600s, backoff)
         run: |
           set -e
           URL="${{ env.BASE_URL }}/health"
-          DEADLINE=$(( $(date +%s) + 120 ))
+          DEADLINE=$(( $(date +%s) + 600 ))
           SLEEP=2
           while true; do
+            STATE=$(az webapp show -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.WEBAPP_NAME }}" --query state -o tsv || echo "unknown")
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            echo "State=$STATE, /health HTTP=$CODE"
             if [ "$CODE" = "200" ]; then
               echo "Health OK"
               break
             fi
             if [ "$(date +%s)" -ge "$DEADLINE" ]; then
-              echo "Health failed: last HTTP $CODE"
+              echo "Health failed: last HTTP $CODE (State=$STATE)"
               exit 1
             fi
-            echo "Health not ready (HTTP $CODE), retrying in ${SLEEP}s..."
             sleep "$SLEEP"
-            if [ "$SLEEP" -lt 10 ]; then SLEEP=$((SLEEP+2)); fi
+            if [ "$SLEEP" -lt 30 ]; then SLEEP=$((SLEEP+3)); fi
           done
 
-        # ----- Mark last-good (update tag) on success -----
+      # ----- Mark last-good (update tag) on success -----
       - name: Move 'prod' tag to this commit (on success)
         if: success()
         run: |
           git tag -f prod "${{ steps.rev.outputs.sha }}"
-          # צריך לשייך remote עם write (GITHUB_TOKEN)
           git push origin -f refs/tags/prod
-          
+
+      # ===== (4a) Extra diagnostics on failure: App logs tail =====
       - name: Dump last logs on failure
         if: failure()
         run: |
           timeout 60 az webapp log tail \
             -g "${{ env.RESOURCE_GROUP }}" \
             -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
+
+      # ===== (4b) Extra diagnostics on failure: fetch Kudu creds =====
+      - name: Fetch Kudu credentials (on failure)
+        if: failure()
+        id: kudu
+        run: |
+          set -e
+          PP=$(az webapp deployment list-publishing-profiles \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --name "${{ env.WEBAPP_NAME }}" \
+                --xml)
+          # xmllint is available on ubuntu-latest
+          USER=$(echo "$PP" | xmllint --xpath "string(//publishProfile[@publishMethod='MSDeploy']/@userName)" - 2>/dev/null)
+          PASS=$(echo "$PP" | xmllint --xpath "string(//publishProfile[@publishMethod='MSDeploy']/@userPWD)" - 2>/dev/null)
+          echo "::add-mask::$USER"
+          echo "::add-mask::$PASS"
+          echo "user=$USER" >> "$GITHUB_OUTPUT"
+          echo "pass=$PASS" >> "$GITHUB_OUTPUT"
+
+      # ===== (4c) Extra diagnostics on failure: Kudu docker/env =====
+      - name: Fetch Kudu docker & environment logs (on failure)
+        if: failure()
+        env:
+          KUSER: ${{ steps.kudu.outputs.user }}
+          KPASS: ${{ steps.kudu.outputs.pass }}
+          SCM: https://incident-api.scm.azurewebsites.net
+        run: |
+          set +e
+          echo "==== KUDU /api/logs/docker ===="
+          curl -s -u "$KUSER:$KPASS" "$SCM/api/logs/docker" | tail -n 500 || true
+          echo
+          echo "==== KUDU /api/environment (filtered) ===="
+          curl -s -u "$KUSER:$KPASS" "$SCM/api/environment" | \
+            jq '.system | {PORT: .PORT, ASPNETCORE_URLS: .ASPNETCORE_URLS, WEBSITE_SITE_NAME: .WEBSITE_SITE_NAME}' || true
 
       # ----- Always cleanup temporary Postgres firewall rule -----
       - name: Remove temporary Postgres firewall rule
@@ -242,7 +296,7 @@ jobs:
 
   rollback:
     needs: build-and-deploy
-    if: failure()              
+    if: failure()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout last-good (prod tag)
@@ -276,7 +330,6 @@ jobs:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
 
       - name: Roll back Web App to last-good build
         run: |
