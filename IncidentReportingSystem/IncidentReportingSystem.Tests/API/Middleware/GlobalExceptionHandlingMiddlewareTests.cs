@@ -77,6 +77,13 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
         title.Should().Be("Not found");
     }
 
+    [Fact]
+    public async Task Maps_InvalidOperation_To_409()
+    {
+        var (status, _) = await InvokeAndReadAsync(new InvalidOperationException("conflict"));
+        Assert.Equal((int)HttpStatusCode.Conflict, status);
+    }
+
     [Fact(DisplayName = "DbUpdateException (non-Postgres) -> 503")]
     public async Task DbUpdateException_503()
     {
