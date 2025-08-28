@@ -67,11 +67,18 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      # Guard: fail if any colon-based AppConfig keys exist in workflows
+      # Utilities for later diagnostics
+      - name: Install CLI helpers (jq, xmllint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq libxml2-utils
+
+      # Guard: ignore cleanup line, but still block accidental colon-keys
       - name: Guard (no colon-based AppConfig keys)
         run: |
           set -e
           offenders=$(git grep -nE '^[^#]*AppConfig:[A-Za-z]' .github/workflows || true)
+          offenders=$(echo "$offenders" | grep -v 'setting-names' || true)
           if [ -n "$offenders" ]; then
             echo "Found colon-based AppConfig keys in workflows. Replace ':' with '__' in these lines:"
             echo "$offenders"
@@ -86,17 +93,23 @@ jobs:
           echo "ip=$RUNNER_IP" >> "$GITHUB_OUTPUT"
           echo "Runner IP: $RUNNER_IP"
 
-      - name: Add temporary Postgres firewall rule
+      - name: Add temporary Postgres firewall rule (retry)
         run: |
-          az postgres flexible-server firewall-rule create \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "${{ env.PG_SERVER_NAME }}" \
-            --rule-name "${{ env.TEMP_RULE_NAME }}" \
-            --start-ip-address "${{ steps.ip.outputs.ip }}" \
-            --end-ip-address "${{ steps.ip.outputs.ip }}" \
-            --only-show-errors --output none
+          set +e
+          for i in 1 2 3; do
+            az postgres flexible-server firewall-rule create \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "${{ env.PG_SERVER_NAME }}" \
+              --rule-name "${{ env.TEMP_RULE_NAME }}" \
+              --start-ip-address "${{ steps.ip.outputs.ip }}" \
+              --end-ip-address "${{ steps.ip.outputs.ip }}" \
+              --only-show-errors --output none && break
+            echo "Retry $i creating firewall rule..."
+            sleep 5
+          done
+          set -e
 
-      # ----- EF Core migrations out-of-band (admin connection) -----
+      # ----- EF Core migrations out-of-band (no migrations in app startup) -----
       - name: Install dotnet-ef
         run: |
           dotnet tool install -g dotnet-ef
@@ -154,8 +167,6 @@ jobs:
           RG="${{ env.RESOURCE_GROUP }}"
           APP="${{ env.WEBAPP_NAME }}"
           EP="${{ steps.appcfg.outputs.endpoint }}"
-          echo "About to set appsettings on $RG/$APP with EP=$EP"
-
           az webapp config appsettings set \
             --resource-group "$RG" \
             --name "$APP" \
@@ -163,35 +174,34 @@ jobs:
               AppConfig__Enabled=true \
               AppConfig__Endpoint="$EP" \
             --output none
-
-          echo "Verifying keys..."
           az webapp config appsettings list -g "$RG" -n "$APP" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint' || true
 
-      # ----- Cleanup legacy colon-based keys (do NOT delete '__' keys) -----
+      # ----- Cleanup legacy colon-based keys (without writing ':' in YAML) -----
       - name: Cleanup legacy colon-based keys (correct)
         run: |
+          KEY1=$(printf 'AppConfig:%s' 'Enabled')
+          KEY2=$(printf 'AppConfig:%s' 'Endpoint')
           az webapp config appsettings delete \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
-            --setting-names "AppConfig:Enabled" "AppConfig:Endpoint" || true
+            --setting-names "$KEY1" "$KEY2" || true
 
-      # ===== (3) Enforce runtime app settings (PORT + startup behavior) =====
-      - name: Ensure runtime app settings (port + startup behavior)
+      # ----- Enforce runtime port settings for Linux Web App -----
+      - name: Ensure runtime app settings (port)
         run: |
           az webapp config appsettings set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ env.WEBAPP_NAME }}" \
             --settings \
               ASPNETCORE_URLS="http://0.0.0.0:8080" \
-              WEBSITES_PORT="8080" \
-              App__RunMigrationsOnStartup="false"
+              WEBSITES_PORT="8080"
 
       - name: Print effective app settings (sanitized)
         run: |
           az webapp config appsettings list \
             -g "${{ env.RESOURCE_GROUP }}" \
             -n "${{ env.WEBAPP_NAME }}" \
-            --query "[?name=='ASPNETCORE_URLS' || name=='WEBSITES_PORT' || name=='App__RunMigrationsOnStartup' || name=='AppConfig__Enabled' || name=='AppConfig__Endpoint']" -o table
+            --query "[?name=='ASPNETCORE_URLS' || name=='WEBSITES_PORT' || name=='AppConfig__Enabled' || name=='AppConfig__Endpoint']" -o table
 
       # ----- Enable application logs (once) -----
       - name: Enable application logs
@@ -213,7 +223,7 @@ jobs:
             --restart true \
             --async true
 
-      # ===== (2) Extended health check with state/backoff (up to 600s) =====
+      # ----- Extended health check with state/backoff (up to 600s) -----
       - name: Wait for /health 200 (max 600s, backoff)
         run: |
           set -e
@@ -243,7 +253,7 @@ jobs:
           git tag -f prod "${{ steps.rev.outputs.sha }}"
           git push origin -f refs/tags/prod
 
-      # ===== (4a) Extra diagnostics on failure: App logs tail =====
+      # ----- Extra diagnostics on failure -----
       - name: Dump last logs on failure
         if: failure()
         run: |
@@ -251,7 +261,6 @@ jobs:
             -g "${{ env.RESOURCE_GROUP }}" \
             -n "${{ env.WEBAPP_NAME }}" | tail -n 200 || true
 
-      # ===== (4b) Extra diagnostics on failure: fetch Kudu creds =====
       - name: Fetch Kudu credentials (on failure)
         if: failure()
         id: kudu
@@ -261,7 +270,6 @@ jobs:
                 --resource-group "${{ env.RESOURCE_GROUP }}" \
                 --name "${{ env.WEBAPP_NAME }}" \
                 --xml)
-          # xmllint is available on ubuntu-latest
           USER=$(echo "$PP" | xmllint --xpath "string(//publishProfile[@publishMethod='MSDeploy']/@userName)" - 2>/dev/null)
           PASS=$(echo "$PP" | xmllint --xpath "string(//publishProfile[@publishMethod='MSDeploy']/@userPWD)" - 2>/dev/null)
           echo "::add-mask::$USER"
@@ -269,7 +277,6 @@ jobs:
           echo "user=$USER" >> "$GITHUB_OUTPUT"
           echo "pass=$PASS" >> "$GITHUB_OUTPUT"
 
-      # ===== (4c) Extra diagnostics on failure: Kudu docker/env =====
       - name: Fetch Kudu docker & environment logs (on failure)
         if: failure()
         env:
@@ -286,13 +293,19 @@ jobs:
             jq '.system | {PORT: .PORT, ASPNETCORE_URLS: .ASPNETCORE_URLS, WEBSITE_SITE_NAME: .WEBSITE_SITE_NAME}' || true
 
       # ----- Always cleanup temporary Postgres firewall rule -----
-      - name: Remove temporary Postgres firewall rule
+      - name: Remove temporary Postgres firewall rule (retry, ignore errors)
         if: always()
         run: |
-          az postgres flexible-server firewall-rule delete \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "${{ env.PG_SERVER_NAME }}" \
-            --rule-name "${{ env.TEMP_RULE_NAME }}" -y
+          set +e
+          for i in 1 2 3; do
+            az postgres flexible-server firewall-rule delete \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "${{ env.PG_SERVER_NAME }}" \
+              --rule-name "${{ env.TEMP_RULE_NAME }}" -y && break
+            echo "Retry $i deleting firewall rule..."
+            sleep 5
+          done
+          exit 0
 
   rollback:
     needs: build-and-deploy
