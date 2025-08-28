@@ -22,10 +22,10 @@ public sealed class HideLoopbackDocumentFilterTests
         };
 
         var filter = new HideLoopbackDocumentFilter();
-        // The filter only inspects doc.Paths; context is not used.
+
         filter.Apply(doc, context: null!);
 
-        Assert.DoesNotContain(doc.Paths.Keys, k => k.Contains("_loopback"));
+        Assert.DoesNotContain(doc.Paths.Keys, k => k.Contains("_loopback", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("/api/v1/incidentreports/{id}/attachments", doc.Paths.Keys);
     }
 
