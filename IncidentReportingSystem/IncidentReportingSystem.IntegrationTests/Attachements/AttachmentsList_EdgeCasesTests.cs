@@ -82,6 +82,55 @@ public sealed class AttachmentsList_EdgeCasesTests : IClassFixture<CustomWebAppl
         Assert.DoesNotContain("storagePath", json, StringComparison.OrdinalIgnoreCase);
     }
 
+    // 1) Paging overrun: skip far beyond total => empty page, correct total.
+    [Fact]
+    public async Task Paging_Overrun_Returns_EmptyItems_And_Correct_Total()
+    {
+        var c = await RegisterAndLoginAsync("User");
+        var incidentId = await CreateIncidentAndSeedThreeAsync(c);
+
+        var paged = await c.GetFromJsonAsync<Paged<AttachmentView>>(
+            RouteHelper.R(_factory, $"api/v1/incidentreports/{incidentId}/attachments?skip=999&take=50"));
+
+        Assert.NotNull(paged);
+        Assert.Equal(3, paged!.Total);
+        Assert.Empty(paged.Items);
+    }
+
+    // 2) Comment endpoint parity: endpoint exists and returns total=0 when empty.
+    [Fact]
+    public async Task Comment_Empty_List_Returns_Total_0()
+    {
+        var c = await RegisterAndLoginAsync("User");
+
+        // Use a new commentId; list can be empty and should still return 200 with total=0.
+        var commentId = Guid.NewGuid();
+
+        var paged = await c.GetFromJsonAsync<Paged<AttachmentView>>(
+            RouteHelper.R(_factory, $"api/v1/comments/{commentId}/attachments?skip=0&take=5"));
+
+        Assert.NotNull(paged);
+        Assert.Equal(0, paged!.Total);
+        Assert.Empty(paged.Items);
+    }
+
+    // 3) Ordering (newest-first): take=1 must return the most recently created attachment.
+    [Fact]
+    public async Task Ordering_NewestFirst_Take1_Returns_Latest()
+    {
+        var c = await RegisterAndLoginAsync("User");
+        var incidentId = await CreateIncidentAndSeedThreeAsync(c);
+
+        // Request only 1 item; it should be the newest one (file3.jpg) based on CreatedAt desc.
+        var page = await c.GetFromJsonAsync<Paged<AttachmentView>>(
+            RouteHelper.R(_factory, $"api/v1/incidentreports/{incidentId}/attachments?skip=0&take=1"));
+
+        Assert.NotNull(page);
+        Assert.Equal(3, page!.Total);
+        Assert.Single(page.Items);
+        Assert.Equal("f3.jpg", page.Items[0].fileName); // matches seeding in CreateIncidentAndSeedThreeAsync
+    }
+
     // ---------- Helpers ----------
 
     private async Task<Guid> CreateIncidentAndSeedThreeAsync(HttpClient c)
