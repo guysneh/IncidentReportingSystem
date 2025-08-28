@@ -27,6 +27,7 @@ env:
 
 jobs:
   build-and-deploy:
+    environment: production
     runs-on: ubuntu-latest
     outputs:
       current_sha: ${{ steps.rev.outputs.sha }}
@@ -320,6 +321,7 @@ jobs:
           exit 0
 
   rollback:
+    environment: production
     needs: build-and-deploy
     if: failure()
     runs-on: ubuntu-latest

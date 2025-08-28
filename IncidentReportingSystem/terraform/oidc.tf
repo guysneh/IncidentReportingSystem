@@ -38,7 +38,7 @@ resource "azuread_application_federated_identity_credential" "github_branch" {
   display_name   = "github-branch-${var.github_branch}"
   audiences      = ["api://AzureADTokenExchange"]
   issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.github_org}/${var.github_repo}"
+  subject        = "repo:${var.github_org}/${var.github_repo}:environment:production"
 }
 
 resource "azurerm_role_assignment" "gha_rg_contributor" {
