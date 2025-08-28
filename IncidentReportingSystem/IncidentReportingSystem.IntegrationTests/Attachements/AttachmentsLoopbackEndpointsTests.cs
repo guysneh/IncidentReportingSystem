@@ -68,28 +68,39 @@ public sealed class AttachmentsLoopbackEndpointsTests : IClassFixture<CustomWebA
         // Upload (PUT or POST, depending on server)
         var up = await UploadAsync(client, storagePath, payload, "application/octet-stream");
 
-        // Accept common success codes and “Conflict” (path already exists) as a valid outcome.
         Assert.Contains(up.StatusCode, new[] { HttpStatusCode.Created, HttpStatusCode.OK, HttpStatusCode.NoContent, HttpStatusCode.Conflict });
 
-        // If server doesn’t support download/delete on loopback (405), stop here – the upload path is covered.
+        // Try download (GET or POST)
         var dlTry = await DownloadAsync(client, storagePath);
         if (dlTry.StatusCode == HttpStatusCode.MethodNotAllowed)
-            return;
+            return; 
 
-        // Otherwise verify bytes and allow 404 if something external removed it meanwhile
-        if (dlTry.StatusCode == HttpStatusCode.NotFound)
-            return;
+        if (dlTry.StatusCode != HttpStatusCode.NotFound)
+        {
+            dlTry.EnsureSuccessStatusCode();
+            var got = await dlTry.Content.ReadAsByteArrayAsync();
+            Assert.Equal(payload, got);
+        }
 
-        dlTry.EnsureSuccessStatusCode();
-        var got = await dlTry.Content.ReadAsByteArrayAsync();
-        Assert.Equal(payload, got);
+        // Delete (DELETE or POST)
+        var delStatus = await DeleteAsync(client, storagePath);
+        if (delStatus == HttpStatusCode.MethodNotAllowed)
+            return; 
 
-        var del = await DeleteAsync(client, storagePath);
-        // If delete is not supported (405), that’s fine – endpoint branch is still covered.
-        if (del == HttpStatusCode.MethodNotAllowed) return;
+        Assert.Equal(HttpStatusCode.NoContent, delStatus);
 
-        Assert.Equal(HttpStatusCode.NoContent, del);
+        var downloadUrl = RouteHelper.R(_factory, $"api/v1/attachments/_loopback/download?path={Uri.EscapeDataString(storagePath)}");
+        var finalStatus = await PollForStatusAsync(
+            client,
+            downloadUrl,
+            expected: HttpStatusCode.NotFound,
+            maxAttempts: 12,   // ~1.8s max
+            delayMs: 150);
+
+        Assert.Equal(HttpStatusCode.NotFound, finalStatus);
     }
+
+
 
 
     [Fact]
@@ -102,6 +113,32 @@ public sealed class AttachmentsLoopbackEndpointsTests : IClassFixture<CustomWebA
 
         // Some deployments don’t expose download on loopback, so 405 is acceptable.
         Assert.Contains(res.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+    }
+
+    private static async Task<HttpStatusCode> PollForStatusAsync(
+    HttpClient client,
+    string url,
+    HttpStatusCode expected,
+    int maxAttempts = 12,
+    int delayMs = 150,
+    CancellationToken ct = default)
+    {
+        for (var i = 0; i < maxAttempts; i++)
+        {
+            using var resp = await client.GetAsync(url, ct);
+            if (resp.StatusCode == expected)
+                return resp.StatusCode;
+
+            if (resp.StatusCode == HttpStatusCode.Conflict || resp.StatusCode == HttpStatusCode.Locked)
+            {
+                await Task.Delay(delayMs, ct);
+                continue;
+            }
+
+            return resp.StatusCode;
+        }
+
+        return HttpStatusCode.Conflict;
     }
 
 }
