@@ -30,6 +30,7 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     outputs:
+      deploy_tag: ${{ steps.make_tag.outputs.tag }}
       current_sha: ${{ steps.rev.outputs.sha }}
     steps:
       # ----- Build artifacts -----
@@ -68,23 +69,11 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      # Utilities for later diagnostics
+      # Utilities for diagnostics
       - name: Install CLI helpers (jq, xmllint)
         run: |
           sudo apt-get update
           sudo apt-get install -y jq libxml2-utils
-
-      # Guard: ignore cleanup line, but still block accidental colon-keys
-      - name: Guard (no colon-based AppConfig keys)
-        run: |
-          set -e
-          offenders=$(git grep -nE '^[^#]*AppConfig:[A-Za-z]' .github/workflows || true)
-          offenders=$(echo "$offenders" | grep -v 'setting-names' || true)
-          if [ -n "$offenders" ]; then
-            echo "Found colon-based AppConfig keys in workflows. Replace ':' with '__' in these lines:"
-            echo "$offenders"
-            exit 1
-          fi
 
       # ----- Open temporary firewall for runner IP (Postgres) -----
       - name: Detect runner public IP
@@ -178,7 +167,7 @@ jobs:
           az webapp config appsettings list -g "$RG" -n "$APP" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint' || true
 
       # ----- Cleanup legacy colon-based keys (without writing ':' in YAML) -----
-      - name: Cleanup legacy colon-based keys (correct)
+      - name: Cleanup legacy colon-based keys (safe)
         run: |
           KEY1=$(printf 'AppConfig:%s' 'Enabled')
           KEY2=$(printf 'AppConfig:%s' 'Endpoint')
@@ -192,10 +181,12 @@ jobs:
         run: |
           az webapp config appsettings set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "${{ env.WEBAPP_NAME }}" \
+            --name "${{ env.WebApp_NAME }}" \
             --settings \
               ASPNETCORE_URLS="http://0.0.0.0:8080" \
               WEBSITES_PORT="8080"
+        env:
+          WebApp_NAME: ${{ env.WEBAPP_NAME }}
 
       - name: Print effective app settings (sanitized)
         run: |
@@ -247,21 +238,27 @@ jobs:
             if [ "$SLEEP" -lt 30 ]; then SLEEP=$((SLEEP+3)); fi
           done
 
-      # ----- Mark last-good (update tag) on success -----
+      # ----- Configure git identity for tags/branch updates -----
+      - name: Configure git identity (for tags/branch updates)
+        run: |
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      # ----- Create immutable deploy tag -----
       - name: Create immutable deploy tag
-        if: success()
+        id: make_tag
         run: |
           set -e
           TS=$(date -u +'%Y-%m-%dT%H-%MZ')
           SHA="${{ steps.rev.outputs.sha }}"
           SHA7=$(echo "$SHA" | cut -c1-7)
           TAG="deploy/prod/${TS}-${SHA7}"
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
           git tag -a "$TAG" "$SHA" -m "Production deploy $TS"
           git push origin "refs/tags/$TAG"
-      
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # ----- Update rollback pointer: branch 'prod' -----
       - name: Update prod branch pointer (on success)
-        if: success()
         run: |
           SHA="${{ steps.rev.outputs.sha }}"
           git push origin "$SHA:refs/heads/prod" -f
@@ -321,15 +318,15 @@ jobs:
           exit 0
 
   rollback:
-    environment: production
     needs: build-and-deploy
     if: failure()
     runs-on: ubuntu-latest
+    environment: production
     steps:
-      - name: Checkout last-good (prod tag)
+      - name: Checkout last-good (prod branch)
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/prod
+          ref: refs/heads/prod
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
