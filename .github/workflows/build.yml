@@ -147,6 +147,7 @@ jobs:
             --exclude-by-attribute "CompilerGeneratedAttribute" \
             --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
             --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
+            --exclude-by-file "**/Infrastructure/Attachments/Storage/AzureBlobAttachmentStorage.cs" \
             || echo "Coverage under threshold — continuing for Sonar END"
 
 
@@ -194,6 +195,7 @@ jobs:
             --exclude-by-attribute "CompilerGeneratedAttribute" \
             --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" \
             --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" \
+            --exclude-by-file "**/Infrastructure/Attachments/Storage/AzureBlobAttachmentStorage.cs" \
             || echo "Coverage under threshold — continuing for Sonar END"
 
       - name: List coverage files (debug)

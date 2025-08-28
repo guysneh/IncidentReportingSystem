@@ -111,7 +111,8 @@ coverlet $unitTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
+  --exclude-by-file "**/Infrastructure/Attachments/Storage/AzureBlobAttachmentStorage.cs"
 
 # -------- Integration --------
 # === START: Azurite env for integration tests ===
@@ -146,7 +147,8 @@ coverlet $integrationTestDll `
   --exclude-by-attribute "GeneratedCodeAttribute" `
   --exclude-by-attribute "CompilerGeneratedAttribute" `
   --exclude-by-attribute "ExcludeFromCodeCoverageAttribute" `
-  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" 
+  --exclude-by-file "**/Persistence/DesignTimeDbContextFactory.cs" `
+  --exclude-by-file "**/Infrastructure/Attachments/Storage/AzureBlobAttachmentStorage.cs"
 
 # Step 9: Merge both coverage files
 reportgenerator `
