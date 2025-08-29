@@ -10,6 +10,22 @@ namespace IncidentReportingSystem.Domain.Entities
     {
         public Guid Id { get; set; }
 
+        /// <summary>
+        /// Optional given name (first name) of the user. Nullable for backward compatibility.
+        /// </summary>
+        public string? FirstName { get; set; }
+
+        /// <summary>
+        /// Optional family name (last name) of the user. Nullable for backward compatibility.
+        /// </summary>
+        public string? LastName { get; set; }
+
+        /// <summary>
+        /// Optional display name to show in UIs. Nullable for backward compatibility.
+        /// </summary>
+        public string? DisplayName { get; set; }
+
+
         /// <summary>Email/username used for login.</summary>
         public string Email { get; set; } = null!;
 
