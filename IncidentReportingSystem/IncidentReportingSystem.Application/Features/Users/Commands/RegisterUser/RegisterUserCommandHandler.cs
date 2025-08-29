@@ -47,8 +47,21 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUs
                 NormalizedEmail = normalized,
                 PasswordHash = hash,
                 PasswordSalt = salt,
-                CreatedAtUtc = DateTime.UtcNow
+                CreatedAtUtc = DateTime.UtcNow,
+                FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim(),
             };
+
+            // compute DisplayName
+            if (!string.IsNullOrWhiteSpace(user.FirstName) || !string.IsNullOrWhiteSpace(user.LastName))
+            {
+                user.DisplayName = string.Join(" ", new[] { user.FirstName, user.LastName }
+                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+            }
+            else
+            {
+                user.DisplayName = user.Email;
+            }
             user.SetRoles(request.Roles);
 
             await _users.AddAsync(user, cancellationToken).ConfigureAwait(false);

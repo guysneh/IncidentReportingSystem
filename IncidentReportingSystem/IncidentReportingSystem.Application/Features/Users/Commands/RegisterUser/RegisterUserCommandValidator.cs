@@ -24,6 +24,14 @@ namespace IncidentReportingSystem.Application.Users.Commands.RegisterUser
                 .NotNull()
                 .Must(HaveAtLeastOneRole).WithMessage("At least one role is required.")
                 .Must(AllRolesAllowed).WithMessage("One or more roles are invalid.");
+
+            RuleFor(x => x.FirstName)
+                .MaximumLength(100)
+                .When(x => !string.IsNullOrWhiteSpace(x.FirstName));
+
+            RuleFor(x => x.LastName)
+                .MaximumLength(100)
+                .When(x => !string.IsNullOrWhiteSpace(x.LastName));
         }
 
         private static bool HaveAtLeastOneRole(IEnumerable<string> roles) =>
