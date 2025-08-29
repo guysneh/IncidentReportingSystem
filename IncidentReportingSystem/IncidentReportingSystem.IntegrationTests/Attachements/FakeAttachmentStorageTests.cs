@@ -78,4 +78,12 @@ public sealed class FakeAttachmentStorageTests
         Assert.NotEqual(p1!.ETag, p2!.ETag);
         Assert.True(p2.Length > p1.Length);
     }
+
+    [Fact]
+    public async Task TryGet_NotExistingPath_ReturnsNull()
+    {
+        var store = new FakeAttachmentStorage();
+        var result = await store.TryGetUploadedAsync("never/created/path/file.bin", default);
+        Assert.Null(result);
+    }
 }

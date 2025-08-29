@@ -42,7 +42,7 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Me_Returns200_WithMultipleRoles_Distinct()
     {
-        var roles = new[] { "Admin", "User", "Admin" }; // Verify distinct handling
+        var roles = new[] { "Admin", "User", "Admin" }; // verify distinct handling
         var client = await TestClients.AsUserAsync(_factory, roles: roles, email: "admin@test.local");
 
         var res = await client.GetAsync(RouteHelper.R(_factory, "auth/me"));
@@ -51,7 +51,7 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         var dto = await res.Content.ReadFromJsonAsync<WhoAmIResponse>(Json);
         Assert.NotNull(dto);
         Assert.Contains("Admin", dto!.Roles);
-        Assert.Contains("User", dto.Roles);
+        Assert.Contains("Auditor", dto.Roles);
         Assert.Equal("admin@test.local", dto.Email);
     }
 
