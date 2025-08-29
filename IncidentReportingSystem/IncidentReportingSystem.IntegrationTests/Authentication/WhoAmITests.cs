@@ -39,11 +39,13 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         Assert.Contains("User", dto.Roles);
     }
 
+    /// <summary>
+    /// With single-role enforcement, /auth/me should still return 200 and include that role.
+    /// </summary>
     [Fact]
-    public async Task Me_Returns200_WithMultipleRoles_Distinct()
+    public async Task Me_Returns200_WithSingleRole()
     {
-        var roles = new[] { "Admin", "User", "Admin" }; // verify distinct handling
-        var client = await TestClients.AsUserAsync(_factory, roles: roles, email: "admin@test.local");
+        var client = await TestClients.AsUserAsync(_factory, roles: new[] { "Admin" }, email: "admin@test.local");
 
         var res = await client.GetAsync(RouteHelper.R(_factory, "auth/me"));
         await res.ShouldBeAsync(HttpStatusCode.OK, _output);
@@ -51,9 +53,9 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         var dto = await res.Content.ReadFromJsonAsync<WhoAmIResponse>(Json);
         Assert.NotNull(dto);
         Assert.Contains("Admin", dto!.Roles);
-        Assert.Contains("User", dto.Roles);
         Assert.Equal("admin@test.local", dto.Email);
     }
+
 
     [Fact]
     public async Task Me_Returns401_WhenNoToken()

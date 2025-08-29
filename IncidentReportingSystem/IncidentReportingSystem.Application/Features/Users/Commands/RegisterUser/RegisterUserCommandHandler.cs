@@ -35,8 +35,15 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUs
             if (await _users.ExistsByNormalizedEmailAsync(normalized, cancellationToken).ConfigureAwait(false))
                 throw new EmailAlreadyExistsException(request.Email);
 
-            if (!request.Roles.All(r => Roles.Allowed.Contains(r)))
-                throw new ArgumentException("One or more roles are invalid.", nameof(request.Roles));
+            // Normalize and enforce exactly one role
+            var normalizedRoles = request.Roles?
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(r => r.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? Array.Empty<string>();
+
+            if (normalizedRoles.Length != 1 || !normalizedRoles.All(r => Roles.Allowed.Contains(r)))
+                throw new ArgumentException("Exactly one valid role is required.", nameof(request.Roles));
 
             var (hash, salt) = _hasher.HashPassword(request.Password);
 
@@ -52,17 +59,13 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUs
                 LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim(),
             };
 
-            // compute DisplayName
-            if (!string.IsNullOrWhiteSpace(user.FirstName) || !string.IsNullOrWhiteSpace(user.LastName))
-            {
-                user.DisplayName = string.Join(" ", new[] { user.FirstName, user.LastName }
-                    .Where(s => !string.IsNullOrWhiteSpace(s)));
-            }
-            else
-            {
-                user.DisplayName = user.Email;
-            }
-            user.SetRoles(request.Roles);
+            // Compute DisplayName (card 6 behavior)
+            user.DisplayName = (!string.IsNullOrWhiteSpace(user.FirstName) || !string.IsNullOrWhiteSpace(user.LastName))
+                ? string.Join(" ", new[] { user.FirstName, user.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                : user.Email;
+
+            // Persist single role (DB stays text[] for future flexibility)
+            user.SetRoles(normalizedRoles);
 
             await _users.AddAsync(user, cancellationToken).ConfigureAwait(false);
             await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

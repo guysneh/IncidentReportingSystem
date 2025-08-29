@@ -139,5 +139,17 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
             user.LastName.Should().BeNull();
             user.DisplayName.Should().Be(email); // email fallback
         }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_Returns400_On_Multiple_Roles()
+        {
+            var email = $"multi_{Guid.NewGuid():N}@example.com";
+            var payload = new RegisterUserCommand(email, "P@ssw0rd!", new[] { "User", "Admin" });
+
+            var resp = await _client.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"), payload);
+
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
     }
 }

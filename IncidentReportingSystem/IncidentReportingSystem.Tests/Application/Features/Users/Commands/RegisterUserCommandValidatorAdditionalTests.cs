@@ -51,7 +51,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
         [Trait("Category", "Unit")]
         public void Valid_Request_Passes()
         {
-            var cmd = new RegisterUserCommand("user@example.com", "P@ssw0rd!", new[] { Roles.User, Roles.Admin });
+            var cmd = new RegisterUserCommand("user@example.com", "P@ssw0rd!", new[] { Roles.User });
             var r = _v.Validate(cmd);
             r.IsValid.Should().BeTrue();
         }
@@ -85,6 +85,15 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 
             var cmdWs = new RegisterUserCommand("n2@example.com", "P@ssw0rd!", new[] { Roles.User }, FirstName: "   ", LastName: "\t");
             _v.Validate(cmdWs).IsValid.Should().BeTrue("whitespace names are treated as empty and allowed");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void Roles_Multiple_Fails()
+        {
+            var cmd = new RegisterUserCommand("a@b.com", "P@ssw0rd!", new[] { Roles.User, Roles.Admin });
+            var r = _v.Validate(cmd);
+            r.IsValid.Should().BeFalse("registration must enforce exactly one role");
         }
     }
 }

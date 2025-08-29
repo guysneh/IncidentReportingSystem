@@ -75,7 +75,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
 
             await FluentActions.Awaiting(() => _handler.Handle(cmd, CancellationToken.None))
                 .Should().ThrowAsync<ArgumentException>()
-                .WithMessage("*invalid*");
+                .WithMessage("*Exactly one valid role*"); 
         }
 
         [Fact]
