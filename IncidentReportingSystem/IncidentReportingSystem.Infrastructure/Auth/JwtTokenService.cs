@@ -17,11 +17,18 @@ namespace IncidentReportingSystem.Infrastructure.Auth
             _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
+        /// <summary>
+        /// Generates a signed JWT containing:
+        /// - Custom user id claim, optional email, and role claims.
+        /// - OIDC-style personal name claims (given_name, family_name) when provided via <paramref name="extraClaims"/>.
+        /// - Exactly one Name claim: prefers extraClaims["name"] (display name), otherwise falls back to <paramref name="email"/>.
+        /// Expiration is controlled by Jwt:AccessTokenMinutes (or Jwt:ExpirationMinutes), defaulting to 60 minutes.
+        /// </summary>
         public (string token, DateTimeOffset expiresAtUtc) Generate(
-     string userId,
-     IEnumerable<string> roles,
-     string? email = null,
-     IDictionary<string, string>? extraClaims = null)
+            string userId,
+            IEnumerable<string> roles,
+            string? email = null,
+            IDictionary<string, string>? extraClaims = null)
         {
             var issuer = _config["Jwt:Issuer"] ?? string.Empty;
             var audience = _config["Jwt:Audience"] ?? string.Empty;
@@ -35,20 +42,23 @@ namespace IncidentReportingSystem.Infrastructure.Auth
 
             var claims = new List<Claim> { new(ClaimTypesConst.UserId, userId) };
 
+            // Email (do NOT set Name yet)
             if (!string.IsNullOrWhiteSpace(email))
             {
                 claims.Add(new Claim(ClaimTypesConst.Email, email));
-                claims.Add(new Claim(ClaimTypesConst.Name, email));
             }
 
+            // Roles
             if (roles != null)
             {
                 foreach (var r in roles)
+                {
                     if (!string.IsNullOrWhiteSpace(r))
                         claims.Add(new Claim(ClaimTypesConst.Role, r));
+                }
             }
 
-            // Local helper to safely get a non-empty claim
+            // Helper: safe read from extraClaims
             static string? GetNonEmpty(IDictionary<string, string>? dict, string key)
             {
                 if (dict is null) return null;
@@ -70,20 +80,18 @@ namespace IncidentReportingSystem.Infrastructure.Auth
                 }
             }
 
-            // OIDC-style standard name claims
+            // OIDC-style personal name claims
             var givenName = GetNonEmpty(extraClaims, "given_name");
-            if (givenName is not null)
-                claims.Add(new Claim("given_name", givenName));
-
             var familyName = GetNonEmpty(extraClaims, "family_name");
-            if (familyName is not null)
-                claims.Add(new Claim("family_name", familyName));
+            if (givenName is not null) claims.Add(new Claim("given_name", givenName));
+            if (familyName is not null) claims.Add(new Claim("family_name", familyName));
 
-            var displayName = GetNonEmpty(extraClaims, "name");
-            if (displayName is not null)
-                claims.Add(new Claim("name", displayName));
+            // Decide the single Name claim: prefer provided display name; fallback to email
+            var effectiveName = GetNonEmpty(extraClaims, "name") ?? email;
+            if (!string.IsNullOrWhiteSpace(effectiveName))
+                claims.Add(new Claim(ClaimTypesConst.Name, effectiveName));
 
-            // ✅ here we define expiresAtUtc correctly
+            // Expiration
             var expiresAtUtc = DateTime.UtcNow.AddMinutes(minutes);
 
             var jwt = new JwtSecurityToken(
@@ -98,6 +106,5 @@ namespace IncidentReportingSystem.Infrastructure.Auth
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);
             return (token, DateTime.SpecifyKind(expiresAtUtc, DateTimeKind.Utc));
         }
-
     }
 }

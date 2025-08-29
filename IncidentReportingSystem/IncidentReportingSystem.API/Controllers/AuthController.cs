@@ -70,7 +70,19 @@ namespace IncidentReportingSystem.API.Controllers
                 var email = HttpContext.User.GetEmail();
                 var roles = HttpContext.User.GetRoles();
 
-                var dto = new WhoAmIResponse(userId.ToString(), email, roles);
+                // Enriched v2: OIDC-style name claims (if present)
+                var firstName = HttpContext.User.FindFirst("given_name")?.Value;
+                var lastName = HttpContext.User.FindFirst("family_name")?.Value;
+                var display = HttpContext.User.FindFirst("name")?.Value ?? email;
+
+                var dto = new WhoAmIResponse(
+                    userId.ToString(),
+                    email,
+                    roles,
+                    firstName,
+                    lastName,
+                    display);
+
                 return Ok(dto);
             }
             catch (InvalidOperationException)

@@ -1,8 +1,9 @@
-﻿using System;
+﻿using IncidentReportingSystem.IntegrationTests.Utils;
+using System;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using IncidentReportingSystem.IntegrationTests.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,7 +57,6 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal("admin@test.local", dto.Email);
     }
 
-
     [Fact]
     public async Task Me_Returns401_WhenNoToken()
     {
@@ -66,5 +66,66 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         await res.ShouldBeAsync(HttpStatusCode.Unauthorized, _output);
     }
 
+
+    /// <summary>
+    /// When a user registers with first/last name, /auth/me should include those fields and a displayName.
+    /// </summary>
+    [Fact]
+    public async Task Me_Includes_First_Last_DisplayName_When_Provided()
+    {
+        var email = $"whoami_{Guid.NewGuid():N}@example.com";
+        var password = "P@ssw0rd!";
+
+        // 1) Register with names
+        var registerPayload = new IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser.RegisterUserCommand(
+            Email: email,
+            Password: password,
+            Roles: new[] { "User" },
+            FirstName: "Jane",
+            LastName: "Doe"
+        );
+
+        var anon = _factory.CreateClient();
+        var reg = await anon.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"), registerPayload);
+        await reg.ShouldBeAsync(HttpStatusCode.Created, _output);
+
+        // 2) Login to get JWT
+        var loginBody = new { Email = email, Password = password };
+        var login = await anon.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/login"), loginBody);
+        await login.ShouldBeAsync(HttpStatusCode.OK, _output);
+
+        var loginDto = await login.Content.ReadFromJsonAsync<LoginResponse>(Json);
+        Assert.NotNull(loginDto);
+
+        // 3) /auth/me with token
+        var authed = _factory.CreateClient();
+        authed.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginDto!.AccessToken);
+
+        var me = await authed.GetAsync(RouteHelper.R(_factory, "auth/me"));
+        await me.ShouldBeAsync(HttpStatusCode.OK, _output);
+
+        var dto = await me.Content.ReadFromJsonAsync<WhoAmIResponseV2>(Json);
+        Assert.NotNull(dto);
+
+        Assert.True(Guid.TryParse(dto!.UserId, out _));
+        Assert.Equal(email, dto.Email);
+        Assert.Contains("User", dto.Roles);
+
+        Assert.Equal("Jane", dto.FirstName);
+        Assert.Equal("Doe", dto.LastName);
+        Assert.Equal("Jane Doe", dto.DisplayName);
+    }
+
+    // Local DTOs for deserialization in tests (avoid tight coupling on API assembly)
+    private sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc);
+
+    private sealed record WhoAmIResponseV2(
+        string UserId,
+        string Email,
+        string[] Roles,
+        string? FirstName,
+        string? LastName,
+        string? DisplayName
+    );
     private sealed record WhoAmIResponse(string UserId, string Email, string[] Roles);
 }
