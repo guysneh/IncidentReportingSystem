@@ -136,35 +136,35 @@ jobs:
             --connection "$CONN"
 
       # ----- Get App Configuration endpoint -----
-      - name: Get App Configuration endpoint
-        id: appcfg
-        run: |
-          set -e
-          NAME="incident-appcfg"
-          RG="${{ env.RESOURCE_GROUP }}"
-          EP=$(az appconfig show --name "$NAME" --resource-group "$RG" --query endpoint -o tsv)
-          if [ -z "$EP" ]; then
-            echo "Could not resolve App Configuration endpoint for $NAME"
-            exit 1
-          fi
-          echo "endpoint=$EP" >> "$GITHUB_OUTPUT"
-          echo "AppConfig endpoint: $EP"
+    #  - name: Get App Configuration endpoint
+    #    id: appcfg
+    #    run: |
+    #      set -e
+    #      NAME="incident-appcfg"
+    #      RG="${{ env.RESOURCE_GROUP }}"
+    #      EP=$(az appconfig show --name "$NAME" --resource-group "$RG" --query endpoint -o tsv)
+    #      if [ -z "$EP" ]; then
+    #        echo "Could not resolve App Configuration endpoint for $NAME"
+    #        exit 1
+    #      fi
+    #      echo "endpoint=$EP" >> "$GITHUB_OUTPUT"
+    #      echo "AppConfig endpoint: $EP"
 
-      # ----- Ensure AppConfig app settings on Web App -----
-      - name: Ensure AppConfig bootstrap settings on Web App
-        run: |
-          set -e
-          RG="${{ env.RESOURCE_GROUP }}"
-          APP="${{ env.WEBAPP_NAME }}"
-          EP="${{ steps.appcfg.outputs.endpoint }}"
-          az webapp config appsettings set \
-            --resource-group "$RG" \
-            --name "$APP" \
-            --settings \
-              AppConfig__Enabled=true \
-              AppConfig__Endpoint="$EP" \
-            --output none
-          az webapp config appsettings list -g "$RG" -n "$APP" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint' || true
+    #  # ----- Ensure AppConfig app settings on Web App -----
+    #  - name: Ensure AppConfig bootstrap settings on Web App
+    #    run: |
+    #      set -e
+    #      RG="${{ env.RESOURCE_GROUP }}"
+    #      APP="${{ env.WEBAPP_NAME }}"
+    #      EP="${{ steps.appcfg.outputs.endpoint }}"
+    #      az webapp config appsettings set \
+    #        --resource-group "$RG" \
+    #        --name "$APP" \
+    #        --settings \
+    #          AppConfig__Enabled=true \
+    #          AppConfig__Endpoint="$EP" \
+    #        --output none
+    #      az webapp config appsettings list -g "$RG" -n "$APP" -o table | egrep 'AppConfig__Enabled|AppConfig__Endpoint' || true
 
       # ----- Cleanup legacy colon-based keys (without writing ':' in YAML) -----
       - name: Cleanup legacy colon-based keys (safe)
