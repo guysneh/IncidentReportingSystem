@@ -51,7 +51,7 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         var dto = await res.Content.ReadFromJsonAsync<WhoAmIResponse>(Json);
         Assert.NotNull(dto);
         Assert.Contains("Admin", dto!.Roles);
-        Assert.Contains("Auditor", dto.Roles);
+        Assert.Contains("User", dto.Roles);
         Assert.Equal("admin@test.local", dto.Email);
     }
 
