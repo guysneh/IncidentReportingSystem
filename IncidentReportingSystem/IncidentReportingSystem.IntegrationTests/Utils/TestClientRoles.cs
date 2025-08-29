@@ -2,6 +2,7 @@
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.AspNetCore.Mvc.Testing;
 
+namespace IncidentReportingSystem.IntegrationTests.Utils;
 public static class TestClientRoles
 {
     public static HttpClient AsUser(this WebApplicationFactory<Program> f) =>
