@@ -20,6 +20,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/IncidentReports/{incidentId:guid}/comments")]
+    [Tags("Comments")]
     public sealed class IncidentCommentsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -29,14 +30,17 @@ namespace IncidentReportingSystem.API.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>
-        /// List comments for an incident.
-        /// Returns 404 if the incident does not exist.
-        /// </summary>
+        /// <summary>Lists comments for a given incident.</summary>
+        /// <response code="200">Comments returned successfully.</response>
+        /// <response code="401">Authentication required.</response>
+        /// <response code="403">Not authorized to read incidents.</response>
+        /// <response code="404">Incident not found.</response>
         [HttpGet]
-        [Authorize(Policy = PolicyNames.CanReadIncidents)] 
+        [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [ProducesResponseType(typeof(IReadOnlyList<CommentDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken cancellationToken = default)
         {
             var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), cancellationToken).ConfigureAwait(false) ;
@@ -63,15 +67,13 @@ namespace IncidentReportingSystem.API.Controllers
             return Created(location, created);
         }
 
-        /// <summary>
-        /// Delete a comment.
-        /// 404 if not found (or belongs to a different incident), 403 if forbidden.
-        /// </summary>
+        /// <summary>Delete a comment.</summary>
         [HttpDelete("{commentId:guid}")]
         [Authorize(Policy = PolicyNames.CanDeleteComment)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> DeleteAsync(Guid incidentId, Guid commentId, CancellationToken cancellationToken = default)
         {
             var isAdmin = User.IsInRole("Admin");

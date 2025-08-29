@@ -11,6 +11,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/attachments/_loopback")]
     [Authorize]
+    [Tags("Attachments Upload")]
     public sealed class AttachmentLoopbackUploadController : ControllerBase
     {
         private readonly LoopbackAttachmentStorage _loopback;

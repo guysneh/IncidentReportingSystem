@@ -4,7 +4,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using IncidentReportingSystem.Infrastructure.Attachments;
 
-namespace IncidentReportingSystem.API.Swagger
+namespace IncidentReportingSystem.API.Filters
 {
     /// <summary>
     /// If a DTO has a 'contentType' property, projects allowed values from configuration as an enum.

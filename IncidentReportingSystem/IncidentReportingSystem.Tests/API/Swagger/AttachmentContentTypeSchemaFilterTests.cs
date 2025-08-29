@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using IncidentReportingSystem.API.Filters;
 using IncidentReportingSystem.API.Swagger;
 using IncidentReportingSystem.Infrastructure.Attachments;
 using Microsoft.Extensions.Options;

@@ -15,6 +15,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/[controller]")]
+    [Tags("Auth")]
     public sealed class AuthController : ControllerBase
     {
         private readonly ISender _sender;
@@ -42,8 +43,8 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpPost("login")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest body, CancellationToken cancellationToken)
         {
             var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken)

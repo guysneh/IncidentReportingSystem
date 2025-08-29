@@ -2,14 +2,16 @@
 using Asp.Versioning.ApiExplorer;
 using FluentValidation;
 using IncidentReportingSystem.API.Converters;
+using IncidentReportingSystem.API.Filters;
 using IncidentReportingSystem.API.Swagger;
+using IncidentReportingSystem.API.Swagger.Examples;
 using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Behaviors;
+using IncidentReportingSystem.Domain.Enums;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
-using IncidentReportingSystem.Domain.Enums;
-using MediatR;
 
 namespace IncidentReportingSystem.API.Extensions;
 
@@ -50,7 +52,10 @@ public static class WebApiExtensions
             c.OperationFilter<LoopbackBinaryRequestFilter>();
             c.SupportNonNullableReferenceTypes();
             c.UseInlineDefinitionsForEnums();
-
+            c.OperationFilter<RegisterUserExample>();
+            c.OperationFilter<WhoAmIExample>();
+            c.OperationFilter<AttachmentsListExample>();
+            c.OperationFilter<ProblemDetailsExample>();
             c.MapType<IncidentSeverity>(() => new OpenApiSchema
             {
                 Type = "string",

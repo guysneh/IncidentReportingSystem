@@ -21,6 +21,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
+    [Tags("Incident Reports")]
     public class IncidentReportsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -42,6 +43,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize(Policy = PolicyNames.CanCreateIncident)]
         [HttpPost]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command,cancellationToken).ConfigureAwait(false);
@@ -112,7 +116,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken cancellationToken)
         {
             await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken).ConfigureAwait(false);

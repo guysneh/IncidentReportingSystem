@@ -1,32 +1,25 @@
 ﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Text.RegularExpressions;
 
-namespace IncidentReportingSystem.API.Filters
+namespace IncidentReportingSystem.API.Swagger;
+
+public sealed class HideLoopbackDocumentFilter : IDocumentFilter
 {
-    public sealed class HideLoopbackDocumentFilter : IDocumentFilter
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
-        private static readonly Regex LoopbackSegment =
-            new Regex(@"(^|/)_(?i:loopback)(/|$)", RegexOptions.Compiled);
+        if (swaggerDoc?.Paths is null || swaggerDoc.Paths.Count == 0)
+            return;
 
-        public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+        var filtered = new OpenApiPaths();
+        foreach (var kvp in swaggerDoc.Paths.ToList()) // snapshot
         {
-            if (swaggerDoc?.Paths is null || swaggerDoc.Paths.Count == 0)
-                return;
+            var key = kvp.Key ?? string.Empty;
+            if (key.IndexOf("/_loopback", StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
 
-            var filtered = new OpenApiPaths();
-
-            // Snapshot KVPs to avoid any internal collection quirks
-            foreach (var kvp in swaggerDoc.Paths.ToList())
-            {
-                var key = (kvp.Key ?? string.Empty).Trim(); // guard against stray whitespace
-                if (LoopbackSegment.IsMatch(key))
-                    continue; // drop any path that has a "_loopback" path segment
-
-                filtered.Add(key, kvp.Value);
-            }
-
-            swaggerDoc.Paths = filtered;
+            filtered.Add(key, kvp.Value);
         }
+
+        swaggerDoc.Paths = filtered;
     }
 }

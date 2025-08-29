@@ -31,6 +31,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiVersion("1.0")]
     [Route(RouteConstants.Attachments)]
     [Authorize]
+    [Tags("Attachments")]
     public sealed class AttachmentsController : ControllerBase
     {
         private readonly ISender _sender;
@@ -62,14 +63,27 @@ namespace IncidentReportingSystem.API.Controllers
 
         /// <summary>Complete an upload by validating stored object and finalizing metadata.</summary>
         [HttpPost("{attachmentId:guid}/complete")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken cancellationToken)
         {
             await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
             return NoContent();
         }
 
-        /// <summary>Get attachment metadata.</summary>
+        /// <summary>Get metadata for a specific attachment.</summary>
+        /// <response code="200">Attachment metadata returned.</response>
+        /// <response code="401">Authentication required.</response>
+        /// <response code="403">Not authorized to access this attachment.</response>
+        /// <response code="404">Attachment not found.</response>
         [HttpGet("{attachmentId:guid}")]
+        [ProducesResponseType(typeof(AttachmentDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Metadata(Guid attachmentId, CancellationToken cancellationToken)
         {
             var dto = await _sender.Send(new GetAttachmentMetadataQuery(attachmentId), cancellationToken).ConfigureAwait(false);
