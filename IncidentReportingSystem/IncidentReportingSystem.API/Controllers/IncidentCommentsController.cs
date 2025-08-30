@@ -1,15 +1,16 @@
-﻿using MediatR;
+﻿using Asp.Versioning;
+using IncidentReportingSystem.API.Auth;
+using IncidentReportingSystem.API.Contracts.Paging;
+using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
+using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
+using IncidentReportingSystem.Application.Features.Comments.Dtos;
+using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
+using IncidentReportingSystem.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using IncidentReportingSystem.Infrastructure.Persistence;
-using Asp.Versioning;
-using IncidentReportingSystem.Application.Features.Comments.Dtos;
-using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
-using IncidentReportingSystem.Application.Common.Auth;
-using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
-using IncidentReportingSystem.API.Auth;
-using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 
 namespace IncidentReportingSystem.API.Controllers
 {
@@ -37,14 +38,23 @@ namespace IncidentReportingSystem.API.Controllers
         /// <response code="404">Incident not found.</response>
         [HttpGet]
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
-        [ProducesResponseType(typeof(IReadOnlyList<CommentDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedResponse<CommentDto>), StatusCodes.Status200OK)] // <-- updated
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ListAsync(Guid incidentId, int skip = 0, int take = 50, CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), cancellationToken).ConfigureAwait(false) ;
-            return Ok(result);
+            var result = await _mediator.Send(new ListCommentsQuery(incidentId, skip, take), cancellationToken).ConfigureAwait(false);
+
+            var response = new PagedResponse<CommentDto>
+            {
+                Total = result.Total,
+                Skip = result.Skip,
+                Take = result.Take,
+                Items = result.Items
+            };
+
+            return Ok(response);
         }
 
         /// <summary>

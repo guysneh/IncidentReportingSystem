@@ -1,4 +1,5 @@
-﻿using IncidentReportingSystem.Domain.Entities;
+﻿using IncidentReportingSystem.Application.Common.Models;
+using IncidentReportingSystem.Domain.Entities;
 
 namespace IncidentReportingSystem.Application.Abstractions.Persistence;
 /// <summary>
@@ -21,4 +22,7 @@ public interface IIncidentCommentsRepository
 
     /// <summary>Lists comments for an incident, newest-first with pagination.</summary>
     Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken);
+
+    /// <summary>Lists comments and returns paging metadata.</summary>
+    Task<PagedResult<IncidentComment>> ListPagedAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken); 
 }

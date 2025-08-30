@@ -1,7 +1,9 @@
 ﻿using FluentAssertions;
 using IncidentReportingSystem.API.Controllers;
+using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Application.Persistence;
@@ -10,6 +12,7 @@ using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Moq.Language.Flow;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,18 +31,30 @@ namespace IncidentReportingSystem.Tests.API.Controllers
         [Fact]
         public async Task GetAll_Delegates_To_Mediator_And_Returns_Ok()
         {
-            var sent = (GetIncidentReportsQuery?)null;
+            GetIncidentReportsQuery? sent = null;
+
             var m = new Mock<IMediator>(MockBehavior.Strict);
-            m.Setup(x => x.Send(It.IsAny<GetIncidentReportsQuery>(), It.IsAny<CancellationToken>()))
-             .Callback<object, CancellationToken>((q, _) => sent = (GetIncidentReportsQuery)q)
-             .ReturnsAsync(Array.Empty<IncidentReport>());
+
+            var emptyPage = new PagedResult<IncidentReportDto>(
+                items: Array.Empty<IncidentReportDto>(),
+                total: 0,
+                skip: 0,
+                take: 50);
+
+            m.Setup(x => x.Send(It.IsAny<IRequest<PagedResult<IncidentReportDto>>>(), It.IsAny<CancellationToken>()))
+             .Callback<IRequest<PagedResult<IncidentReportDto>>, CancellationToken>((req, _) =>
+             {
+                 if (req is GetIncidentReportsQuery q) sent = q;
+             })
+             .Returns(Task.FromResult(emptyPage));
 
             var ctrl = Ctrl(m);
-            var res = await ctrl.GetAll(status: IncidentStatus.Open, skip: 1, take: 2,
-                                        category: IncidentCategory.Security, severity: IncidentSeverity.Medium,
-                                        searchText: "txt", reportedAfter: DateTime.UtcNow.AddDays(-1),
-                                        reportedBefore: DateTime.UtcNow, sortBy: IncidentSortField.CreatedAt,
-                                        direction: SortDirection.Asc, cancellationToken: CancellationToken.None);
+            var res = await ctrl.GetAll(
+                status: IncidentStatus.Open, skip: 1, take: 2,
+                category: IncidentCategory.Security, severity: IncidentSeverity.Medium,
+                searchText: "txt", reportedAfter: DateTime.UtcNow.AddDays(-1),
+                reportedBefore: DateTime.UtcNow, sortBy: IncidentSortField.CreatedAt,
+                direction: SortDirection.Asc, cancellationToken: CancellationToken.None);
 
             res.Should().BeOfType<OkObjectResult>();
             sent.Should().NotBeNull();

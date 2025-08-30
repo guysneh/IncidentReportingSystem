@@ -1,6 +1,8 @@
 ﻿using FluentAssertions;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
+using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
@@ -24,7 +26,6 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
         [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnReports_FromRepository()
         {
-            // Arrange
             var query = new GetIncidentReportsQuery(
                 Status: null,
                 Skip: 0,
@@ -34,25 +35,27 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
             );
 
             var expectedReports = new List<IncidentReport>
-            {
-                TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "desc1", "Berlin"),
-                TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "desc2", "Hamburg")
-            };
+        {
+            TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "desc1", "Berlin"),
+            TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "desc2", "Hamburg")
+        };
 
             _repositoryMock
-                .Setup(r => r.GetAsync(
+                .Setup(r => r.GetPagedAsync(
                     null, 0, 10,
                     null, null, null, null, null,
                     IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expectedReports);
+                .ReturnsAsync(new PagedResult<IncidentReport>(expectedReports, total: expectedReports.Count, skip: 0, take: 10));
 
-            // Act
             var result = await _handler.Handle(query, CancellationToken.None);
 
-            // Assert
-            result.Should().BeEquivalentTo(expectedReports);
-            _repositoryMock.Verify(r => r.GetAsync(
+            result.Should().NotBeNull();
+            result.Total.Should().Be(expectedReports.Count);
+            result.Items.Should().HaveCount(expectedReports.Count);
+            result.Items.Should().BeEquivalentTo(expectedReports.Select(e => e.ToDto()));
+
+            _repositoryMock.Verify(r => r.GetPagedAsync(
                 null, 0, 10,
                 null, null, null, null, null,
                 IncidentSortField.Status, SortDirection.Asc,
@@ -63,7 +66,6 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
         [Trait("Category", "Unit")]
         public async Task Handle_ShouldPassFiltersToRepository()
         {
-            // Arrange
             var query = new GetIncidentReportsQuery(
                 Status: IncidentStatus.Closed,
                 Skip: 5,
@@ -78,12 +80,12 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
             );
 
             var expectedReports = new List<IncidentReport>
-            {
-                TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "Security issue", "Berlin")
-            };
+    {
+        TestMockFactory.CreateIncidentReport(Guid.NewGuid(), "Security issue", "Berlin")
+    };
 
             _repositoryMock
-                .Setup(r => r.GetAsync(
+                .Setup(r => r.GetPagedAsync(
                     IncidentStatus.Closed, 5, 5,
                     IncidentCategory.Security,
                     IncidentSeverity.High,
@@ -92,14 +94,16 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
                     new DateTime(2023, 12, 31),
                     IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expectedReports);
+                .ReturnsAsync(new PagedResult<IncidentReport>(expectedReports, total: expectedReports.Count, skip: 5, take: 5));
 
-            // Act
             var result = await _handler.Handle(query, CancellationToken.None);
 
-            // Assert
-            result.Should().BeEquivalentTo(expectedReports);
-            _repositoryMock.Verify(r => r.GetAsync(
+            result.Should().NotBeNull();
+            result.Total.Should().Be(expectedReports.Count);
+            result.Items.Should().HaveCount(expectedReports.Count);
+            result.Items.Should().BeEquivalentTo(expectedReports.Select(e => e.ToDto()));
+
+            _repositoryMock.Verify(r => r.GetPagedAsync(
                 IncidentStatus.Closed, 5, 5,
                 IncidentCategory.Security,
                 IncidentSeverity.High,
@@ -114,30 +118,31 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Que
         [Trait("Category", "Unit")]
         public async Task Handle_ShouldReturnEmptyList_WhenNoReportsFound()
         {
-            // Arrange
             var query = new GetIncidentReportsQuery(
                 SortBy: IncidentSortField.Status,
                 Direction: SortDirection.Asc
             );
 
             _repositoryMock
-                .Setup(r => r.GetAsync(
+                .Setup(r => r.GetPagedAsync(
                     null, 0, 50,
                     null, null, null, null, null,
                     IncidentSortField.Status, SortDirection.Asc,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<IncidentReport>());
+                .ReturnsAsync(new PagedResult<IncidentReport>(Array.Empty<IncidentReport>(), total: 0, skip: 0, take: 50));
 
-            // Act
             var result = await _handler.Handle(query, CancellationToken.None);
 
-            // Assert
-            result.Should().BeEmpty();
-            _repositoryMock.Verify(r => r.GetAsync(
+            result.Should().NotBeNull();
+            result.Total.Should().Be(0);
+            result.Items.Should().BeEmpty(); 
+
+            _repositoryMock.Verify(r => r.GetPagedAsync(
                 null, 0, 50,
                 null, null, null, null, null,
                 IncidentSortField.Status, SortDirection.Asc,
                 It.IsAny<CancellationToken>()), Times.Once);
         }
+
     }
 }

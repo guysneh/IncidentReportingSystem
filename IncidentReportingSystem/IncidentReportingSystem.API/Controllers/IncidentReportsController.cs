@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using IncidentReportingSystem.API.Contracts.Paging;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
@@ -89,7 +90,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// </summary>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<IncidentReportDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedResponse<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
             IncidentStatus? status, int skip = 0, int take = 50,
             IncidentCategory? category = null, IncidentSeverity? severity = null,
@@ -101,10 +102,18 @@ namespace IncidentReportingSystem.API.Controllers
                 status, skip, take, category, severity, searchText,
                 reportedAfter, reportedBefore, sortBy, direction);
 
-            var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result.Select(x => x.ToDto()));
-        }
+            var result = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
+            var response = new PagedResponse<IncidentReportDto>
+            {
+                Total = result.Total,
+                Skip = result.Skip,
+                Take = result.Take,
+                Items = result.Items
+            };
+
+            return Ok(response);
+        }
 
         /// <summary>
         /// Updates the status of an existing incident report.

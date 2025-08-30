@@ -1,8 +1,9 @@
-﻿using System.Net;
+﻿using FluentAssertions;
+using IncidentReportingSystem.IntegrationTests.Utils;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using IncidentReportingSystem.IntegrationTests.Utils;
 
 namespace IncidentReportingSystem.IntegrationTests.Comments;
 
@@ -27,11 +28,11 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(created);
         var commentId = created!.Id;
 
-        var list = await owner.GetFromJsonAsync<List<CommentView>>(
+        var list = await owner.GetFromJsonAsync<Paged<CommentView>>( 
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments?skip=0&take=10"));
 
         Assert.NotNull(list);
-        Assert.Contains(list!, c => c.Id == commentId);
+        Assert.Contains(list!.Items, c => c.Id == commentId); 
 
         var del = await owner.DeleteAsync(
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments/{commentId}"));
@@ -53,15 +54,15 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
             r.EnsureSuccessStatusCode();
         }
 
-        var page1 = await owner.GetFromJsonAsync<List<CommentView>>(
+        var page1 = await owner.GetFromJsonAsync<Paged<CommentView>>( 
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments?skip=0&take=2"));
-        var page2 = await owner.GetFromJsonAsync<List<CommentView>>(
+        var page2 = await owner.GetFromJsonAsync<Paged<CommentView>>( 
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments?skip=2&take=2"));
 
         Assert.NotNull(page1);
         Assert.NotNull(page2);
-        Assert.Equal(2, page1!.Count);
-        Assert.Single(page2!);
+        Assert.Equal(2, page1!.Items.Count); 
+        Assert.Single(page2!.Items);         
     }
 
     [Fact, Trait("Category", "Integration")]
@@ -107,6 +108,24 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
     }
 
+    [Fact, Trait("Category", "Integration")]
+    public async Task ListComments_ShouldReturnPagedResponseContract()
+    {
+        var owner = await RegisterAndLoginAsync($"owner4.{Guid.NewGuid():N}@example.com", "User");
+        var incidentId = await CreateIncidentAsync(owner);
+
+        await owner.PostAsJsonAsync(RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments"),
+            new { text = "comment one" });
+
+        var res = await owner.GetAsync(RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments?skip=0&take=10"));
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await res.Content.ReadAsStringAsync();
+        body.Should().Contain("\"total\"");
+        body.Should().Contain("\"items\"");
+    }
+
+
     // ---- helpers ----
 
     private async Task<HttpClient> RegisterAndLoginAsync(string email, string role)
@@ -145,7 +164,13 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var dto = await res.Content.ReadFromJsonAsync<IncidentDto>();
         return dto!.Id;
     }
-
+    private sealed class Paged<T>
+    {
+        public int Total { get; set; }
+        public int Skip { get; set; }
+        public int Take { get; set; }
+        public List<T> Items { get; set; } = new();
+    }
     private sealed class LoginDto { [JsonPropertyName("accessToken")] public string AccessToken { get; set; } = string.Empty; }
     private sealed class IncidentDto { public Guid Id { get; set; } }
     private sealed class CommentView { public Guid Id { get; set; } public Guid IncidentId { get; set; } public Guid UserId { get; set; } public string Text { get; set; } = string.Empty; public DateTime CreatedAtUtc { get; set; } }
