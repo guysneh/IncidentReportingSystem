@@ -61,7 +61,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.Users.Commands
                 .ReturnsAsync(true);
 
             await FluentActions.Awaiting(() => _handler.Handle(cmd, CancellationToken.None))
-                .Should().ThrowAsync<EmailAlreadyExistsException>();
+                .Should().ThrowAsync<ConflictException>();
         }
 
         [Fact]

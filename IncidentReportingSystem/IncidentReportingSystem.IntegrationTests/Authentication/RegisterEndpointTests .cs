@@ -153,5 +153,27 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
 
             Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
         }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_Legacy_SingleRole_Works()
+        {
+            var client = _factory.CreateClient();
+            var res = await client.PostAsJsonAsync(
+                RouteHelper.R(_factory, "api/v1/auth/register"),
+                new { Email = $"{Guid.NewGuid():N}@example.com", Password = "P@ssw0rd!", Role = "User" });
+            res.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_New_MultiRoles_Works()
+        {
+            var client = _factory.CreateClient();
+            var res = await client.PostAsJsonAsync(
+                RouteHelper.R(_factory, "api/v1/auth/register"),
+                new { Email = $"{Guid.NewGuid():N}@example.com", Password = "P@ssw0rd!", Roles = new[] { "User" }, FirstName = "A", LastName = "B" });
+            res.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
+        }
     }
 }

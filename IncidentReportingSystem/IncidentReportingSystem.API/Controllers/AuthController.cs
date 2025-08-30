@@ -2,8 +2,10 @@ using Asp.Versioning;
 using IncidentReportingSystem.API.Common;
 using IncidentReportingSystem.API.Contracts.Authentication;
 using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
+using IncidentReportingSystem.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,14 +31,34 @@ namespace IncidentReportingSystem.API.Controllers
 
         /// <summary>Registers a new user with roles. Anonymous for demo.</summary>
         [HttpPost("register")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(RegisterUserResult), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken ct)
         {
-            var result = await _sender.Send(command, cancellationToken).ConfigureAwait(false);
-            return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
+            var roles = (body.Roles is { Length: > 0 })
+                ? body.Roles!
+                : string.IsNullOrWhiteSpace(body.Role)
+                    ? new[] { Roles.User }   // default when neither provided
+                    : new[] { body.Role! };
+
+            var cmd = new RegisterUserCommand(
+                Email: body.Email,
+                Password: body.Password,
+                Roles: roles,
+                FirstName: body.FirstName,
+                LastName: body.LastName
+            );
+
+            try
+            {
+                var res = await _sender.Send(cmd, ct);
+                return CreatedAtAction(nameof(Me), new { }, new { id = res.UserId });
+            }
+            catch (ConflictException)
+            {
+                return Conflict(new { error = "User already exists" });
+            }
         }
 
         /// <summary>Authenticate with email + password and receive a JWT.</summary>

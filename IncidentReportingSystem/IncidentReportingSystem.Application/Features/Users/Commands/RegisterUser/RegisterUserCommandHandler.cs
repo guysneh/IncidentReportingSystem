@@ -33,7 +33,7 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.RegisterUs
             var normalized = request.Email.Trim().ToUpperInvariant();
 
             if (await _users.ExistsByNormalizedEmailAsync(normalized, cancellationToken).ConfigureAwait(false))
-                throw new EmailAlreadyExistsException(request.Email);
+                throw new ConflictException("User already exists");
 
             // Normalize and enforce exactly one role
             var normalizedRoles = request.Roles?
