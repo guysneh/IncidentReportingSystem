@@ -1,7 +1,9 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
+using IncidentReportingSystem.Domain.Enums;
 using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListAttachmentsByParent
@@ -14,11 +16,17 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
         : IRequestHandler<ListAttachmentsByParentQuery, PagedResult<AttachmentDto>>
     {
         private readonly IAttachmentRepository _repo;
-        public ListAttachmentsByParentQueryHandler(IAttachmentRepository repo) => _repo = repo;
+        private readonly ICurrentUserService _currentUserService;
+
+        public ListAttachmentsByParentQueryHandler(IAttachmentRepository repo, ICurrentUserService currentUserService)
+        {
+            _repo = repo;
+            _currentUserService = currentUserService;
+        }
 
         public async Task<PagedResult<AttachmentDto>> Handle(
-            ListAttachmentsByParentQuery request,
-            CancellationToken ct)
+    ListAttachmentsByParentQuery request,
+    CancellationToken ct)
         {
             // Sanitize incoming paging before delegating to the repository
             var effectiveSkip = request.Skip < 0 ? 0 : request.Skip;
@@ -28,6 +36,9 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
                 request.ParentType, request.ParentId, effectiveSkip, effectiveTake, ct)
                 .ConfigureAwait(false);
 
+            var userId = _currentUserService.UserIdOrThrow(); // currently unused for flags, kept for future ownership logic
+
+            // Map entities -> DTOs (no 'page' variable; use 'entities')
             var items = entities.Select(a => new AttachmentDto
             {
                 Id = a.Id,
@@ -39,11 +50,14 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
                 Status = a.Status,
                 CreatedAt = a.CreatedAt,
                 CompletedAt = a.CompletedAt,
-                HasThumbnail = a.HasThumbnail
-            }).ToList();
+                HasThumbnail = a.HasThumbnail,
+                CanDownload = a.Status == AttachmentStatus.Completed,
+                CanDelete = false
+            }).ToArray();
 
             // Return the effective values (post-clamp) so clients/tests see the real paging contract.
             return new PagedResult<AttachmentDto>(items, total, effectiveSkip, effectiveTake);
         }
+
     }
 }

@@ -15,5 +15,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Dtos
         public DateTimeOffset CreatedAt { get; init; }
         public DateTimeOffset? CompletedAt { get; init; }
         public bool HasThumbnail { get; init; }
+        public bool CanDelete { get; init; }
+        public bool CanDownload { get; init; }
     }
 }
