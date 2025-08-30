@@ -3,6 +3,7 @@ using IncidentReportingSystem.API.Common;
 using IncidentReportingSystem.API.Contracts.Authentication;
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Exceptions;
+using IncidentReportingSystem.Application.Common.Logging;
 using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Domain;
@@ -22,11 +23,13 @@ namespace IncidentReportingSystem.API.Controllers
     {
         private readonly ISender _sender;
         private readonly ICurrentUserService _currentUser;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(ISender sender, ICurrentUserService currentUser)
+        public AuthController(ISender sender, ICurrentUserService currentUser, ILogger<AuthController> logger)
         {
             _sender = sender ?? throw new ArgumentNullException(nameof(sender));
             _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
+            _logger = logger;
         }
 
         /// <summary>Registers a new user with roles. Anonymous for demo.</summary>
@@ -52,7 +55,10 @@ namespace IncidentReportingSystem.API.Controllers
 
             try
             {
+                using var scope = _logger.BeginAuditScope(AuditTags.Auth, AuditTags.Register);
                 var res = await _sender.Send(cmd, ct);
+                _logger.LogInformation(AuditEvents.Auth.Registered,
+                    "User registered. UserId={UserId}", res.UserId);
                 return CreatedAtAction(nameof(Me), new { }, new { id = res.UserId });
             }
             catch (ConflictException)
@@ -69,9 +75,10 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest body, CancellationToken cancellationToken)
         {
+            using var scope = _logger.BeginAuditScope(AuditTags.Auth, AuditTags.Login);
             var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken)
                                       .ConfigureAwait(false);
-
+            _logger.LogInformation(AuditEvents.Auth.Login, "Login succeeded");
             return Ok(new LoginResponse
             {
                 AccessToken = result.AccessToken,

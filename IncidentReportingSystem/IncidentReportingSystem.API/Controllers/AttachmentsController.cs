@@ -2,6 +2,7 @@
 using IncidentReportingSystem.API.Common;
 using IncidentReportingSystem.API.Contracts.Paging;
 using IncidentReportingSystem.Application.Common.Auth;
+using IncidentReportingSystem.Application.Common.Logging;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment;
@@ -36,9 +37,14 @@ namespace IncidentReportingSystem.API.Controllers
     public sealed class AttachmentsController : ControllerBase
     {
         private readonly ISender _sender;
+        private readonly ILogger<AuthController> _logger;
 
         /// <summary>Creates a new <see cref="AttachmentsController"/>.</summary>
-        public AttachmentsController(ISender sender) => _sender = sender;
+        public AttachmentsController(ISender sender, ILogger<AuthController> looger) 
+        { 
+            _sender = sender;
+            _logger = looger; 
+        }
 
         /// <summary>Start an attachment upload for a specific incident.</summary>
         [HttpPost("~/"+RouteConstants.Incidents+"/{incidentId:guid}/attachments/start")]
@@ -71,7 +77,10 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken cancellationToken)
         {
+            using var scope = _logger.BeginAuditScope(AuditTags.Attachments, AuditTags.Complete);
             await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(AuditEvents.Attachments.Complete,
+                "Attachment completed. AttachmentId={AttachmentId}", attachmentId);
             return NoContent();
         }
 
@@ -111,7 +120,8 @@ namespace IncidentReportingSystem.API.Controllers
             var headers = Response.GetTypedHeaders();
             headers.ETag = new EntityTagHeaderValue(resp.ETag);
             headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
-
+            _logger.LogInformation(AuditEvents.Attachments.Download,
+                "Attachment downloaded. AttachmentId={AttachmentId}", attachmentId);
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
 
