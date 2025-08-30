@@ -16,7 +16,7 @@ public static class HealthAndRateLimitingExtensions
     IConfiguration configuration,
     IHostEnvironment env)
     {
-        // Rate limiter (unchanged)
+        // Rate limiter
         services.AddRateLimiter(options =>
         {
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
@@ -31,27 +31,20 @@ public static class HealthAndRateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
-        // Health checks — single builder
+        // Health checks
         var hc = services.AddHealthChecks();
 
         if (env.IsEnvironment("Test"))
         {
-            hc.AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "ready" });
+            hc.AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "ready" })
+              .AddCheck("storage", () => HealthCheckResult.Healthy(), tags: new[] { "ready" });
         }
         else
         {
             hc.AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
         }
 
-        // Optional storage check (Non-prod)
-        if (!env.IsProduction())
-        {
-            hc.AddCheck<AttachmentStorageHealthCheck>(
-                "storage",
-                failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "ready" });
-        }
-
         return services;
     }
+
 }

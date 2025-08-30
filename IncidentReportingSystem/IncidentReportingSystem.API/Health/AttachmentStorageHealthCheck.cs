@@ -20,7 +20,8 @@ public sealed class AttachmentStorageHealthCheck : IHealthCheck
         {
             // Non-invasive probe: only asks storage to prepare an upload slot.
             var slot = await _storage.CreateUploadSlotAsync(
-            new CreateUploadSlotRequest(Guid.NewGuid(), "health-probe.txt", "text/plain", "incidents/health-probe")                cancellationToken).ConfigureAwait(false);
+                new CreateUploadSlotRequest(Guid.NewGuid(), "health-probe.txt", "text/plain", "incidents/health-probe"),
+                cancellationToken).ConfigureAwait(false);
 
             var data = new Dictionary<string, object?>
             {

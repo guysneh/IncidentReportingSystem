@@ -102,56 +102,30 @@ public static class MiddlewareExtensions
             return Results.Ok(new { AppConfigEnabled = enabled, Label = label, Sentinel = version, CacheSeconds = cache, SampleRatio = sampleRatio });
         }).AllowAnonymous().ExcludeFromDescription();
 
-        app.MapGet("/diagnostics/config/refresh-state", (ConfigRefreshState s) =>
-            Results.Ok(new { s.LastRefreshUtc })
-        ).AllowAnonymous().ExcludeFromDescription();
-
-        app.MapPost("/diagnostics/config/force-refresh",
-            async (IConfigurationRefresherProvider refresherProvider) =>
-            {
-                foreach (var r in refresherProvider.Refreshers)
-                    await r.TryRefreshAsync();
-                return Results.Ok(new { forced = true, atUtc = DateTimeOffset.UtcNow });
-            }).AllowAnonymous().ExcludeFromDescription();
-
-        // Readiness: always 200 in Test, real health checks otherwise
-        if (app.Environment.IsEnvironment("Test"))
+        app.MapGet("/health", async (HealthCheckService svc, CancellationToken ct) =>
         {
-            app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-               .AllowAnonymous()
-               .ExcludeFromDescription();
-        }
-        else
-        {
-            // Readiness: aggregate health checks with JSON payload
-            var healthOptions = new HealthCheckOptions
+            var report = await svc.CheckHealthAsync(ct);
+
+            var checksArray = report.Entries.Select(e => new
             {
-                ResponseWriter = async (ctx, report) =>
-                {
-                    ctx.Response.ContentType = "application/json";
-                    var payload = new
-                    {
-                        status = report.Status.ToString(),
-                        checks = report.Entries.Select(e => new
-                        {
-                            name = e.Key,
-                            status = e.Value.Status.ToString(),
-                            description = e.Value.Description,
-                            data = e.Value.Data
-                        }),
-                        duration = report.TotalDuration
-                    };
-                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(payload));
-                }
-            };
-            app.MapHealthChecks("/health", healthOptions)
-               .AllowAnonymous()
-               .ExcludeFromDescription();
-        }
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                durationMs = e.Value.Duration.TotalMilliseconds
+            }).ToArray();
+
+            return Results.Json(new
+            {
+                status = report.Status.ToString(),
+                checks = checksArray
+            });
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
 
         app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
-            .AllowAnonymous()
-            .ExcludeFromDescription();
+           .AllowAnonymous()
+           .ExcludeFromDescription();
 
         // CORS preflight catch-all
         app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())
