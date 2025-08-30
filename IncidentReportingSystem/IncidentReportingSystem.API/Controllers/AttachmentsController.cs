@@ -69,6 +69,7 @@ namespace IncidentReportingSystem.API.Controllers
 
         /// <summary>Start an attachment upload for a specific incident.</summary>
         [HttpPost("~/" + RouteConstants.Incidents + "/{incidentId:guid}/attachments/start")]
+        [ProducesResponseType(typeof(StartUploadAttachmentResponse), StatusCodes.Status200OK)]
         public async Task<ActionResult<StartUploadAttachmentResponse>> StartForIncident(
             Guid incidentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {

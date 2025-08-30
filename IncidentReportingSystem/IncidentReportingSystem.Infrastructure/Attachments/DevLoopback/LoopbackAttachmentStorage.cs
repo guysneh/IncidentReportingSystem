@@ -47,20 +47,26 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             storagePath = NormalizePath(storagePath);
             ValidateStoragePath(storagePath);
 
-            var basePart = string.Equals(_basePath, "/", StringComparison.Ordinal) ? string.Empty : _basePath.TrimEnd('/');
+            var basePart = _basePath == "/" ? "" : _basePath; // "" or "/api" or "/irs" or "/irs/api"
             var needsApi = !basePart.EndsWith("/api", StringComparison.OrdinalIgnoreCase);
             var apiSegment = needsApi ? "/api" : string.Empty;
 
-            var absoluteUrl =
-                $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload" +
-                $"?path={Uri.EscapeDataString(storagePath)}";
+            var uploadUrl = new Uri(
+                $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload?path={Uri.EscapeDataString(storagePath)}");
 
-            var uploadUrl = new Uri(absoluteUrl, UriKind.Absolute);
+            // Loopback doesn't require any special headers; UI still gets a definitive method.
+            var headers = (IReadOnlyDictionary<string, string>)new Dictionary<string, string>();
 
             return Task.FromResult(
-                new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
+                new CreateUploadSlotResult(
+                    storagePath,
+                    uploadUrl,
+                    DateTimeOffset.UtcNow.AddMinutes(10),
+                    method: "PUT",
+                    headers: new Dictionary<string, string>() // loopback needs no special headers
+                )
+            );
         }
-
 
         // ---------- Upload endpoints write to disk ----------
         public async Task ReceiveUploadAsync(string relativePath, Stream body, string contentType, CancellationToken ct)

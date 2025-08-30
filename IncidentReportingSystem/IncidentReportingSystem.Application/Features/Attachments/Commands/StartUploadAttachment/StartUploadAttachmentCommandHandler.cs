@@ -66,8 +66,13 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Star
 
             attachment.AssignStoragePath(slot.StoragePath);
             await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-;
-            return new StartUploadAttachmentResponse(attachment.Id, slot.UploadUrl, slot.StoragePath);
+
+            return new StartUploadAttachmentResponse(
+                attachment.Id,
+                slot.UploadUrl,
+                slot.StoragePath,
+                slot.Method,
+                slot.Headers);
         }
     }
 }

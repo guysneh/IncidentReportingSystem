@@ -41,6 +41,12 @@ public sealed class AttachmentsE2E_LoopbackPutTests : IClassFixture<AttachmentsW
         var attachmentId = startDoc.RootElement.GetProperty("attachmentId").GetGuid();
         var storagePath = startDoc.RootElement.GetProperty("storagePath").GetString()!;
 
+        startDoc.RootElement.TryGetProperty("method", out var methodProp).Should().BeTrue();
+        methodProp.GetString().Should().Be("PUT");
+
+        startDoc.RootElement.TryGetProperty("headers", out var headersProp).Should().BeTrue();
+        headersProp.ValueKind.Should().Be(JsonValueKind.Object); // may be empty on loopback
+
         // Upload (PUT)
         var fileBytes = Encoding.UTF8.GetBytes("fake-png-bytes");
         var putContent = new ByteArrayContent(fileBytes);

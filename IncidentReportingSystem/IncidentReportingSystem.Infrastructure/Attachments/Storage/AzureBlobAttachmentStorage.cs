@@ -73,36 +73,39 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Storage
                 _service = new BlobServiceClient(new Uri(opts.Endpoint), cred, clientOptions);
                 _container = _service.GetBlobContainerClient(opts.Container);
             }
-
         }
 
         public async Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken ct)
         {
             if (req is null) throw new ArgumentNullException(nameof(req));
-            if (string.IsNullOrWhiteSpace(req.FileName)) throw new ArgumentException("FileName is required.");
-            if (string.IsNullOrWhiteSpace(req.ContentType)) throw new ArgumentException("ContentType is required.");
-            if (string.IsNullOrWhiteSpace(req.PathPrefix)) throw new ArgumentException("PathPrefix is required.");
+            if (string.IsNullOrWhiteSpace(req.FileName)) throw new ArgumentException("FileName is required.", nameof(req));
+            if (string.IsNullOrWhiteSpace(req.ContentType)) throw new ArgumentException("ContentType is required.", nameof(req));
+            if (string.IsNullOrWhiteSpace(req.PathPrefix)) throw new ArgumentException("PathPrefix is required.", nameof(req));
 
+            // Normalize and compose the final relative blob path under the container
             var prefix = NormalizePrefix(req.PathPrefix);
             var fileName = NormalizeFileName(req.FileName);
             var storagePath = $"{prefix}/{req.AttachmentId:D}/{fileName}";
 
-            await _container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
+            // Ensure container exists (no public access)
+            await _container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct).ConfigureAwait(false);
 
             var blob = _container.GetBlobClient(storagePath);
-            if (await blob.ExistsAsync(ct))
+            if (await blob.ExistsAsync(ct).ConfigureAwait(false))
                 throw new InvalidOperationException("Blob already exists at requested path.");
 
-            var startsOn = DateTimeOffset.UtcNow.AddMinutes(-1);
-            var expiresOn = DateTimeOffset.UtcNow.Add(_sasTtl);
+            // SAS time window
+            var startsAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+            var expiresAt = DateTimeOffset.UtcNow.Add(_sasTtl);
 
+            // Build SAS for write (PUT) create
             var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = _container.Name,
                 BlobName = blob.Name,
                 Resource = "b",
-                StartsOn = startsOn,
-                ExpiresOn = expiresOn,
+                StartsOn = startsAt,
+                ExpiresOn = expiresAt,
                 ContentType = req.ContentType
             };
             sasBuilder.SetPermissions(BlobSasPermissions.Create | BlobSasPermissions.Write | BlobSasPermissions.Add);
@@ -110,20 +113,43 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Storage
             string sasQuery;
             if (_useSharedKey)
             {
+                // Shared key flow
                 sasQuery = sasBuilder.ToSasQueryParameters(_sharedKey).ToString();
             }
             else
             {
-                var udk = await _service.GetUserDelegationKeyAsync(startsOn, expiresOn, ct);
+                // User Delegation Key (AAD) flow
+                var udk = await _service.GetUserDelegationKeyAsync(startsAt, expiresAt, ct).ConfigureAwait(false);
                 sasQuery = sasBuilder.ToSasQueryParameters(udk.Value, _accountName).ToString();
             }
 
-            // Client-facing URL uses PublicEndpoint if provided (dev), otherwise service endpoint (cloud).
-            var baseEndpoint = _publicEndpoint ?? _service.Uri.ToString().TrimEnd('/');
-            var uploadBase = $"{baseEndpoint}/{_container.Name}/{Uri.EscapeDataString(blob.Name)}";
-            var uploadUri = new Uri($"{uploadBase}?{sasQuery}");
+            // Compose the client-facing upload URL.
+            // If your class has a configured public endpoint, prefer it; otherwise use the blob primary URI.
+            Uri uploadUrl;
+            if (!string.IsNullOrWhiteSpace(_publicEndpoint))
+            {
+                var baseUri = _publicEndpoint.TrimEnd('/');
+                var encodedPath = Uri.EscapeDataString(storagePath).Replace("%2F", "/"); // keep slashes
+                uploadUrl = new Uri($"{baseUri}/{_container.Name}/{encodedPath}?{sasQuery}");
+            }
+            else
+            {
+                uploadUrl = new Uri($"{blob.Uri}?{sasQuery}");
+            }
 
-            return new CreateUploadSlotResult(storagePath, uploadUri, expiresOn);
+            // Extra headers the client must send with the PUT
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["x-ms-blob-type"] = "BlockBlob"
+            };
+
+            return new CreateUploadSlotResult(
+                storagePath,
+                uploadUrl,
+                expiresAt,
+                method: "PUT",
+                headers
+            );
         }
 
         public async Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken ct)

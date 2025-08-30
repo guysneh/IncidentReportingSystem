@@ -1,15 +1,7 @@
-﻿using FluentValidation;
-using IncidentReportingSystem.Application.Abstractions.Attachments;
-using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Abstractions.Security;
-using IncidentReportingSystem.Application.Common.Errors;
-using IncidentReportingSystem.Application.Common.Exceptions;
-using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Domain.Enums;
+﻿using System;
+using System.Collections.Generic;
 using MediatR;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using IncidentReportingSystem.Domain.Enums;
 
 namespace IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment
 {
@@ -20,9 +12,15 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Star
         string FileName,
         string ContentType) : IRequest<StartUploadAttachmentResponse>;
 
+    /// <summary>
+    /// Client-facing response describing where and how to upload the content.
+    /// Non-breaking extension: existing fields preserved; new 'Method' and 'Headers' added.
+    /// </summary>
     public sealed record StartUploadAttachmentResponse(
         Guid AttachmentId,
         Uri UploadUrl,
-        string StoragePath
+        string StoragePath,
+        string Method,
+        IReadOnlyDictionary<string, string> Headers
     );
 }
