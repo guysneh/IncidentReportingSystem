@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -116,7 +117,37 @@ public sealed class WhoAmITests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal("Jane Doe", dto.DisplayName);
     }
 
+    [Fact(DisplayName = "GET /auth/me returns expected contract")]
+    public async Task WhoAmI_Contract_Is_Stable()
+    {
+        var c = _factory.CreateClient();
+        var email = $"c{Guid.NewGuid():N}@example.com";
+
+        var reg = await c.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"),
+            new { Email = email, Password = "P@ssw0rd!", Roles = new[] { "User" } });
+        Assert.True(reg.StatusCode is HttpStatusCode.Created or HttpStatusCode.Conflict);
+
+        var login = await c.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/login"),
+            new { Email = email, Password = "P@ssw0rd!" });
+        login.EnsureSuccessStatusCode();
+
+        var token = (await login.Content.ReadFromJsonAsync<LoginDto>())!.AccessToken;
+        c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var me = await c.GetAsync(RouteHelper.R(_factory, "Auth/me"));
+        me.EnsureSuccessStatusCode();
+
+        var dto = await me.Content.ReadFromJsonAsync<WhoAmIResponseV2>();
+        Assert.NotNull(dto);
+        Assert.False(string.IsNullOrWhiteSpace(dto!.UserId));
+        Assert.Equal(email, dto.Email);
+        Assert.Contains("User", dto.Roles);
+    }
+
     // Local DTOs for deserialization in tests (avoid tight coupling on API assembly)
+
+    private sealed class LoginDto { [JsonPropertyName("accessToken")] public string AccessToken { get; set; } = string.Empty; }
+
     private sealed record LoginResponse(string AccessToken, DateTime ExpiresAtUtc);
 
     private sealed record WhoAmIResponseV2(
