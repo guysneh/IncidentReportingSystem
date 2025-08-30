@@ -79,8 +79,12 @@ namespace IncidentReportingSystem.API.Controllers
         {
             using var scope = _logger.BeginAuditScope(AuditTags.Attachments, AuditTags.Complete);
             await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation(AuditEvents.Attachments.Complete,
-                "Attachment completed. AttachmentId={AttachmentId}", attachmentId);
+            // Audit: structured tags for filtering in AI/ELK.
+            _logger.LogInformation(
+                 AuditEvents.Attachments.Complete,
+                 "Audit: {tags} attachmentId={AttachmentId}",
+                 "attachments,complete",
+                 attachmentId);
             return NoContent();
         }
 
@@ -120,8 +124,11 @@ namespace IncidentReportingSystem.API.Controllers
             var headers = Response.GetTypedHeaders();
             headers.ETag = new EntityTagHeaderValue(resp.ETag);
             headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
-            _logger.LogInformation(AuditEvents.Attachments.Download,
-                "Attachment downloaded. AttachmentId={AttachmentId}", attachmentId);
+            _logger.LogInformation(
+                 AuditEvents.Attachments.Download,
+                 "Audit: {tags} attachmentId={AttachmentId}",
+                 "attachments,download",
+                 attachmentId);
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
 

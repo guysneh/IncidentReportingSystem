@@ -78,7 +78,12 @@ namespace IncidentReportingSystem.API.Controllers
             using var scope = _logger.BeginAuditScope(AuditTags.Auth, AuditTags.Login);
             var result = await _sender.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken)
                                       .ConfigureAwait(false);
-            _logger.LogInformation(AuditEvents.Auth.Login, "Login succeeded");
+            // Emit audit log with structured tags. Do not include password or raw tokens.
+            _logger.LogInformation(
+               AuditEvents.Auth.Login,
+               "Audit: {tags}",
+               "auth,login");
+
             return Ok(new LoginResponse
             {
                 AccessToken = result.AccessToken,

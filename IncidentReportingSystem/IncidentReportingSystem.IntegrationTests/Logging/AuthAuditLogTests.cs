@@ -2,7 +2,6 @@
 using System.Net.Http.Json;
 using FluentAssertions;
 using IncidentReportingSystem.Application.Common.Logging;
-using IncidentReportingSystem.IntegrationTests.Infrastructure.Logging;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -44,8 +43,10 @@ public sealed class AuthAuditLogTests : IClassFixture<LoggingWebAppFactory>
             new { Email = email, Password = "P@ssw0rd!" });
         login.IsSuccessStatusCode.Should().BeTrue();
 
-        var rec = _factory.Provider.Records
-            .FirstOrDefault(r => r.EventId.Id == AuditEvents.Auth.Login.Id);
+        // Take a lock-free snapshot of current logs
+        var snapshot = _factory.Provider.Snapshot();
+
+        var rec = snapshot.FirstOrDefault(r => r.EventId.Id == AuditEvents.Auth.Login.Id);
         rec.Should().NotBeNull("Login should emit audit log");
 
         rec!.TryGetTags().Should().Be("auth,login");

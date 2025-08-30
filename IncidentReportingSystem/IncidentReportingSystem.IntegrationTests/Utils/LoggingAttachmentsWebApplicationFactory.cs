@@ -1,5 +1,4 @@
-﻿using IncidentReportingSystem.IntegrationTests.Infrastructure.Logging;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IncidentReportingSystem.IntegrationTests.Utils;

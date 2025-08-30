@@ -28,6 +28,17 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(created);
         var commentId = created!.Id;
 
+        // assert composite path
+        create.Headers.Location!.ToString()
+              .Should().Contain($"/incidentreports/{incidentId}/comments/{commentId}");
+
+        // GET by Location (your existing endpoint supports incident+comment)
+        var byLoc = await owner.GetAsync(create.Headers.Location);
+        byLoc.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dto = await byLoc.Content.ReadFromJsonAsync<CommentView>();
+        dto!.Id.Should().Be(commentId);
+
         var list = await owner.GetFromJsonAsync<Paged<CommentView>>( 
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments?skip=0&take=10"));
 
@@ -37,7 +48,10 @@ public class CommentsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var del = await owner.DeleteAsync(
             RouteHelper.R(_factory, $"incidentreports/{incidentId}/comments/{commentId}"));
 
-        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+
+        // Location points to the composite resource
+        create.Headers.Location.Should().NotBeNull();
     }
 
     [Fact, Trait("Category", "Integration")]
