@@ -1,4 +1,5 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using MediatR;

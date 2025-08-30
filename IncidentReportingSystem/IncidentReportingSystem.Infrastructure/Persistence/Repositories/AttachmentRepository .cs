@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;

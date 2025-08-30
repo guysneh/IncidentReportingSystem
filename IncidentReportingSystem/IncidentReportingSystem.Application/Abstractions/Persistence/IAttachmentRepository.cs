@@ -1,7 +1,7 @@
 ﻿using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 
-namespace IncidentReportingSystem.Application.Abstractions.Attachments
+namespace IncidentReportingSystem.Application.Abstractions.Persistence
 {
     /// <summary>Repository abstraction for the Attachment aggregate.</summary>
     public interface IAttachmentRepository

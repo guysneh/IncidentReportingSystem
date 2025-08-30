@@ -47,15 +47,20 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             storagePath = NormalizePath(storagePath);
             ValidateStoragePath(storagePath);
 
-            var basePart = _basePath == "/" ? "" : _basePath; // "" or "/api" or "/irs" or "/irs/api"
+            var basePart = string.Equals(_basePath, "/", StringComparison.Ordinal) ? string.Empty : _basePath.TrimEnd('/');
             var needsApi = !basePart.EndsWith("/api", StringComparison.OrdinalIgnoreCase);
             var apiSegment = needsApi ? "/api" : string.Empty;
 
-            var uploadUrl = new Uri(
-                $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload?path={Uri.EscapeDataString(storagePath)}");
+            var absoluteUrl =
+                $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload" +
+                $"?path={Uri.EscapeDataString(storagePath)}";
 
-            return Task.FromResult(new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
+            var uploadUrl = new Uri(absoluteUrl, UriKind.Absolute);
+
+            return Task.FromResult(
+                new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
         }
+
 
         // ---------- Upload endpoints write to disk ----------
         public async Task ReceiveUploadAsync(string relativePath, Stream body, string contentType, CancellationToken ct)
@@ -68,6 +73,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
             await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
             await body.CopyToAsync(fs, 81920, ct);
+            await fs.FlushAsync(ct);
 
             var normalized = NormalizeContentType(contentType, relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
@@ -83,6 +89,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
             await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
             await file.CopyToAsync(fs, ct);
+            await fs.FlushAsync(ct);
 
             var normalized = NormalizeContentType(file.ContentType ?? "application/octet-stream", relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);

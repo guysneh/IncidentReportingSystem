@@ -15,7 +15,10 @@ public static class MiddlewareExtensions
     {
         app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsEnvironment("Test"))
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseRouting();
 
         // Enable App Configuration only if provider was wired successfully

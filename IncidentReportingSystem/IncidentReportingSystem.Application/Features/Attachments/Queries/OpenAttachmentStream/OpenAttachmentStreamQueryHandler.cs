@@ -1,4 +1,5 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Common.Errors;
 using IncidentReportingSystem.Application.Common.Exceptions;
 using MediatR;

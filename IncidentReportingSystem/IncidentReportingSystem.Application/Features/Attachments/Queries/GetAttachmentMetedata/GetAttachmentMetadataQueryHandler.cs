@@ -6,6 +6,7 @@ using IncidentReportingSystem.Application.Abstractions.Attachments;
 using IncidentReportingSystem.Application.Common.Errors;
 using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
+using IncidentReportingSystem.Application.Abstractions.Persistence;
 
 namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentMetedata
 {   
