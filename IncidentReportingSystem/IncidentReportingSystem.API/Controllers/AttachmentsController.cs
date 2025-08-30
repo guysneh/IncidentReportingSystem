@@ -2,6 +2,8 @@
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Common;
 using IncidentReportingSystem.API.Contracts.Paging;
+using IncidentReportingSystem.Application.Abstractions.Logging;
+using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Common.Logging;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
@@ -39,34 +41,14 @@ namespace IncidentReportingSystem.API.Controllers
     public sealed class AttachmentsController : ControllerBase
     {
         private readonly ISender _sender;
-        private readonly ILogger<AttachmentsController> _logger;
+        private readonly ISignedUrlService _signedUrls;
+        private readonly IAttachmentAuditService _audit;
 
-        // Signing parameters for download URLs
-        private readonly byte[] _signedUrlKey;
-        
-        // Query parameter names for signed URL scheme
-        private const string SigParam = "sig";
-        private const string ExpParam = "exp";
-
-        /// <summary>
-        /// Creates a new <see cref="AttachmentsController"/>.
-        /// </summary>
-        /// <param name="sender">Mediator used to dispatch application requests.</param>
-        /// <param name="configuration">
-        /// Configuration used to resolve a signing secret for temporary download URLs.
-        /// Uses "Attachments:DownloadUrlSecret" when present; falls back to "Jwt:Secret".
-        /// </param>
-        /// <exception cref="InvalidOperationException">Thrown if no signing secret is configured.</exception>
-        public AttachmentsController(ISender sender, IConfiguration configuration, ILogger<AttachmentsController> logger)
+        public AttachmentsController(ISender sender, ISignedUrlService signedUrls, IAttachmentAuditService audit)
         {
             _sender = sender;
-
-            var secret = configuration["Attachments:DownloadUrlSecret"] ?? configuration["Jwt:Secret"];
-            if (string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException("Missing signing secret for signed attachment URLs. Provide 'Attachments:DownloadUrlSecret' or 'Jwt:Secret'.");
-
-            _signedUrlKey = Encoding.UTF8.GetBytes(secret);
-            _logger = logger;
+            _signedUrls = signedUrls;
+            _audit = audit;
         }
 
         /// <summary>Start an attachment upload for a specific incident.</summary>
@@ -76,7 +58,7 @@ namespace IncidentReportingSystem.API.Controllers
             Guid incidentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
             var res = await _sender.Send(new StartUploadAttachmentCommand(
-                Domain.Enums.AttachmentParentType.Incident,
+                AttachmentParentType.Incident,
                 incidentId, body.FileName, body.ContentType), cancellationToken).ConfigureAwait(false);
             return Ok(res);
         }
@@ -87,7 +69,7 @@ namespace IncidentReportingSystem.API.Controllers
             Guid commentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
             var res = await _sender.Send(new StartUploadAttachmentCommand(
-                Domain.Enums.AttachmentParentType.Comment,
+                AttachmentParentType.Comment,
                 commentId, body.FileName, body.ContentType), cancellationToken).ConfigureAwait(false);
             return Ok(res);
         }
@@ -102,15 +84,6 @@ namespace IncidentReportingSystem.API.Controllers
         public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken cancellationToken)
         {
             await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
-            // --- AUDIT: attachments.complete ---
-            var userId = User?.Claims?.FirstOrDefault(c =>
-                             c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
-            _logger.LogInformation(
-                AuditEvents.Attachments.Complete,
-                "Attachment completed {tags} {AttachmentId} {UserId}",
-                "attachments,complete",
-                attachmentId,
-                userId ?? string.Empty);
             return NoContent();
         }
 
@@ -156,16 +129,23 @@ namespace IncidentReportingSystem.API.Controllers
                 return Problem(statusCode: StatusCodes.Status409Conflict, title: "Attachment not completed.");
 
             var version = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
-            var exp = DateTimeOffset.UtcNow.AddMinutes(ttlMinutes).ToUnixTimeSeconds();
-            var sig = ComputeSignature(attachmentId, exp);
-
             var relative = Url.Action(
                 action: nameof(Download),
                 controller: "Attachments",
-                values: new { version, attachmentId, exp, sig });
+                values: new { version, attachmentId });
 
-            var absolute = $"{Request.Scheme}://{Request.Host}{relative}";
-            return Ok(new { url = absolute, expiresAt = DateTimeOffset.FromUnixTimeSeconds(exp) });
+            var expUnix = DateTimeOffset.UtcNow.AddMinutes(ttlMinutes).ToUnixTimeSeconds();
+            var sig = _signedUrls.ComputeSignature(attachmentId, expUnix);
+
+            // append query with interface-provided parameter names
+            var relativeWithQuery = QueryHelpers.AddQueryString(relative!, new Dictionary<string, string>
+            {
+                [_signedUrls.ExpQueryName] = expUnix.ToString(),
+                [_signedUrls.SigQueryName] = sig
+            });
+
+            var absolute = $"{Request.Scheme}://{Request.Host}{relativeWithQuery}";
+            return Ok(new { url = absolute, expiresAt = DateTimeOffset.FromUnixTimeSeconds(expUnix) });
         }
 
         /// <summary>
@@ -177,92 +157,66 @@ namespace IncidentReportingSystem.API.Controllers
         /// Signature format: sig = Base64Url(HMACSHA256(secret, $"{attachmentId:N}|{exp}")) where exp is Unix seconds (UTC).
         /// </remarks>
         [HttpGet("{attachmentId:guid}/download")]
-        [AllowAnonymous] // accept anonymous when a valid signed URL is provided
+        [AllowAnonymous]
         public async Task<IActionResult> Download(Guid attachmentId, CancellationToken cancellationToken)
         {
-            // If caller is not authenticated, validate signed URL parameters.
-            if (!(User?.Identity?.IsAuthenticated ?? false))
-            {
-                var expStr = Request.Query[ExpParam].FirstOrDefault();
-                var sigStr = Request.Query[SigParam].FirstOrDefault();
+            // Require a valid signed URL when caller is anonymous
+            var isAuthenticated = User?.Identity?.IsAuthenticated == true;
 
-                if (string.IsNullOrWhiteSpace(expStr) || string.IsNullOrWhiteSpace(sigStr))
+            if (!isAuthenticated)
+            {
+                var expRaw = Request.Query[_signedUrls.ExpQueryName].FirstOrDefault();
+                var sigRaw = Request.Query[_signedUrls.SigQueryName].FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(expRaw) || string.IsNullOrWhiteSpace(sigRaw))
                     return Unauthorized(new ProblemDetails { Title = "Missing signed URL parameters." });
 
-                if (!long.TryParse(expStr, out var exp))
+                if (!long.TryParse(expRaw, out var expUnix))
                     return Unauthorized(new ProblemDetails { Title = "Invalid expiration timestamp." });
 
-                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expUnix)
                     return Unauthorized(new ProblemDetails { Title = "Signed URL has expired." });
 
-                if (!IsSignatureValid(attachmentId, exp, sigStr))
+                if (!_signedUrls.IsValid(attachmentId, expUnix, sigRaw))
                     return Unauthorized(new ProblemDetails { Title = "Invalid signature." });
             }
+            // signed URL validation (unchanged) using _signedUrls ...
 
-            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken)
-                            .ConfigureAwait(false);
-
-            // Build typed headers
+            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken).ConfigureAwait(false);
             var etagValue = string.IsNullOrWhiteSpace(resp.ETag) ? null : new EntityTagHeaderValue(resp.ETag);
 
-            // Conditional GET: If-None-Match → 304 (Not Modified)
             var reqHeaders = Request.GetTypedHeaders();
             if (etagValue != null && reqHeaders.IfNoneMatch != null && reqHeaders.IfNoneMatch.Any(tag => tag.Tag == etagValue.Tag))
             {
                 var r = Response.GetTypedHeaders();
                 r.ETag = etagValue;
-                r.CacheControl = new CacheControlHeaderValue
-                {
-                    Private = true,
-                    MaxAge = TimeSpan.FromMinutes(5)
-                };
+                r.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
 
-                // Audit (download attempt that resulted in 304 is still an access event)
+                // audit 304 without ILogger in controller
                 var isAuthed304 = User?.Identity?.IsAuthenticated == true;
                 var userId304 = isAuthed304
-                    ? User!.Claims!.FirstOrDefault(c =>
-                        c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
+                    ? User!.Claims!.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
                     : null;
 
-                _logger.LogInformation(
-                    AuditEvents.Attachments.Download,
-                    "Attachment download {tags} {AttachmentId} {Mode} {UserId}",
-                    "attachments,download",
-                    attachmentId,
-                    isAuthed304 ? "auth" : "signed",
-                    userId304 ?? string.Empty);
-
+                _audit.AttachmentDownloaded(attachmentId, isAuthed304 ? "auth" : "signed", notModified: true, userId: userId304);
                 return StatusCode(StatusCodes.Status304NotModified);
             }
 
-            // 200: set ETag + Cache-Control
             var headers = Response.GetTypedHeaders();
-            if (etagValue != null)
-                headers.ETag = etagValue;
+            if (etagValue != null) headers.ETag = etagValue;
+            headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
 
-            headers.CacheControl = new CacheControlHeaderValue
-            {
-                Private = true,
-                MaxAge = TimeSpan.FromMinutes(5)
-            };
-
-            // Existing audit log for download (200 path)
+            // audit 200 without ILogger in controller
             var isAuthed = User?.Identity?.IsAuthenticated == true;
             var userId = isAuthed
-                ? User!.Claims!.FirstOrDefault(c =>
-                    c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
+                ? User!.Claims!.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
                 : null;
 
-            _logger.LogInformation(
-                AuditEvents.Attachments.Download,
-                "Attachment download {tags} {AttachmentId} {Mode} {UserId}",
-                "attachments,download",
-                attachmentId,
-                isAuthed ? "auth" : "signed",
-                userId ?? string.Empty);
+            _audit.AttachmentDownloaded(attachmentId, isAuthed ? "auth" : "signed", notModified: false, userId: userId);
 
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
+
 
         /// <summary>Get attachment constraints (allowed content types, max size, etc.).</summary>
         [HttpGet("constraints")]
@@ -352,44 +306,6 @@ namespace IncidentReportingSystem.API.Controllers
             var isAdmin = User.IsInRole("Admin");
             await _sender.Send(new AbortUploadAttachmentCommand(attachmentId, userId, isAdmin), cancellationToken).ConfigureAwait(false);
             return NoContent();
-        }
-
-        // ---------- Signed URL helpers ----------
-
-        /// <summary>
-        /// Computes a Base64Url-encoded HMAC-SHA256 signature over "{attachmentId:N}|{exp}".
-        /// </summary>
-        private string ComputeSignature(Guid attachmentId, long expUnixSeconds)
-        {
-            var payload = $"{attachmentId:N}|{expUnixSeconds}";
-            using var hmac = new HMACSHA256(_signedUrlKey);
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
-            return WebEncoders.Base64UrlEncode(hash);
-        }
-
-        /// <summary>
-        /// Validates a Base64Url-encoded HMAC-SHA256 signature and protects against timing attacks.
-        /// </summary>
-        private bool IsSignatureValid(Guid attachmentId, long expUnixSeconds, string providedSig)
-        {
-            byte[] provided;
-            try
-            {
-                provided = WebEncoders.Base64UrlDecode(providedSig);
-            }
-            catch
-            {
-                return false;
-            }
-
-            var payload = $"{attachmentId:N}|{expUnixSeconds}";
-            using var hmac = new HMACSHA256(_signedUrlKey);
-            var expected = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
-
-            if (provided.Length != expected.Length)
-                return false;
-
-            return CryptographicOperations.FixedTimeEquals(provided, expected);
         }
     }
 }

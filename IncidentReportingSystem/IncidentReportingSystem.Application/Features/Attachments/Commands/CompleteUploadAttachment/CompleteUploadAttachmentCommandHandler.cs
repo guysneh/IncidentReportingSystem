@@ -1,11 +1,14 @@
 ﻿using FluentValidation;
 using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Abstractions.Logging;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Common.Errors;
 using IncidentReportingSystem.Application.Common.Exceptions;
+using IncidentReportingSystem.Application.Common.Logging;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,17 +25,19 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
         private readonly IAttachmentPolicy _policy;
         private readonly IAttachmentStorage _storage;
         private readonly IUnitOfWork _uow;
-
+        private readonly IAttachmentAuditService _audit;
         public CompleteUploadAttachmentCommandHandler(
             IAttachmentRepository repo,
             IAttachmentPolicy policy,
             IAttachmentStorage storage,
-            IUnitOfWork uow)
+            IUnitOfWork uow,
+            IAttachmentAuditService audit)
         {
             _repo = repo;
             _policy = policy;
             _storage = storage;
             _uow = uow;
+            _audit = audit;
         }
 
         /// <inheritdoc />
@@ -56,6 +61,9 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
 
             entity.MarkCompleted(props.Length);
             await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Audit moved from controller to application layer
+            _audit.AttachmentCompleted(entity.Id);
         }
     }
 }
