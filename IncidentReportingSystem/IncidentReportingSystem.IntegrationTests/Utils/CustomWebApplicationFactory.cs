@@ -32,7 +32,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
                .AddEnvironmentVariables();
+
+            // Force an allowed origin for tests
+            cfg.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Cors:AllowedOrigins:0"] = "http://example.com"
+            });
         });
+
 
         builder.ConfigureLogging(lb =>
         {

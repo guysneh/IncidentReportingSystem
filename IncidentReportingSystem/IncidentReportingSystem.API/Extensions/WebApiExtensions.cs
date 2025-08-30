@@ -9,6 +9,7 @@ using IncidentReportingSystem.Application;
 using IncidentReportingSystem.Application.Behaviors;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
@@ -126,13 +127,12 @@ public static class WebApiExtensions
 
     public static IServiceCollection AddCorsPolicy(this IServiceCollection services, IConfiguration cfg)
     {
-        // Support both array and comma-separated string
         var fromArray = cfg.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
         var fromCsv = (cfg["Cors:AllowedOrigins"] ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         var allowed = fromArray.Concat(fromCsv)
-                               .Select(o => o.Trim().TrimEnd('/')) // normalize trailing slash
+                               .Select(o => o.Trim().TrimEnd('/'))
                                .Where(o => !string.IsNullOrWhiteSpace(o))
                                .Distinct(StringComparer.OrdinalIgnoreCase)
                                .ToArray();
@@ -141,25 +141,55 @@ public static class WebApiExtensions
         {
             options.AddPolicy("Default", b =>
             {
+                // Build allow-list from configuration (array + CSV), normalize, dedupe
+                var fromArray = cfg.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+                var fromCsv = (cfg["Cors:AllowedOrigins"] ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                var allowed = fromArray.Concat(fromCsv)
+                                       .Select(o => o.Trim())
+                                       .Where(o => !string.IsNullOrWhiteSpace(o))
+                                       .Distinct(StringComparer.OrdinalIgnoreCase)
+                                       .ToArray();
+
                 if (allowed.Length > 0)
                 {
-                    b.WithOrigins(allowed)
-                     .AllowAnyHeader()
-                     .AllowAnyMethod()
-                     .AllowCredentials();
+                    var allowedHosts = allowed
+                        .Select(s =>
+                        {
+                            if (Uri.TryCreate(s, UriKind.Absolute, out var u)) return u.Host;
+                            // normalize bare host
+                            s = s.Replace("http://", "", StringComparison.OrdinalIgnoreCase)
+                                 .Replace("https://", "", StringComparison.OrdinalIgnoreCase)
+                                 .TrimEnd('/');
+                            var slash = s.IndexOf('/');
+                            return slash >= 0 ? s[..slash] : s;
+                        })
+                        .Where(h => !string.IsNullOrWhiteSpace(h))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    b.SetIsOriginAllowed(origin =>
+                    {
+                        if (string.IsNullOrWhiteSpace(origin)) return false;
+                        if (!Uri.TryCreate(origin, UriKind.Absolute, out var u)) return false;
+                        return allowedHosts.Contains(u.Host);
+                    })
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()
+                    .WithExposedHeaders("ETag", "Content-Disposition", "Location", "X-Correlation-Id");
                 }
                 else
                 {
-                    // Fallback (no credentials when wildcard)
-                    b.SetIsOriginAllowed(_ => true)
-                     .AllowAnyHeader()
-                     .AllowAnyMethod();
-                    // intentionally NOT calling .AllowCredentials() here
+                    // Deny-all when no allow-list configured: no CORS headers at all
                 }
             });
         });
 
+
         return services;
     }
+
 
 }
