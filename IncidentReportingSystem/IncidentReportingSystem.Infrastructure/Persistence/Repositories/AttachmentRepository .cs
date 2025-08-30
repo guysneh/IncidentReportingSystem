@@ -51,5 +51,11 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
 
             return (items, total);
         }
+        public Task RemoveAsync(Attachment entity, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
+            _db.Attachments.Remove(entity);
+            return Task.CompletedTask;
+        }
     }
 }

@@ -19,5 +19,10 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
             int skip,
             int take,
             CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Removes an attachment entity from the persistence context.
+        /// </summary>
+        Task RemoveAsync(Attachment entity, CancellationToken cancellationToken);
     }
 }

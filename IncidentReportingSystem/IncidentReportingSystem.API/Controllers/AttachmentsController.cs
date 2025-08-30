@@ -1,9 +1,11 @@
 ﻿using Asp.Versioning;
+using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Common;
 using IncidentReportingSystem.API.Contracts.Paging;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Common.Logging;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
+using IncidentReportingSystem.Application.Features.Attachments.Commands.AbortUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
@@ -327,6 +329,29 @@ namespace IncidentReportingSystem.API.Controllers
             };
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Aborts a pending attachment upload. Only the original uploader or an Admin may abort.
+        /// Pending uploads are deleted from storage (best-effort) and the record is removed.
+        /// </summary>
+        /// <response code="204">Upload aborted (or cleaned up) successfully.</response>
+        /// <response code="401">Authentication required.</response>
+        /// <response code="403">Requester is not permitted to abort this upload.</response>
+        /// <response code="404">Attachment not found.</response>
+        /// <response code="409">Attachment is not pending (already completed/blocked).</response>
+        [HttpPost("{attachmentId:guid}/abort")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> Abort(Guid attachmentId, CancellationToken cancellationToken)
+        {
+            var userId = User.RequireUserId();              // from our existing auth helper
+            var isAdmin = User.IsInRole("Admin");
+            await _sender.Send(new AbortUploadAttachmentCommand(attachmentId, userId, isAdmin), cancellationToken).ConfigureAwait(false);
+            return NoContent();
         }
 
         // ---------- Signed URL helpers ----------
