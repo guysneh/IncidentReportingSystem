@@ -17,6 +17,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,7 +95,23 @@ namespace IncidentReportingSystem.API.Controllers
         [HttpGet("{attachmentId:guid}/download")]
         public async Task<IActionResult> Download(Guid attachmentId, CancellationToken cancellationToken)
         {
-            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken).ConfigureAwait(false);
+            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken)
+                                    .ConfigureAwait(false);
+
+            // Conditional GET (If-None-Match)
+            var reqEtags = Request.GetTypedHeaders().IfNoneMatch;
+            if (reqEtags != null && reqEtags.Any(tag => tag.Tag == resp.ETag || tag.Tag == "*"))
+            {
+                Response.GetTypedHeaders().ETag = new EntityTagHeaderValue(resp.ETag);
+                Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+
+            // Fresh response with caching
+            var headers = Response.GetTypedHeaders();
+            headers.ETag = new EntityTagHeaderValue(resp.ETag);
+            headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
+
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
 
