@@ -17,17 +17,17 @@ using IncidentReportingSystem.Infrastructure.Attachments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace IncidentReportingSystem.API.Controllers
 {
     /// <summary>
     /// Versioned endpoints for starting uploads, completing uploads,
-    /// retrieving metadata, and downloading attachments.
+    /// retrieving metadata, and downloading attachments (including signed URLs).
     /// </summary>
     [ApiController]
     [ApiVersion("1.0")]
@@ -37,17 +37,38 @@ namespace IncidentReportingSystem.API.Controllers
     public sealed class AttachmentsController : ControllerBase
     {
         private readonly ISender _sender;
-        private readonly ILogger<AuthController> _logger;
+        private readonly ILogger<AttachmentsController> _logger;
 
-        /// <summary>Creates a new <see cref="AttachmentsController"/>.</summary>
-        public AttachmentsController(ISender sender, ILogger<AuthController> looger) 
-        { 
+        // Signing parameters for download URLs
+        private readonly byte[] _signedUrlKey;
+        
+        // Query parameter names for signed URL scheme
+        private const string SigParam = "sig";
+        private const string ExpParam = "exp";
+
+        /// <summary>
+        /// Creates a new <see cref="AttachmentsController"/>.
+        /// </summary>
+        /// <param name="sender">Mediator used to dispatch application requests.</param>
+        /// <param name="configuration">
+        /// Configuration used to resolve a signing secret for temporary download URLs.
+        /// Uses "Attachments:DownloadUrlSecret" when present; falls back to "Jwt:Secret".
+        /// </param>
+        /// <exception cref="InvalidOperationException">Thrown if no signing secret is configured.</exception>
+        public AttachmentsController(ISender sender, IConfiguration configuration, ILogger<AttachmentsController> logger)
+        {
             _sender = sender;
-            _logger = looger; 
+
+            var secret = configuration["Attachments:DownloadUrlSecret"] ?? configuration["Jwt:Secret"];
+            if (string.IsNullOrWhiteSpace(secret))
+                throw new InvalidOperationException("Missing signing secret for signed attachment URLs. Provide 'Attachments:DownloadUrlSecret' or 'Jwt:Secret'.");
+
+            _signedUrlKey = Encoding.UTF8.GetBytes(secret);
+            _logger = logger;
         }
 
         /// <summary>Start an attachment upload for a specific incident.</summary>
-        [HttpPost("~/"+RouteConstants.Incidents+"/{incidentId:guid}/attachments/start")]
+        [HttpPost("~/" + RouteConstants.Incidents + "/{incidentId:guid}/attachments/start")]
         public async Task<ActionResult<StartUploadAttachmentResponse>> StartForIncident(
             Guid incidentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
@@ -58,7 +79,7 @@ namespace IncidentReportingSystem.API.Controllers
         }
 
         /// <summary>Start an attachment upload for a specific comment.</summary>
-        [HttpPost("~/"+RouteConstants.Comments+"/{commentId:guid}/attachments/start")]
+        [HttpPost("~/" + RouteConstants.Comments + "/{commentId:guid}/attachments/start")]
         public async Task<ActionResult<StartUploadAttachmentResponse>> StartForComment(
             Guid commentId, [FromBody] StartUploadBody body, CancellationToken cancellationToken)
         {
@@ -77,22 +98,20 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Complete(Guid attachmentId, CancellationToken cancellationToken)
         {
-            using var scope = _logger.BeginAuditScope(AuditTags.Attachments, AuditTags.Complete);
             await _sender.Send(new CompleteUploadAttachmentCommand(attachmentId), cancellationToken).ConfigureAwait(false);
-            // Audit: structured tags for filtering in AI/ELK.
+            // --- AUDIT: attachments.complete ---
+            var userId = User?.Claims?.FirstOrDefault(c =>
+                             c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
             _logger.LogInformation(
-                 AuditEvents.Attachments.Complete,
-                 "Audit: {tags} attachmentId={AttachmentId}",
-                 "attachments,complete",
-                 attachmentId);
+                AuditEvents.Attachments.Complete,
+                "Attachment completed {tags} {AttachmentId} {UserId}",
+                "attachments,complete",
+                attachmentId,
+                userId ?? string.Empty);
             return NoContent();
         }
 
         /// <summary>Get metadata for a specific attachment.</summary>
-        /// <response code="200">Attachment metadata returned.</response>
-        /// <response code="401">Authentication required.</response>
-        /// <response code="403">Not authorized to access this attachment.</response>
-        /// <response code="404">Attachment not found.</response>
         [HttpGet("{attachmentId:guid}")]
         [ProducesResponseType(typeof(AttachmentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -104,31 +123,141 @@ namespace IncidentReportingSystem.API.Controllers
             return Ok(dto);
         }
 
-        /// <summary>Download attachment content (only for completed attachments).</summary>
+        /// <summary>
+        /// Issues a temporary, signed download URL that can be used without authentication
+        /// until the given TTL expires. Only completed attachments are eligible.
+        /// </summary>
+        /// <param name="attachmentId">Target attachment identifier.</param>
+        /// <param name="ttlMinutes">Time-to-live in minutes for the signed URL (1–60). Default is 15.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>
+        /// <c>200 OK</c> with <c>{ url, expiresAt }</c> where <c>url</c> is absolute and <c>expiresAt</c> is UTC.
+        /// Returns <c>400</c> for invalid TTL, <c>409</c> if attachment is not completed, or <c>404</c> if missing.
+        /// </returns>
+        [HttpPost("{attachmentId:guid}/download-url")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetSignedDownloadUrl(Guid attachmentId, [FromQuery] int ttlMinutes = 15, CancellationToken cancellationToken = default)
+        {
+            if (ttlMinutes < 1 || ttlMinutes > 60)
+                return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    ["ttlMinutes"] = new[] { "ttlMinutes must be between 1 and 60." }
+                }));
+
+            var dto = await _sender.Send(new GetAttachmentMetadataQuery(attachmentId), cancellationToken).ConfigureAwait(false);
+            if (dto.Status != AttachmentStatus.Completed)
+                return Problem(statusCode: StatusCodes.Status409Conflict, title: "Attachment not completed.");
+
+            var version = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
+            var exp = DateTimeOffset.UtcNow.AddMinutes(ttlMinutes).ToUnixTimeSeconds();
+            var sig = ComputeSignature(attachmentId, exp);
+
+            var relative = Url.Action(
+                action: nameof(Download),
+                controller: "Attachments",
+                values: new { version, attachmentId, exp, sig });
+
+            var absolute = $"{Request.Scheme}://{Request.Host}{relative}";
+            return Ok(new { url = absolute, expiresAt = DateTimeOffset.FromUnixTimeSeconds(exp) });
+        }
+
+        /// <summary>
+        /// Downloads attachment content. Works in two modes:
+        /// 1) Authenticated: standard authorization applies (class-level [Authorize]).
+        /// 2) Anonymous with a valid signed URL: pass 'exp' and 'sig' query parameters.
+        /// </summary>
+        /// <remarks>
+        /// Signature format: sig = Base64Url(HMACSHA256(secret, $"{attachmentId:N}|{exp}")) where exp is Unix seconds (UTC).
+        /// </remarks>
         [HttpGet("{attachmentId:guid}/download")]
+        [AllowAnonymous] // accept anonymous when a valid signed URL is provided
         public async Task<IActionResult> Download(Guid attachmentId, CancellationToken cancellationToken)
         {
-            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken)
-                                    .ConfigureAwait(false);
-
-            // Conditional GET (If-None-Match)
-            var reqEtags = Request.GetTypedHeaders().IfNoneMatch;
-            if (reqEtags != null && reqEtags.Any(tag => tag.Tag == resp.ETag || tag.Tag == "*"))
+            // If caller is not authenticated, validate signed URL parameters.
+            if (!(User?.Identity?.IsAuthenticated ?? false))
             {
-                Response.GetTypedHeaders().ETag = new EntityTagHeaderValue(resp.ETag);
-                Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
+                var expStr = Request.Query[ExpParam].FirstOrDefault();
+                var sigStr = Request.Query[SigParam].FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(expStr) || string.IsNullOrWhiteSpace(sigStr))
+                    return Unauthorized(new ProblemDetails { Title = "Missing signed URL parameters." });
+
+                if (!long.TryParse(expStr, out var exp))
+                    return Unauthorized(new ProblemDetails { Title = "Invalid expiration timestamp." });
+
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+                    return Unauthorized(new ProblemDetails { Title = "Signed URL has expired." });
+
+                if (!IsSignatureValid(attachmentId, exp, sigStr))
+                    return Unauthorized(new ProblemDetails { Title = "Invalid signature." });
+            }
+
+            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken)
+                            .ConfigureAwait(false);
+
+            // Build typed headers
+            var etagValue = string.IsNullOrWhiteSpace(resp.ETag) ? null : new EntityTagHeaderValue(resp.ETag);
+
+            // Conditional GET: If-None-Match → 304 (Not Modified)
+            var reqHeaders = Request.GetTypedHeaders();
+            if (etagValue != null && reqHeaders.IfNoneMatch != null && reqHeaders.IfNoneMatch.Any(tag => tag.Tag == etagValue.Tag))
+            {
+                var r = Response.GetTypedHeaders();
+                r.ETag = etagValue;
+                r.CacheControl = new CacheControlHeaderValue
+                {
+                    Private = true,
+                    MaxAge = TimeSpan.FromMinutes(5)
+                };
+
+                // Audit (download attempt that resulted in 304 is still an access event)
+                var isAuthed304 = User?.Identity?.IsAuthenticated == true;
+                var userId304 = isAuthed304
+                    ? User!.Claims!.FirstOrDefault(c =>
+                        c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
+                    : null;
+
+                _logger.LogInformation(
+                    AuditEvents.Attachments.Download,
+                    "Attachment download {tags} {AttachmentId} {Mode} {UserId}",
+                    "attachments,download",
+                    attachmentId,
+                    isAuthed304 ? "auth" : "signed",
+                    userId304 ?? string.Empty);
+
                 return StatusCode(StatusCodes.Status304NotModified);
             }
 
-            // Fresh response with caching
+            // 200: set ETag + Cache-Control
             var headers = Response.GetTypedHeaders();
-            headers.ETag = new EntityTagHeaderValue(resp.ETag);
-            headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
+            if (etagValue != null)
+                headers.ETag = etagValue;
+
+            headers.CacheControl = new CacheControlHeaderValue
+            {
+                Private = true,
+                MaxAge = TimeSpan.FromMinutes(5)
+            };
+
+            // Existing audit log for download (200 path)
+            var isAuthed = User?.Identity?.IsAuthenticated == true;
+            var userId = isAuthed
+                ? User!.Claims!.FirstOrDefault(c =>
+                    c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
+                : null;
+
             _logger.LogInformation(
-                 AuditEvents.Attachments.Download,
-                 "Audit: {tags} attachmentId={AttachmentId}",
-                 "attachments,download",
-                 attachmentId);
+                AuditEvents.Attachments.Download,
+                "Attachment download {tags} {AttachmentId} {Mode} {UserId}",
+                "attachments,download",
+                attachmentId,
+                isAuthed ? "auth" : "signed",
+                userId ?? string.Empty);
+
             return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
         }
 
@@ -143,13 +272,12 @@ namespace IncidentReportingSystem.API.Controllers
                 maxSizeBytes = o.MaxSizeBytes,
                 allowedContentTypes = o.AllowedContentTypes,
                 allowedExtensions = o.AllowedExtensions,
-                uploadUrlTtlMinutes = o.SasMinutesToLive  
+                uploadUrlTtlMinutes = o.SasMinutesToLive
             });
         }
 
         /// <summary>
         /// Lists attachments for an incident, newest-first, with paging metadata.
-        /// Route note: we keep existing naming convention 'incidentreports'.
         /// </summary>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet("~/api/v{version:apiVersion}/incidentreports/{incidentId:guid}/attachments")]
@@ -198,6 +326,44 @@ namespace IncidentReportingSystem.API.Controllers
             };
 
             return Ok(response);
+        }
+
+        // ---------- Signed URL helpers ----------
+
+        /// <summary>
+        /// Computes a Base64Url-encoded HMAC-SHA256 signature over "{attachmentId:N}|{exp}".
+        /// </summary>
+        private string ComputeSignature(Guid attachmentId, long expUnixSeconds)
+        {
+            var payload = $"{attachmentId:N}|{expUnixSeconds}";
+            using var hmac = new HMACSHA256(_signedUrlKey);
+            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+            return WebEncoders.Base64UrlEncode(hash);
+        }
+
+        /// <summary>
+        /// Validates a Base64Url-encoded HMAC-SHA256 signature and protects against timing attacks.
+        /// </summary>
+        private bool IsSignatureValid(Guid attachmentId, long expUnixSeconds, string providedSig)
+        {
+            byte[] provided;
+            try
+            {
+                provided = WebEncoders.Base64UrlDecode(providedSig);
+            }
+            catch
+            {
+                return false;
+            }
+
+            var payload = $"{attachmentId:N}|{expUnixSeconds}";
+            using var hmac = new HMACSHA256(_signedUrlKey);
+            var expected = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+
+            if (provided.Length != expected.Length)
+                return false;
+
+            return CryptographicOperations.FixedTimeEquals(provided, expected);
         }
     }
 }
