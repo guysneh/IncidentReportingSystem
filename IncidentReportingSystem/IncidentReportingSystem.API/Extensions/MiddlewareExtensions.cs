@@ -123,7 +123,28 @@ public static class MiddlewareExtensions
         }
         else
         {
-            app.MapHealthChecks("/health")
+            // Readiness: aggregate health checks with JSON payload
+            var healthOptions = new HealthCheckOptions
+            {
+                ResponseWriter = async (ctx, report) =>
+                {
+                    ctx.Response.ContentType = "application/json";
+                    var payload = new
+                    {
+                        status = report.Status.ToString(),
+                        checks = report.Entries.Select(e => new
+                        {
+                            name = e.Key,
+                            status = e.Value.Status.ToString(),
+                            description = e.Value.Description,
+                            data = e.Value.Data
+                        }),
+                        duration = report.TotalDuration
+                    };
+                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(payload));
+                }
+            };
+            app.MapHealthChecks("/health", healthOptions)
                .AllowAnonymous()
                .ExcludeFromDescription();
         }

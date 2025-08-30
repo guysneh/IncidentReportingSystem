@@ -1,19 +1,20 @@
-﻿using System;
-using System.Threading.RateLimiting;
+﻿using IncidentReportingSystem.API.Health;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Threading.RateLimiting;
 
 namespace IncidentReportingSystem.API.Extensions;
 public static class HealthAndRateLimitingExtensions
 {
     public static IServiceCollection AddHealthAndRateLimiting(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        IHostEnvironment env)
+    this IServiceCollection services,
+    IConfiguration configuration,
+    IHostEnvironment env)
     {
         // Rate limiter (unchanged)
         services.AddRateLimiter(options =>
@@ -30,18 +31,25 @@ public static class HealthAndRateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
-        // Health checks – single builder instance
+        // Health checks — single builder
         var hc = services.AddHealthChecks();
 
         if (env.IsEnvironment("Test"))
         {
-            services.AddHealthChecks()
-                    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "ready" });
+            hc.AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "ready" });
         }
         else
         {
-            services.AddHealthChecks()
-                    .AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
+            hc.AddNpgSql(configuration["ConnectionStrings:DefaultConnection"]);
+        }
+
+        // Optional storage check (Non-prod)
+        if (!env.IsProduction())
+        {
+            hc.AddCheck<AttachmentStorageHealthCheck>(
+                "storage",
+                failureStatus: HealthStatus.Unhealthy,
+                tags: new[] { "ready" });
         }
 
         return services;
