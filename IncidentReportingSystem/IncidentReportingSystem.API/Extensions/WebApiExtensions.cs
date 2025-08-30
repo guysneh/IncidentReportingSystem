@@ -60,6 +60,8 @@ public static class WebApiExtensions
             c.OperationFilter<IncidentReportsListExample>();
             c.OperationFilter<CommentsListExample>();
             c.OperationFilter<AttachmentsStartExample>();
+            c.OperationFilter<AttachmentStatusExample>();
+
             c.MapType<IncidentSeverity>(() => new OpenApiSchema
             {
                 Type = "string",

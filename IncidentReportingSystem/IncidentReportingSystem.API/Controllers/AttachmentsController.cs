@@ -14,6 +14,7 @@ using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using IncidentReportingSystem.Application.Features.Attachments.Queries;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentConstraints;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentMetedata;
+using IncidentReportingSystem.Application.Features.Attachments.Queries.GetAttachmentStatus;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.ListAttachmentsByParent;
 using IncidentReportingSystem.Application.Features.Attachments.Queries.OpenAttachmentStream;
 using IncidentReportingSystem.Domain.Enums;
@@ -307,5 +308,18 @@ namespace IncidentReportingSystem.API.Controllers
             await _sender.Send(new AbortUploadAttachmentCommand(attachmentId, userId, isAdmin), cancellationToken).ConfigureAwait(false);
             return NoContent();
         }
+
+        /// <summary>Get current status information of a specific attachment.</summary>
+        [HttpGet("{attachmentId:guid}/status")]
+        [ProducesResponseType(typeof(AttachmentStatusDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<AttachmentStatusDto>> GetStatus(Guid attachmentId, CancellationToken cancellationToken)
+        {
+            var dto = await _sender.Send(new GetAttachmentStatusQuery(attachmentId), cancellationToken).ConfigureAwait(false);
+            return Ok(dto);
+        }
+
     }
 }
