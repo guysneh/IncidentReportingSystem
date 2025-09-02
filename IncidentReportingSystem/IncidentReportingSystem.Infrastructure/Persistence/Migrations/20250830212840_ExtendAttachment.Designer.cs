@@ -3,17 +3,20 @@ using System;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IncidentReportingSystem.Infrastructure.Migrations
+namespace IncidentReportingSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250830212840_ExtendAttachment")]
+    partial class ExtendAttachment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -73,14 +76,13 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
 
                     b.HasIndex("ParentType", "ParentId");
 
-                    b.HasIndex("ParentType", "ParentId", "CreatedAt")
-                        .HasDatabaseName("IX_Attachments_Parent_CreatedAt");
+                    b.HasIndex("ParentType", "ParentId", "ContentType");
 
-                    b.HasIndex("ParentType", "ParentId", "FileName")
-                        .HasDatabaseName("IX_Attachments_Parent_FileName");
+                    b.HasIndex("ParentType", "ParentId", "CreatedAt");
 
-                    b.HasIndex("ParentType", "ParentId", "Size")
-                        .HasDatabaseName("IX_Attachments_Parent_Size");
+                    b.HasIndex("ParentType", "ParentId", "FileName");
+
+                    b.HasIndex("ParentType", "ParentId", "Size");
 
                     b.ToTable("attachments", (string)null);
                 });

@@ -246,7 +246,7 @@ namespace IncidentReportingSystem.API.Controllers
             CancellationToken cancellationToken = default)
         {
             var paged = await _sender.Send(
-                new ListAttachmentsByParentQuery(AttachmentParentType.Incident, incidentId, skip, take),
+                new ListAttachmentsByParentQuery(AttachmentParentType.Incident, incidentId, new AttachmentListFilters(Skip:skip, Take:take)),
                 cancellationToken).ConfigureAwait(false);
 
             var response = new PagedResponse<AttachmentDto>
@@ -272,7 +272,7 @@ namespace IncidentReportingSystem.API.Controllers
             CancellationToken cancellationToken = default)
         {
             var paged = await _sender.Send(
-                new ListAttachmentsByParentQuery(AttachmentParentType.Comment, commentId, skip, take),
+                new ListAttachmentsByParentQuery(AttachmentParentType.Comment, commentId, new AttachmentListFilters(Skip: skip, Take: take)),
                 cancellationToken).ConfigureAwait(false);
 
             var response = new PagedResponse<AttachmentDto>
@@ -321,5 +321,71 @@ namespace IncidentReportingSystem.API.Controllers
             return Ok(dto);
         }
 
-    }
+       
+        /// <summary>
+        /// Lists attachments for an Incident. Supports search (q), content-type filter,
+        /// date range, sorting (createdAt|fileName|size) and paging (skip/take).
+        /// </summary>
+        [HttpGet("incident-reports/{incidentId:guid}/attachments")]
+        public async Task<IActionResult> ListByIncident(
+            Guid incidentId,
+            int skip = 0,
+            int take = 100,
+            string? q = null,
+            string? contentType = null,
+            DateTimeOffset? createdAfter = null,
+            DateTimeOffset? createdBefore = null,
+            string? orderBy = "createdAt",
+            string? direction = "desc",
+            CancellationToken ct = default)
+        {
+            var filters = new AttachmentListFilters(
+                Search: q,
+                ContentType: contentType,
+                CreatedAfter: createdAfter,
+                CreatedBefore: createdBefore,
+                OrderBy: orderBy ?? "createdAt",
+                Direction: direction ?? "desc",
+                Skip: skip,
+                Take: take);
+
+            var result = await _sender.Send(
+                new ListAttachmentsByParentQuery(AttachmentParentType.Incident, incidentId, filters), ct);
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Lists attachments for a Comment. Supports search (q), content-type filter,
+        /// date range, sorting (createdAt|fileName|size) and paging (skip/take).
+        /// </summary>
+        [HttpGet("comments/{commentId:guid}/attachments")]
+        public async Task<IActionResult> ListByComment(
+            Guid commentId,
+            int skip = 0,
+            int take = 100,
+            string? q = null,
+            string? contentType = null,
+            DateTimeOffset? createdAfter = null,
+            DateTimeOffset? createdBefore = null,
+            string? orderBy = "createdAt",
+            string? direction = "desc",
+            CancellationToken ct = default)
+        {
+            var filters = new AttachmentListFilters(
+                Search: q,
+                ContentType: contentType,
+                CreatedAfter: createdAfter,
+                CreatedBefore: createdBefore,
+                OrderBy: orderBy ?? "createdAt",
+                Direction: direction ?? "desc",
+                Skip: skip,
+                Take: take);
+
+            var result = await _sender.Send(
+                new ListAttachmentsByParentQuery(AttachmentParentType.Comment, commentId, filters), ct);
+
+            return Ok(result);
+        }
+        }
 }

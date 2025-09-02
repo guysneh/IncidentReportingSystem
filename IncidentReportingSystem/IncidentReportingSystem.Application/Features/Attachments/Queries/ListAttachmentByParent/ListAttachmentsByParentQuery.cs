@@ -1,4 +1,5 @@
-﻿using IncidentReportingSystem.Application.Common.Models;
+﻿using System;
+using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
@@ -6,12 +7,11 @@ using MediatR;
 namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListAttachmentsByParent
 {
     /// <summary>
-    /// Lists attachments for a given parent (Incident/Comment), newest-first, with paging.
+    /// Lists attachments for a given parent (Incident/Comment) with search/filter/sort/paging support.
     /// </summary>
     public sealed record ListAttachmentsByParentQuery(
         AttachmentParentType ParentType,
         Guid ParentId,
-        int Skip = 0,
-        int Take = 100
+        AttachmentListFilters Filters
     ) : IRequest<PagedResult<AttachmentDto>>;
 }

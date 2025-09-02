@@ -48,6 +48,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="appsettings.Test.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
   	<None Update="appsettings.json">
   		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   	</None>

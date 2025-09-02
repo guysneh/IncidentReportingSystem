@@ -11,19 +11,28 @@ public static class ConfigurationExtensions
 {
     public static void AddConfigurationAndBindOptions(this WebApplicationBuilder builder)
     {
-        var configuration = builder.Configuration;
+        var configuration = builder.Configuration;     // ConfigurationManager (IConfiguration + IConfigurationBuilder)
         var services = builder.Services;
+        var env = builder.Environment;          // <-- always trust the hosting environment
 
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-        configuration.SetBasePath(Directory.GetCurrentDirectory());
+        // Use the host's content root (the API project folder), not the test runner's CWD
+        configuration.SetBasePath(env.ContentRootPath);
 
+        // Outside Docker, load JSON files including the environment-specific one (Test/Dev/Prod)
         if (!IsRunningInDocker())
         {
-            configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-            configuration.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
+            configuration
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: false, reloadOnChange: true);
         }
 
+        // Environment variables come last so they can override JSON when present (works in Prod & CI)
         configuration.AddEnvironmentVariables();
+
+        if (env.IsDevelopment())
+        {
+            configuration.AddUserSecrets<Program>(optional: true);
+        }
 
         // Azure App Configuration (only if explicitly enabled and endpoint is provided)
         TryAddAzureAppConfiguration(configuration);
