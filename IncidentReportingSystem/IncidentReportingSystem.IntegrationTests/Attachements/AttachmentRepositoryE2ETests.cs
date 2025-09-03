@@ -4,13 +4,12 @@ using IncidentReportingSystem.Application.Features.Attachments.Queries.ListAttac
 using IncidentReportingSystem.Domain.Enums;
 using IncidentReportingSystem.Infrastructure.Persistence.Repositories;
 using IncidentReportingSystem.IntegrationTests.Utils;
-using IncidentReportingSystem.Tests.Integration.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using System.Net.Http;
 using Xunit;
 
-namespace IncidentReportingSystem.Tests.Integration.Attachments
+namespace IncidentReportingSystem.IntegrationTests.Attachments
 {
     /// <summary>
     /// E2E-style integration tests against your existing PostgreSQL defined in appsettings.Test.json.

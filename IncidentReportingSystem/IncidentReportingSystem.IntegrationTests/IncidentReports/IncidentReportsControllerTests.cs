@@ -12,7 +12,7 @@ using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplication
 using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 
-namespace IncidentReportingSystem.Tests.Integration;
+namespace IncidentReportingSystem.IntegrationTests;
 
 public class IncidentReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
 {

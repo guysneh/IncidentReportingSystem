@@ -3,7 +3,7 @@ using FluentAssertions;
 using IncidentReportingSystem.IntegrationTests.Utils;
 using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
-namespace IncidentReportingSystem.Tests.Integration.Middleware;
+namespace IncidentReportingSystem.IntegrationTests.Middleware;
 
 public class CorrelationIdTests : IClassFixture<CustomWebApplicationFactory>
 {

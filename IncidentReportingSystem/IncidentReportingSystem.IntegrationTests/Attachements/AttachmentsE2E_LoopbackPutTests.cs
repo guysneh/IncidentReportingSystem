@@ -174,7 +174,7 @@ public sealed class AttachmentsE2E_LoopbackPutTests : IClassFixture<AttachmentsW
         var attachmentId = doc.RootElement.GetProperty("attachmentId").GetGuid();
 
         // stranger (not admin)
-        var stranger = AuthenticatedHttpClientFactory.CreateClientWithToken(_factory, roles: new[] { "User" });
+        var stranger = AuthenticatedHttpClientFactory.CreateClientWithToken(_factory, email: "stragner@example.com", roles: new[] { "User" });
         var abortStranger = await stranger.PostAsync($"{apiRoot}/attachments/{attachmentId}/abort", new StringContent(""));
         abortStranger.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
