@@ -5,6 +5,7 @@ using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Exceptions;
 using IncidentReportingSystem.Application.Common.Logging;
+using IncidentReportingSystem.Application.Features.Users.Commands.ChangePassword;
 using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.UpdateUserProfile;
@@ -139,5 +140,24 @@ namespace IncidentReportingSystem.API.Controllers
 
             return Ok(resp);
         }
+
+        /// <summary>Change the authenticated user's password.</summary>
+        /// <response code="204">Password changed.</response>
+        /// <response code="400">Validation errors / weak password.</response>
+        /// <response code="401">Missing/invalid token.</response>
+        /// <response code="403">Current password does not match.</response>
+        [HttpPost("me/change-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body, CancellationToken ct)
+        {
+            await _sender.Send(new ChangePasswordCommand(body.CurrentPassword, body.NewPassword), ct);
+            return NoContent();
+        }
+
+        // If you must also support the users/me form, add an extra route:
+        [HttpPost("~/api/v{version:apiVersion}/users/me/change-password")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public Task<IActionResult> ChangePasswordAlias([FromBody] ChangePasswordRequest body, CancellationToken ct)
+            => ChangePassword(body, ct);
     }
 }

@@ -54,7 +54,7 @@ public static class WebApiExtensions
             c.SupportNonNullableReferenceTypes();
             c.UseInlineDefinitionsForEnums();
             c.OperationFilter<RegisterUserExample>();
-            c.OperationFilter<WhoAmIExample>();
+          //  c.OperationFilter<WhoAmIExample>();
             c.OperationFilter<AttachmentsListExample>();
             c.OperationFilter<ProblemDetailsExample>();
             c.OperationFilter<IncidentReportsListExample>();
