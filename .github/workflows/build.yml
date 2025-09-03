@@ -41,9 +41,15 @@ jobs:
         image: mcr.microsoft.com/azure-storage/azurite
         ports:
           - 10000:10000
+          - 10001:10001
+          - 10002:10002
+        # Override entrypoint so we can pass host flags
         options: >-
-          --health-cmd="bash -c 'sleep 1; curl -fsS http://localhost:10000/devstoreaccount1?comp=list || exit 1'"
+          --entrypoint /bin/sh
+          --health-cmd="bash -lc '</dev/tcp/127.0.0.1/10000' || exit 1"
           --health-interval=5s --health-timeout=3s --health-retries=60
+        # Run azurite with 0.0.0.0 bindings
+        command: -lc "exec azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
       
     steps:
       - name: Checkout
