@@ -170,6 +170,22 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             return Task.CompletedTask;
         }
 
+        public async Task OverwriteAsync(string storagePath, Stream content, string contentType, CancellationToken ct)
+        {
+            var full = CanonicalizeUnderRoot(_root, storagePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+
+            await using (var fs = new FileStream(full, FileMode.Create, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                content.Position = 0;
+                await content.CopyToAsync(fs, 81920, ct);
+                await fs.FlushAsync(ct);
+            }
+
+            var normalized = NormalizeContentType(contentType, storagePath);
+            await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
+        }
+
 
         // ---------- Helpers ----------
         private static string NormalizePath(string path)

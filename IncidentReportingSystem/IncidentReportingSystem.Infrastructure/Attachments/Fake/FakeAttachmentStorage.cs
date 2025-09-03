@@ -109,5 +109,10 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Fake
             if (t is "." or "..") throw new ArgumentException("Invalid FileName.");
             return t;
         }
+
+        public Task OverwriteAsync(string storagePath, Stream content, string contentType, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

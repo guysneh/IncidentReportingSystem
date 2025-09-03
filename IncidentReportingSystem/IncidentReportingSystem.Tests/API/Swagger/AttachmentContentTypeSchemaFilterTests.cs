@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using IncidentReportingSystem.API.Filters;
 using IncidentReportingSystem.API.Swagger;
+using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;

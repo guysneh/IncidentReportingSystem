@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using IncidentReportingSystem.Infrastructure.Attachments;
+using IncidentReportingSystem.Application.Features.Attachments;
 
 namespace IncidentReportingSystem.API.Filters
 {

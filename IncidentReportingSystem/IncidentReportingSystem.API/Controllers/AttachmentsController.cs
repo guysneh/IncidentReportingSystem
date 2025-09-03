@@ -6,6 +6,7 @@ using IncidentReportingSystem.Application.Abstractions.Logging;
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Common.Logging;
+using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.AbortUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;

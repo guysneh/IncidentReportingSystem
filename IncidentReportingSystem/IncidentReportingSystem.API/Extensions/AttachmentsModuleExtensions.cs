@@ -2,6 +2,7 @@
 using IncidentReportingSystem.Application.Abstractions.Logging;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments.DevLoopback;
 using IncidentReportingSystem.Infrastructure.Attachments.Fake;

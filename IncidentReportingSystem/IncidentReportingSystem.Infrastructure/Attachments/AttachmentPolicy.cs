@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Features.Attachments;
 using Microsoft.Extensions.Options;
 
 namespace IncidentReportingSystem.Infrastructure.Attachments

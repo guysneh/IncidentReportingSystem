@@ -184,6 +184,23 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Storage
             await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: ct);
         }
 
+        public async Task OverwriteAsync(string storagePath, Stream content, string contentType, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(storagePath))
+                throw new ArgumentException("storagePath is required.", nameof(storagePath));
+
+            var blob = _container.GetBlobClient(storagePath);
+
+            // Upload will fully replace existing content; set content-type explicitly.
+            var opts = new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders { ContentType = contentType }
+            };
+
+            content.Position = 0;
+            await blob.UploadAsync(content, opts, ct).ConfigureAwait(false);
+        }
+
         private static string NormalizePrefix(string pathPrefix)
         {
             var s = pathPrefix.Replace('\\', '/').Trim();
