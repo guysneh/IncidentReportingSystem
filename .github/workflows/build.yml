@@ -104,11 +104,19 @@ jobs:
       - name: Test (Unit) with coverlet.console + thresholds
         shell: bash
         env:
-          Attachments__Storage: Loopback
           Attachments__Container: attachments
           Storage__Blob__Endpoint: http://127.0.0.1:10000/devstoreaccount1
           Storage__Blob__AccountName: devstoreaccount1
           Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
+          Attachments__Storage: Azurite
+          AZURE_STORAGE_CONNECTION_STRING: >-
+              DefaultEndpointsProtocol=http;
+              AccountName=devstoreaccount1;
+              AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==;
+              BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;
+              QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
+              TableEndpoint=http://127.0.0.1:10002/devstoreaccount1
+          Storage__ConnectionString: ${{ env.AZURE_STORAGE_CONNECTION_STRING }}
         run: |
           set -euxo pipefail
           INT_TRX="IncidentReportingSystem/TestResults/Unit"
@@ -156,16 +164,13 @@ jobs:
       - name: Start Azurite
         run: |
           docker run -d --name azurite \
+          -e AZURITE_ACCOUNTS="devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==" \
           -p 10000:10000 -p 10001:10001 -p 10002:10002 \
           mcr.microsoft.com/azure-storage/azurite \
           azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
       
-          # Wait for TCP port to open (no auth needed)
-          for i in {1..60}; do
-          (</dev/tcp/127.0.0.1/10000) >/dev/null 2>&1 && break
-          sleep 1
-          done
-
+          # Wait for TCP port (no auth)
+          for i in {1..60}; do (</dev/tcp/127.0.0.1/10000) >/dev/null 2>&1 && break; sleep 1; done
 
       # ---------- Integration tests via coverlet.console ----------
       - name: Test (Integration) with coverlet.console + thresholds
