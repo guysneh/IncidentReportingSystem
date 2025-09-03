@@ -23,7 +23,7 @@ public static class ConfigurationExtensions
         {
             configuration
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: false, reloadOnChange: true);
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
         }
 
         // Environment variables come last so they can override JSON when present (works in Prod & CI)
