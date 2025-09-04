@@ -3,6 +3,11 @@ name: UI CI
 on:
   workflow_dispatch:
 
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+  
 jobs:
   build-test:
     runs-on: ubuntu-latest
