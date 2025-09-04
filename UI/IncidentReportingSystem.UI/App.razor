@@ -1,0 +1,14 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+
+    <NotFound>
+        <LayoutView Layout="@typeof(Shared.MainLayout)">
+            <MudText Typo="Typo.h5">Sorry, there's nothing at this address.</MudText>
+        </LayoutView>
+    </NotFound>
+</Router>
