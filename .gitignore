@@ -473,3 +473,4 @@ sonar-project.properties.ignore
 **/wwwroot/**/*.min.*
 **/wwwroot/**/*.map
 UI/IncidentReportingSystem.UI/appsettings.Development.json
+*.plan
