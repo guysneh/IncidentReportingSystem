@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-
     permissions:
       contents: read
       id-token: write
@@ -25,37 +24,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug repo tree
+        run: |
+          pwd
+          ls -la
+          ls -la UI || true
+          ls -la "UI/IncidentReportingSystem.UI" || true
+          ls -la "UI/IncidentReportingSystem.UI.Tests" || true
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        working-directory: ui/IncidentReportingSystem.UI
+        working-directory: UI/IncidentReportingSystem.UI
         run: dotnet restore
 
       - name: Build (Release)
-        working-directory: ui/IncidentReportingSystem.UI
+        working-directory: UI/IncidentReportingSystem.UI
         run: dotnet build -c Release --no-restore
 
       - name: Test (xUnit/bUnit)
-        working-directory: ui/IncidentReportingSystem.UI.Tests
-        run: |
-          dotnet test -c Release --no-build `
-            --logger "trx;LogFileName=ui-tests.trx" `
-            --results-directory ../TestResults
+        working-directory: UI/IncidentReportingSystem.UI.Tests
+        run: dotnet test -c Release --no-build --logger "trx;LogFileName=ui-tests.trx" --results-directory ../TestResults
 
       - name: Publish (zip content)
         if: ${{ github.event.inputs.publish_artifact == 'true' }}
-        working-directory: ui/IncidentReportingSystem.UI
-        run: |
-          dotnet publish -c Release -o ../out
-          echo "Publish directory: $GITHUB_WORKSPACE/ui/out"
+        working-directory: UI/IncidentReportingSystem.UI
+        run: dotnet publish -c Release -o ../out
 
       - name: Upload artifact
         if: ${{ github.event.inputs.publish_artifact == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ui-publish
-          path: ui/out/**
+          path: UI/out/**
           if-no-files-found: error
