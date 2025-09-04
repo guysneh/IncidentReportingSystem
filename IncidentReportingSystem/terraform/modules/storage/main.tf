@@ -12,6 +12,15 @@ resource "azurerm_storage_account" "this" {
   allow_nested_items_to_be_public = false
   min_tls_version                 = "TLS1_2"
   tags                            = var.default_tags
+  blob_properties {
+    cors_rule {
+      allowed_headers    = ["*"]
+      exposed_headers    = ["Content-Length", "Content-Type", "Content-Disposition", "ETag", "x-ms-*"]
+      allowed_methods    = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "DELETE"]
+      allowed_origins    = ["https://localhost:5003"]
+      max_age_in_seconds = 86400
+    }
+  }
 }
 
 resource "azurerm_storage_container" "attachments" {

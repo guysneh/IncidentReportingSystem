@@ -117,8 +117,8 @@ resource "azurerm_role_assignment" "webapp_kv_secrets_user" {
 
 locals {
   app_settings = {
-    "AppConfig__Enabled"                   = "false"
-   # "AppConfig__Endpoint"                  = module.app_configuration.endpoint
+    "AppConfig__Enabled" = "false"
+    # "AppConfig__Endpoint"                  = module.app_configuration.endpoint
     "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/PostgreSqlConnectionString)"
     "Telemetry__SamplingRatio"             = var.telemetry_sample_ratio
     "Jwt__Secret"                          = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-secret)"
@@ -129,10 +129,13 @@ locals {
     "Storage__Blob__Endpoint"              = module.storage.blob_endpoint
     "Storage__Blob__AccountName"           = module.storage.account_name
     # "Storage__Blob__PublicEndpoint" CDN/Front Door
-    "Jwt__Issuer"   = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-issuer)"
-    "Jwt__Audience" = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-audience)"
-    "ASPNETCORE_URLS" = "http://0.0.0.0:8080"
-    "WEBSITES_PORT"    = "8080" 
+    "Jwt__Issuer"                 = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-issuer)"
+    "Jwt__Audience"               = "@Microsoft.KeyVault(SecretUri=https://incident-kv.vault.azure.net/secrets/jwt-audience)"
+    "ASPNETCORE_URLS"             = "http://0.0.0.0:8080"
+    "WEBSITES_PORT"               = "8080"
+    "Attachments__SanitizeImages" = "true"
+    "Cors__AllowedOrigins"        = "https://localhost:5003"
+    "Cors__AllowCredentials"      = "true"
   }
 }
 
