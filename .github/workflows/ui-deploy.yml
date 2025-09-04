@@ -1,0 +1,151 @@
+name: UI – Deploy to Azure App Service (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Override Api__BaseUrl (HTTPS, trailing slash). If empty uses secret UI_API_BASEURL"
+        required: false
+      update_api_cors:
+        description: "Also append the UI origin to API's CORS (requires API secrets)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false","true"]
+
+permissions:
+  id-token: write   # OIDC for azure/login
+  contents: read
+
+env:
+  PROJECT_PATH: UI/IncidentReportingSystem.UI/IncidentReportingSystem.UI.csproj
+  PUBLISH_DIR:  UI/IncidentReportingSystem.UI/publish
+  DOTNET_VERSION: "8.0.x"
+
+jobs:
+  deploy-ui:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build (Release)
+        run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
+
+      - name: Publish
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ${{ env.PUBLISH_DIR }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:      ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:      ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id:${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure App Settings (UI)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -e
+            APP="${{ secrets.AZURE_WEBAPP_NAME }}"
+            RG="${{ secrets.AZURE_WEBAPP_RG }}"
+            API_BASE="${{ github.event.inputs.api_base_url != '' && github.event.inputs.api_base_url || secrets.UI_API_BASEURL }}"
+            if [ -z "$APP" ] || [ -z "$RG" ]; then
+              echo "AZURE_WEBAPP_NAME / AZURE_WEBAPP_RG secrets are required."
+              exit 1
+            fi
+            if [ -z "$API_BASE" ]; then
+              echo "Api__BaseUrl missing (provide workflow input or set UI_API_BASEURL secret)."
+              exit 1
+            fi
+            # harden & DP keys directory for App Service Linux
+            az webapp config appsettings set -g "$RG" -n "$APP" --settings \
+              ASPNETCORE_ENVIRONMENT=Production \
+              Api__BaseUrl="$API_BASE" \
+              EnableHttpsRedirection=true \
+              DataProtection__KeysDirectory=/home/keys \
+              WEBSITE_HTTPLOGGING_RETENTION_DAYS=7
+
+      - name: Deploy UI to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          package:  ${{ env.PUBLISH_DIR }}
+
+      - name: Smoke test (UI root)
+        shell: bash
+        run: |
+          set -e
+          HOSTNAME=$(az webapp show -g "${{ secrets.AZURE_WEBAPP_RG }}" -n "${{ secrets.AZURE_WEBAPP_NAME }}" --query defaultHostName -o tsv)
+          URL="https://$HOSTNAME/"
+          echo "Pinging $URL ..."
+          for i in {1..20}; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i => HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 6
+          done
+          echo "Smoke test failed"; exit 1
+
+  # Optional: add UI origin to API CORS (only if requested)
+  update-api-cors:
+    if: ${{ github.event.inputs.update_api_cors == 'true' }}
+    needs: deploy-ui
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:      ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:      ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id:${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Append UI origin to API CORS__AllowedOrigins
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -e
+            API_APP="${{ secrets.API_WEBAPP_NAME }}"
+            API_RG="${{ secrets.API_WEBAPP_RG }}"
+            UI_APP="${{ secrets.AZURE_WEBAPP_NAME }}"
+            UI_RG="${{ secrets.AZURE_WEBAPP_RG }}"
+
+            if [ -z "$API_APP" ] || [ -z "$API_RG" ]; then
+              echo "API_WEBAPP_NAME / API_WEBAPP_RG secrets are required for CORS sync."
+              exit 1
+            fi
+
+            UI_HOST=$(az webapp show -g "$UI_RG" -n "$UI_APP" --query defaultHostName -o tsv)
+            ORIGIN="https://$UI_HOST"
+            echo "UI Origin = $ORIGIN"
+
+            current=$(az webapp config appsettings list -g "$API_RG" -n "$API_APP" --query "[?name=='Cors__AllowedOrigins'].value" -o tsv)
+            if [ -z "$current" ]; then
+              new="$ORIGIN"
+            else
+              # split by comma/semicolon and check if ORIGIN exists
+              IFS=',; ' read -r -a arr <<< "$current"
+              found=0
+              for x in "${arr[@]}"; do
+                if [ "$x" = "$ORIGIN" ]; then found=1; fi
+              done
+              if [ $found -eq 1 ]; then
+                echo "Origin already present. No change."
+                exit 0
+              fi
+              new="$current,$ORIGIN"
+            fi
+
+            echo "Updating CORS__AllowedOrigins -> $new"
+            az webapp config appsettings set -g "$API_RG" -n "$API_APP" --settings Cors__AllowedOrigins="$new" Cors__AllowCredentials=true
