@@ -47,7 +47,7 @@ services:
 
   api:
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/live"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
       interval: 15s
       timeout: 3s
       retries: 5
@@ -84,6 +84,8 @@ services:
       Storage__Blob__AccountKey: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVG==
       Storage__Blob__PublicEndpoint: http://localhost:10000/devstoreaccount1
       Storage__Blob__UploadSasTtlMinutes: "15"
+      Cors__AllowedOrigins: "http://localhost:${UI_PORT}"
+      Cors__AllowCredentials: "true"
     ports:
       - "${API_PORT}:8080"
 
@@ -93,8 +95,6 @@ services:
     restart: always
     ports:
       - "10000:10000"
-    environment:
-      - AZURITE_ACCOUNTS=devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
     command: >
       azurite
       --blobHost 0.0.0.0
@@ -108,7 +108,30 @@ services:
       retries: 30
     volumes:
       - azurite:/data
+      
+  ui:
+    build:
+      context: ../UI/IncidentReportingSystem.UI
+      dockerfile: Dockerfile
+    container_name: incidentreportingsystem-ui
+    restart: always
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      Api__BaseUrl: "${UI_API_BASEURL}"
+      EnableHttpsRedirection: "false"  
+      DataProtection__KeysDirectory: "/keys"
+    volumes:
+      - dpkeys:/keys 
+    ports:
+      - "${UI_PORT}:8080"  
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
 volumes:
   pgdata: {}
   azurite: {}
+  dpkeys: {} 

@@ -3,10 +3,27 @@ using IncidentReportingSystem.UI.Core.Http;
 using IncidentReportingSystem.UI.Core.Options;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+// Persist DataProtection keys to a shared folder (mounted from Docker)
+// so antiforgery/data-protection cookies survive restarts.
+var keysDir = builder.Configuration["DataProtection:KeysDirectory"] ?? "/keys";
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("IncidentReportingSystem.UI");
+
+// Make antiforgery cookie explicit (and “rotate” name once to drop old cookies safely)
+builder.Services.AddAntiforgery(o =>
+{
+    o.Cookie.Name = ".irs.xsrf";                 
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 
 // ---------- Options binding ----------
 builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection("Api"));
@@ -30,6 +47,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// Redirect to HTTPS only if explicitly enabled (containers use HTTP by default)
+if (app.Configuration.GetValue<bool>("EnableHttpsRedirection"))
+{
+    app.UseHttpsRedirection();
+}
 
 // ---------- Middleware pipeline ----------
 if (!app.Environment.IsDevelopment())
