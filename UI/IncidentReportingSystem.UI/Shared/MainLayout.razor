@@ -1,0 +1,22 @@
+﻿@inherits LayoutComponentBase
+
+<!--
+  Main application layout using MudBlazor providers.
+  Provides global theme, dialogs, and snackbars across pages.
+-->
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudAppBar Elevation="4">
+    <MudText Typo="Typo.h6">Incident UI</MudText>
+    <MudSpacer />
+    <MudText Color="Color.Secondary">v0</MudText>
+</MudAppBar>
+
+<MudContainer Class="pa-4">
+    <MudPaper Class="pa-4">
+        @Body
+    </MudPaper>
+</MudContainer>

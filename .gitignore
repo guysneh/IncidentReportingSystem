@@ -468,3 +468,8 @@ INTERNAL_PLAN.md
 .sonarqube/conf/vbnet/SonarLint.xml
 sonar-project.properties.ignore
 .azurite/
+
+**/wwwroot/dist/
+**/wwwroot/**/*.min.*
+**/wwwroot/**/*.map
+UI/IncidentReportingSystem.UI/appsettings.Development.json

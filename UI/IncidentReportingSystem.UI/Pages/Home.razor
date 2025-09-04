@@ -1,0 +1,26 @@
+﻿@page "/"
+
+@inject Microsoft.Extensions.Options.IOptions<ApiOptions> Options
+
+<!--
+  Simple smoke page to verify the app starts and base configuration is present.
+  Shows a warning banner if Api:BaseUrl is missing to avoid runtime surprises.
+-->
+
+<MudText Typo="Typo.h5">App is alive ✅</MudText>
+
+@if (MissingApiBaseUrl)
+{
+    <MudAlert Severity="Severity.Warning" Class="mt-4">
+        Api:BaseUrl is missing. Set it in appsettings or environment variables.
+    </MudAlert>
+}
+
+@code {
+    private bool MissingApiBaseUrl;
+
+    protected override void OnInitialized()
+    {
+        MissingApiBaseUrl = string.IsNullOrWhiteSpace(Options.Value.BaseUrl);
+    }
+}
