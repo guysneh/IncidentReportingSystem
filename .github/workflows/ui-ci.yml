@@ -1,23 +1,29 @@
-name: UI CI
+name: UI Manual Build/Test (production)
 
 on:
   workflow_dispatch:
-
-permissions:
-  checks: write
-  contents: read
-  pull-requests: write
+    inputs:
+      publish_artifact:
+        description: "Upload publish artifact (zip from dotnet publish)"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
 
 jobs:
   build-test:
+    name: Build & Test UI
     runs-on: ubuntu-latest
-    environment: production
-    defaults:
-      run:
-        working-directory: UI
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -25,10 +31,31 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        run: dotnet restore IncidentReportingSystem/IncidentReportingSystem.UI/IncidentReportingSystem.UI.csproj
+        working-directory: ui/IncidentReportingSystem.UI
+        run: dotnet restore
 
-      - name: Build
-        run: dotnet build IncidentReportingSystem/IncidentReportingSystem.UI/IncidentReportingSystem.UI.csproj -c Release --no-restore
+      - name: Build (Release)
+        working-directory: ui/IncidentReportingSystem.UI
+        run: dotnet build -c Release --no-restore
 
-      - name: Test (bUnit/xUnit)
-        run: dotnet test IncidentReportingSystem/IncidentReportingSystem.UI.Tests/IncidentReportingSystem.UI.Tests.csproj -c Release --no-build
+      - name: Test (xUnit/bUnit)
+        working-directory: ui/IncidentReportingSystem.UI.Tests
+        run: |
+          dotnet test -c Release --no-build `
+            --logger "trx;LogFileName=ui-tests.trx" `
+            --results-directory ../TestResults
+
+      - name: Publish (zip content)
+        if: ${{ github.event.inputs.publish_artifact == 'true' }}
+        working-directory: ui/IncidentReportingSystem.UI
+        run: |
+          dotnet publish -c Release -o ../out
+          echo "Publish directory: $GITHUB_WORKSPACE/ui/out"
+
+      - name: Upload artifact
+        if: ${{ github.event.inputs.publish_artifact == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-publish
+          path: ui/out/**
+          if-no-files-found: error
