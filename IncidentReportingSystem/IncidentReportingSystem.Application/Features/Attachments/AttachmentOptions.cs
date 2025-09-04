@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace IncidentReportingSystem.Infrastructure.Attachments
+namespace IncidentReportingSystem.Application.Features.Attachments
 {
     /// <summary>Options for attachment constraints. Bind from configuration section "Attachments".</summary>
     public sealed class AttachmentOptions
@@ -16,5 +16,10 @@ namespace IncidentReportingSystem.Infrastructure.Attachments
         {
             ".jpg", ".jpeg", ".png", ".pdf"
         };
+
+        /// <summary>
+        /// When true, the server will sanitize image files on Complete by stripping EXIF/ICC metadata and normalizing orientation.
+        /// </summary>
+        public bool SanitizeImages { get; set; } = false;
     }
 }

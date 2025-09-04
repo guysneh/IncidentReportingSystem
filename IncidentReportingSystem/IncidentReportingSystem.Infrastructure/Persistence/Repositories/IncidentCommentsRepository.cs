@@ -1,5 +1,6 @@
-﻿using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Application.Abstractions.Persistence;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Common.Models;
+using IncidentReportingSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
@@ -41,6 +42,23 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
         {
             _db.IncidentComments.Remove(c);
             return Task.CompletedTask;
+        }
+
+        /// <inheritdoc />
+        public async Task<PagedResult<IncidentComment>> ListPagedAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
+        {
+            var query = _db.IncidentComments.AsNoTracking()
+                .Where(x => x.IncidentId == incidentId);
+
+            var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+            var items = await query
+                .OrderByDescending(x => x.CreatedAtUtc)
+                .Skip(Math.Max(0, skip))
+                .Take(take <= 0 ? 50 : take)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            return new PagedResult<IncidentComment>(items, total, skip, take);
         }
     }
 }

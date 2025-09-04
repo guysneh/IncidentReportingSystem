@@ -39,7 +39,18 @@ namespace IncidentReportingSystem.Infrastructure.Persistence
             ArgumentNullException.ThrowIfNull(modelBuilder, nameof(modelBuilder));
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());       
+            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());
+            // Attachments - helpful composite indexes for common list queries
+            modelBuilder.Entity<Attachment>(b =>
+            {
+                b.HasIndex(a => new { a.ParentType, a.ParentId, a.CreatedAt })
+                    .HasDatabaseName("IX_Attachments_Parent_CreatedAt");
+                b.HasIndex(a => new { a.ParentType, a.ParentId, a.FileName })
+                    .HasDatabaseName("IX_Attachments_Parent_FileName");
+                b.HasIndex(a => new { a.ParentType, a.ParentId, a.Size })
+                    .HasDatabaseName("IX_Attachments_Parent_Size");
+            });
+
         }
     }
 }

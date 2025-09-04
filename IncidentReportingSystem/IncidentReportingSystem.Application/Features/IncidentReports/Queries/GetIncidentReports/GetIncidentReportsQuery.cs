@@ -1,4 +1,6 @@
-﻿using IncidentReportingSystem.Application.Persistence;
+﻿using IncidentReportingSystem.Application.Common.Models;
+using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using MediatR;
@@ -52,4 +54,4 @@ public record GetIncidentReportsQuery(
     IncidentSortField SortBy = IncidentSortField.CreatedAt,
 
     SortDirection Direction = SortDirection.Desc
-) : IRequest<IReadOnlyList<IncidentReport>>;
+) : IRequest<PagedResult<IncidentReportDto>>;

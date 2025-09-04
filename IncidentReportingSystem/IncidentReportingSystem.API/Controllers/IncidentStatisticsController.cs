@@ -14,6 +14,7 @@ namespace IncidentReportingSystem.API.Controllers;
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
+[Tags("Statistics")]
 public class IncidentStatisticsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -23,11 +24,15 @@ public class IncidentStatisticsController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>
-    /// Retrieves high-level incident statistics (e.g., counts per severity).
-    /// </summary>
+    /// <summary>Retrieves aggregated incident statistics (counts per severity, etc.).</summary>
+    /// <response code="200">Statistics returned successfully.</response>
+    /// <response code="401">Authentication required.</response>
+    /// <response code="403">Not authorized to read incidents.</response>
     [HttpGet]
     [Authorize(Policy = PolicyNames.CanReadIncidents)]
+    [ProducesResponseType(typeof(IncidentStatisticsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IncidentStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetIncidentStatisticsQuery(), cancellationToken).ConfigureAwait(false);

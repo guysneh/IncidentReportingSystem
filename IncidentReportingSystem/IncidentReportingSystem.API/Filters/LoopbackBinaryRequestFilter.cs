@@ -1,9 +1,10 @@
-﻿using IncidentReportingSystem.Infrastructure.Attachments;
+﻿using IncidentReportingSystem.Application.Features.Attachments;
+using IncidentReportingSystem.Infrastructure.Attachments;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace IncidentReportingSystem.API.Swagger;
+namespace IncidentReportingSystem.API.Filters;
 
 public sealed class LoopbackBinaryRequestFilter : IOperationFilter
 {

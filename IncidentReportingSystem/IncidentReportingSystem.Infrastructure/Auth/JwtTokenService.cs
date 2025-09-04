@@ -17,6 +17,13 @@ namespace IncidentReportingSystem.Infrastructure.Auth
             _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
+        /// <summary>
+        /// Generates a signed JWT containing:
+        /// - Custom user id claim, optional email, and role claims.
+        /// - OIDC-style personal name claims (given_name, family_name) when provided via <paramref name="extraClaims"/>.
+        /// - Exactly one Name claim: prefers extraClaims["name"] (display name), otherwise falls back to <paramref name="email"/>.
+        /// Expiration is controlled by Jwt:AccessTokenMinutes (or Jwt:ExpirationMinutes), defaulting to 60 minutes.
+        /// </summary>
         public (string token, DateTimeOffset expiresAtUtc) Generate(
             string userId,
             IEnumerable<string> roles,
@@ -35,42 +42,69 @@ namespace IncidentReportingSystem.Infrastructure.Auth
 
             var claims = new List<Claim> { new(ClaimTypesConst.UserId, userId) };
 
+            // Email (do NOT set Name yet)
             if (!string.IsNullOrWhiteSpace(email))
             {
                 claims.Add(new Claim(ClaimTypesConst.Email, email));
-                claims.Add(new Claim(ClaimTypesConst.Name, email));
             }
 
+            // Roles
             if (roles != null)
             {
                 foreach (var r in roles)
+                {
                     if (!string.IsNullOrWhiteSpace(r))
                         claims.Add(new Claim(ClaimTypesConst.Role, r));
+                }
             }
 
-            if (extraClaims != null)
+            // Helper: safe read from extraClaims
+            static string? GetNonEmpty(IDictionary<string, string>? dict, string key)
+            {
+                if (dict is null) return null;
+                return dict.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+                    ? value
+                    : null;
+            }
+
+            // Merge arbitrary extra claims (excluding reserved ones)
+            if (extraClaims is not null)
             {
                 foreach (var kv in extraClaims)
                 {
                     if (kv.Key is ClaimTypesConst.UserId or ClaimTypesConst.Email or ClaimTypesConst.Name or ClaimTypesConst.Role)
                         continue;
-                    claims.Add(new Claim(kv.Key, kv.Value));
+
+                    if (!string.IsNullOrWhiteSpace(kv.Value))
+                        claims.Add(new Claim(kv.Key, kv.Value));
                 }
             }
 
-            var expiresUtc = DateTime.UtcNow.AddMinutes(minutes);
+            // OIDC-style personal name claims
+            var givenName = GetNonEmpty(extraClaims, "given_name");
+            var familyName = GetNonEmpty(extraClaims, "family_name");
+            if (givenName is not null) claims.Add(new Claim("given_name", givenName));
+            if (familyName is not null) claims.Add(new Claim("family_name", familyName));
+
+            // Decide the single Name claim: prefer provided display name; fallback to email
+            var effectiveName = GetNonEmpty(extraClaims, "name") ?? email;
+            if (!string.IsNullOrWhiteSpace(effectiveName))
+                claims.Add(new Claim(ClaimTypesConst.Name, effectiveName));
+
+            // Expiration
+            var expiresAtUtc = DateTime.UtcNow.AddMinutes(minutes);
 
             var jwt = new JwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
                 notBefore: DateTime.UtcNow,
-                expires: expiresUtc,
+                expires: expiresAtUtc,
                 signingCredentials: creds
             );
 
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);
-            return (token, DateTime.SpecifyKind(expiresUtc, DateTimeKind.Utc));
+            return (token, DateTime.SpecifyKind(expiresAtUtc, DateTimeKind.Utc));
         }
     }
 }

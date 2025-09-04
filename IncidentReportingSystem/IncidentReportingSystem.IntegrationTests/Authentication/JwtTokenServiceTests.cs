@@ -111,5 +111,66 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
             act.Should().Throw<InvalidOperationException>()
                .WithMessage("*Jwt:Secret*");
         }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public void Generate_Adds_Oidc_Name_Claims_When_Provided()
+        {
+            var cfg = BuildConfig(new());
+            var svc = new JwtTokenService(cfg);
+
+            var extra = new Dictionary<string, string>
+            {
+                ["given_name"] = "Ada",
+                ["family_name"] = "Lovelace",
+                ["name"] = "Ada Lovelace"
+            };
+
+            var (token, _) = svc.Generate(
+                userId: Guid.NewGuid().ToString(),
+                roles: new[] { "User" },
+                email: "ada@example.com",
+                extraClaims: extra
+            );
+
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            jwt.Claims.Any(c => c.Type == "given_name" && c.Value == "Ada").Should().BeTrue();
+            jwt.Claims.Any(c => c.Type == "family_name" && c.Value == "Lovelace").Should().BeTrue();
+            jwt.Claims.Any(c => c.Type == "name" && c.Value == "Ada Lovelace").Should().BeTrue();
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public void Generate_Ignores_Empty_Or_Whitespace_Oidc_Name_Claims()
+        {
+            var cfg = BuildConfig(new());
+            var svc = new JwtTokenService(cfg);
+
+            var extra = new Dictionary<string, string>
+            {
+                ["given_name"] = " ", // whitespace → ignored
+                ["family_name"] = "",  // empty → ignored
+                ["name"] = "  "        // whitespace → ignored
+            };
+
+            var email = "user@example.com";
+            var (token, _) = svc.Generate(
+                userId: Guid.NewGuid().ToString(),
+                roles: new[] { "User" },
+                email: email,
+                extraClaims: extra
+            );
+
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+            // OIDC extras with empty/whitespace are ignored
+            jwt.Claims.Any(c => c.Type == "given_name").Should().BeFalse();
+            jwt.Claims.Any(c => c.Type == "family_name").Should().BeFalse();
+
+            // There should still be exactly one 'name' claim from the email fallback
+            var nameClaims = jwt.Claims.Where(c => c.Type == ClaimTypesConst.Name).ToList();
+            nameClaims.Should().ContainSingle();
+            nameClaims[0].Value.Should().Be(email);
+        }
     }
 }

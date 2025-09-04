@@ -5,7 +5,7 @@ using IncidentReportingSystem.IntegrationTests.Utils;
 using System.Net.Http.Json;
 using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 
-namespace IncidentReportingSystem.Tests.Integration.Auth;
+namespace IncidentReportingSystem.IntegrationTests.Auth;
 
 public class InvalidTokenTests : IClassFixture<CustomWebApplicationFactory>
 {

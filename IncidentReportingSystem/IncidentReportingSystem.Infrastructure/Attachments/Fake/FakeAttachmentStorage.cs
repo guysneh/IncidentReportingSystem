@@ -1,9 +1,12 @@
-﻿using System;
+﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using IncidentReportingSystem.Application.Abstractions.Attachments;
 
 namespace IncidentReportingSystem.Infrastructure.Attachments.Fake
 {
@@ -20,16 +23,41 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Fake
             public string ETag = Guid.NewGuid().ToString("N");
         }
 
-        private readonly ConcurrentDictionary<string, Obj> _storage = new();
+        private const string UploadBase = "https://fake-upload/";
 
-        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken cancellationToken)
+        private readonly ConcurrentDictionary<string, Obj> _storage = new();
+        private static readonly Regex SafeFileName = new(@"^[\w\-. ]+$", RegexOptions.Compiled);
+
+        public Task<CreateUploadSlotResult> CreateUploadSlotAsync(CreateUploadSlotRequest req, CancellationToken ct)
         {
-            var path = $"{req.PathPrefix}/{req.AttachmentId}/{req.FileName}";
-            _storage[path] = new Obj { Bytes = Array.Empty<byte>(), ContentType = req.ContentType, ETag = Guid.NewGuid().ToString("N") };
-            var expires = DateTimeOffset.UtcNow.AddMinutes(15);
-            var url = new Uri($"https://fake-upload/{path}");
-            return Task.FromResult(new CreateUploadSlotResult(path, url, expires));
+            if (req is null) throw new ArgumentNullException(nameof(req));
+            if (string.IsNullOrWhiteSpace(req.FileName)) throw new ArgumentException("FileName is required.", nameof(req));
+            if (string.IsNullOrWhiteSpace(req.ContentType)) throw new ArgumentException("ContentType is required.", nameof(req));
+            if (string.IsNullOrWhiteSpace(req.PathPrefix)) throw new ArgumentException("PathPrefix is required.", nameof(req));
+
+            var prefix = NormalizePrefix(req.PathPrefix);     
+            var fileName = NormalizeFileName(req.FileName);     
+            var storagePath = $"{prefix}/{req.AttachmentId:D}/{fileName}";
+
+            var uploadUrl = new Uri($"{UploadBase}upload?path={Uri.EscapeDataString(storagePath)}");
+            var expiresAt = DateTimeOffset.UtcNow.AddMinutes(10);
+
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["x-ms-blob-type"] = "BlockBlob"
+            };
+
+            return Task.FromResult(
+                new CreateUploadSlotResult(
+                    storagePath,
+                    uploadUrl,
+                    expiresAt,
+                    method: "PUT",
+                    headers
+                )
+            );
         }
+
 
         public Task<UploadedBlobProps?> TryGetUploadedAsync(string storagePath, CancellationToken cancellationToken)
         {
@@ -55,6 +83,36 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.Fake
         public void SimulateClientUpload(string storagePath, byte[] bytes, string contentType)
         {
             _storage[storagePath] = new Obj { Bytes = bytes, ContentType = contentType, ETag = Guid.NewGuid().ToString("N") };
+        }
+
+        private static string NormalizePrefix(string pathPrefix)
+        {
+            var s = pathPrefix.Replace('\\', '/').Trim();
+            while (s.StartsWith("/")) s = s[1..];
+            while (s.EndsWith("/")) s = s[..^1];
+            if (s.Contains("..", StringComparison.Ordinal)) throw new ArgumentException("Invalid PathPrefix.");
+            if (s.Length == 0) throw new ArgumentException("Invalid PathPrefix.");
+            return s;
+        }
+
+        private static string NormalizeFileName(string fileName)
+        {
+            var t = fileName.Trim();
+            if (t.Length == 0) throw new ArgumentException("Invalid FileName.");
+            if (!SafeFileName.IsMatch(t))
+            {
+                var sb = new StringBuilder(t.Length);
+                foreach (var ch in t)
+                    sb.Append(char.IsLetterOrDigit(ch) || ch is '.' or '-' or '_' or ' ' ? ch : '_');
+                t = sb.ToString();
+            }
+            if (t is "." or "..") throw new ArgumentException("Invalid FileName.");
+            return t;
+        }
+
+        public Task OverwriteAsync(string storagePath, Stream content, string contentType, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
     }
 }

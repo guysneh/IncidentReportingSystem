@@ -1,5 +1,6 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Common.Exceptions;
+using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
@@ -25,6 +26,20 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
             public Task<IReadOnlyList<IncidentComment>> ListAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
                 => Task.FromResult<IReadOnlyList<IncidentComment>>(Array.Empty<IncidentComment>());
 
+            // NEW: required by interface
+            public Task<PagedResult<IncidentComment>> ListPagedAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
+            {
+                var all = new List<IncidentComment>();
+                if (Stored is not null && Stored.IncidentId == incidentId)
+                    all.Add(Stored);
+
+                if (skip < 0) skip = 0;
+                if (take <= 0) take = 50;
+
+                var items = all.Skip(skip).Take(take).ToList();
+                return Task.FromResult(new PagedResult<IncidentComment>(items, all.Count, skip, take));
+            }
+
             public Task RemoveAsync(IncidentComment comment, CancellationToken cancellationToken)
             { Stored = null; return Task.CompletedTask; }
         }
@@ -47,6 +62,24 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
             public Task<IReadOnlyList<IncidentReport>> GetAsync(IncidentStatus? status = null, int skip = 0, int take = 50, IncidentCategory? category = null, IncidentSeverity? severity = null, string? searchText = null, DateTime? reportedAfter = null, DateTime? reportedBefore = null, IncidentSortField sortBy = IncidentSortField.CreatedAt, SortDirection direction = SortDirection.Desc, CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
+            }
+
+            // NEW: required by interface
+            public Task<PagedResult<IncidentReport>> GetPagedAsync(
+                IncidentStatus? status = null,
+                int skip = 0,
+                int take = 50,
+                IncidentCategory? category = null,
+                IncidentSeverity? severity = null,
+                string? searchText = null,
+                DateTime? reportedAfter = null,
+                DateTime? reportedBefore = null,
+                IncidentSortField sortBy = IncidentSortField.CreatedAt,
+                SortDirection direction = SortDirection.Desc,
+                CancellationToken cancellationToken = default)
+            {
+                var empty = Array.Empty<IncidentReport>();
+                return Task.FromResult(new PagedResult<IncidentReport>(empty, total: 0, skip, take));
             }
 
             public Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(IReadOnlyList<Guid> ids, IncidentStatus newStatus, CancellationToken ct)

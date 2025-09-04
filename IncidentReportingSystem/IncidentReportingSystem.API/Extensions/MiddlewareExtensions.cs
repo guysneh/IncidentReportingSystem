@@ -15,7 +15,10 @@ public static class MiddlewareExtensions
     {
         app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsEnvironment("Test"))
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseRouting();
 
         // Enable App Configuration only if provider was wired successfully
@@ -99,35 +102,30 @@ public static class MiddlewareExtensions
             return Results.Ok(new { AppConfigEnabled = enabled, Label = label, Sentinel = version, CacheSeconds = cache, SampleRatio = sampleRatio });
         }).AllowAnonymous().ExcludeFromDescription();
 
-        app.MapGet("/diagnostics/config/refresh-state", (ConfigRefreshState s) =>
-            Results.Ok(new { s.LastRefreshUtc })
-        ).AllowAnonymous().ExcludeFromDescription();
+        app.MapGet("/health", async (HealthCheckService svc, CancellationToken ct) =>
+        {
+            var report = await svc.CheckHealthAsync(ct);
 
-        app.MapPost("/diagnostics/config/force-refresh",
-            async (IConfigurationRefresherProvider refresherProvider) =>
+            var checksArray = report.Entries.Select(e => new
             {
-                foreach (var r in refresherProvider.Refreshers)
-                    await r.TryRefreshAsync();
-                return Results.Ok(new { forced = true, atUtc = DateTimeOffset.UtcNow });
-            }).AllowAnonymous().ExcludeFromDescription();
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                durationMs = e.Value.Duration.TotalMilliseconds
+            }).ToArray();
 
-        // Readiness: always 200 in Test, real health checks otherwise
-        if (app.Environment.IsEnvironment("Test"))
-        {
-            app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-               .AllowAnonymous()
-               .ExcludeFromDescription();
-        }
-        else
-        {
-            app.MapHealthChecks("/health")
-               .AllowAnonymous()
-               .ExcludeFromDescription();
-        }
+            return Results.Json(new
+            {
+                status = report.Status.ToString(),
+                checks = checksArray
+            });
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
 
         app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
-            .AllowAnonymous()
-            .ExcludeFromDescription();
+           .AllowAnonymous()
+           .ExcludeFromDescription();
 
         // CORS preflight catch-all
         app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.NoContent())

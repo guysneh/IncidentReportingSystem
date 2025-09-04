@@ -1,9 +1,13 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Attachments;
+using IncidentReportingSystem.Application.Abstractions.Logging;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Abstractions.Security;
+using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments.DevLoopback;
 using IncidentReportingSystem.Infrastructure.Attachments.Fake;
 using IncidentReportingSystem.Infrastructure.Attachments.Services;
+using IncidentReportingSystem.Infrastructure.Logging;
 using IncidentReportingSystem.Infrastructure.Persistence;
 using IncidentReportingSystem.Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +29,8 @@ namespace IncidentReportingSystem.API.Extensions
             services.AddScoped<IAttachmentRepository, AttachmentRepository>();
             services.AddScoped<IAttachmentParentReadService, AttachmentParentReadService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddSingleton<ISignedUrlService, SignedUrlService>();
+            services.AddSingleton<IAttachmentAuditService, AttachmentAuditService>();
 
             var storage = configuration["Attachments:Storage"];
             var useLoopback = string.Equals(storage, "Loopback", StringComparison.OrdinalIgnoreCase)

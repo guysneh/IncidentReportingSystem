@@ -1,5 +1,6 @@
-﻿using IncidentReportingSystem.Application.Persistence;
-using IncidentReportingSystem.Application.Abstractions.Persistence;
+﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Common.Models;
+using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,25 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
+        public async Task<PagedResult<IncidentReport>> GetPagedAsync(
+            IncidentStatus? status, int skip, int take, IncidentCategory? category, IncidentSeverity? severity,
+            string? searchText, DateTime? reportedAfter, DateTime? reportedBefore,
+            IncidentSortField sortBy, SortDirection direction, CancellationToken cancellationToken)
+        {
+            var query = BuildQuery(status, category, severity, searchText, reportedAfter, reportedBefore);
+            var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+            query = ApplySort(query, sortBy, direction);
+
+            var items = await query
+                .Skip(Math.Max(0, skip))
+                .Take(take <= 0 ? 50 : take)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            return new PagedResult<IncidentReport>(items, total, skip, take);
+        }
+
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<IncidentReport>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return await _context.IncidentReports.ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -130,6 +150,48 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
             // Adjust property name to your entity ( ModifiedAt )
             entity.SetModifiedAt(utcNow);
             // No SaveChanges here; the caller's unit of work will commit.
+        }
+
+        // --- helpers ---
+        private IQueryable<IncidentReport> BuildQuery(
+            IncidentStatus? status, IncidentCategory? category, IncidentSeverity? severity,
+            string? searchText, DateTime? reportedAfter, DateTime? reportedBefore)
+        {
+            IQueryable<IncidentReport> query = _context.IncidentReports.AsNoTracking();
+
+            if (status.HasValue) query = query.Where(i => i.Status == status.Value);
+            if (category.HasValue) query = query.Where(i => i.Category == category.Value);
+            if (severity.HasValue) query = query.Where(i => i.Severity == severity.Value);
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var s = searchText.Trim().ToLower();
+                query = query.Where(i =>
+                    i.Description.ToLower().Contains(s) ||
+                    i.Location.ToLower().Contains(s) ||
+                    i.ReporterId.ToString().Contains(s));
+            }
+
+            if (reportedAfter.HasValue) query = query.Where(i => i.ReportedAt >= reportedAfter.Value);
+            if (reportedBefore.HasValue) query = query.Where(i => i.ReportedAt <= reportedBefore.Value);
+
+            return query;
+        }
+
+        private static IQueryable<IncidentReport> ApplySort(IQueryable<IncidentReport> query, IncidentSortField sortBy, SortDirection direction)
+        {
+            return (sortBy, direction) switch
+            {
+                (IncidentSortField.ReportedAt, SortDirection.Desc) => query.OrderByDescending(i => i.ReportedAt),
+                (IncidentSortField.ReportedAt, SortDirection.Asc) => query.OrderBy(i => i.ReportedAt),
+                (IncidentSortField.CreatedAt, SortDirection.Desc) => query.OrderByDescending(i => i.CreatedAt),
+                (IncidentSortField.CreatedAt, SortDirection.Asc) => query.OrderBy(i => i.CreatedAt),
+                (IncidentSortField.Severity, SortDirection.Desc) => query.OrderByDescending(i => i.Severity),
+                (IncidentSortField.Severity, SortDirection.Asc) => query.OrderBy(i => i.Severity),
+                (IncidentSortField.Status, SortDirection.Desc) => query.OrderByDescending(i => i.Status),
+                (IncidentSortField.Status, SortDirection.Asc) => query.OrderBy(i => i.Status),
+                _ => query.OrderByDescending(i => i.CreatedAt)
+            };
         }
     }
 }

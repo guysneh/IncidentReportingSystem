@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IncidentReportingSystem.Application.Abstractions.Attachments;
 using IncidentReportingSystem.Infrastructure.Attachments.Storage;
+using IncidentReportingSystem.Infrastructure.Attachments.Sanitization;
 
 namespace IncidentReportingSystem.API.Extensions
 {
@@ -16,7 +17,7 @@ namespace IncidentReportingSystem.API.Extensions
             var publicEndpoint = config["Storage:Blob:PublicEndpoint"];       // optional
             var ttlMinutesStr = config["Storage:Blob:UploadSasTtlMinutes"];  // optional
             var ttlMinutes = int.TryParse(ttlMinutesStr, out var m) && m > 0 ? m : 15;
-
+            services.AddSingleton<IImageSanitizer, ImageSharpSanitizer>();
             if (mode.Equals("Azurite", StringComparison.OrdinalIgnoreCase))
             {
                 var options = new AzureBlobAttachmentStorage.Options(

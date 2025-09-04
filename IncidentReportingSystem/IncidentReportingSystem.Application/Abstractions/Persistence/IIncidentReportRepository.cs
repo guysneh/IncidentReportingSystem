@@ -1,3 +1,4 @@
+using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;
@@ -18,7 +19,22 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
            IncidentSortField sortBy = IncidentSortField.CreatedAt,
            SortDirection direction = SortDirection.Desc,
            CancellationToken cancellationToken = default);
-      
+
+        /// <summary>Returns paged incidents with total count.</summary>
+        Task<PagedResult<IncidentReport>> GetPagedAsync(
+            IncidentStatus? status = null,
+            int skip = 0,
+            int take = 50,
+            IncidentCategory? category = null,
+            IncidentSeverity? severity = null,
+            string? searchText = null,
+            DateTime? reportedAfter = null,
+            DateTime? reportedBefore = null,
+            IncidentSortField sortBy = IncidentSortField.CreatedAt,
+            SortDirection direction = SortDirection.Desc,
+            CancellationToken cancellationToken = default);
+
+
         Task<(int UpdatedCount, List<Guid> NotFound)> BulkUpdateStatusAsync(
             IReadOnlyList<Guid> ids,
             IncidentStatus newStatus,

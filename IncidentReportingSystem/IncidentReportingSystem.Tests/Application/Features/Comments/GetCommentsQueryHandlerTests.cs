@@ -1,4 +1,7 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
+using IncidentReportingSystem.Application.Common.Models;                
+using IncidentReportingSystem.Application.Features.Comments.Dtos;       
+using IncidentReportingSystem.Application.Features.Comments.Mappers;    
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
 using IncidentReportingSystem.Domain.Entities;
 
@@ -32,6 +35,19 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
                 return Task.FromResult<IReadOnlyList<IncidentComment>>(slice);
             }
 
+            // NEW: required by interface — now used by the handler
+            public Task<PagedResult<IncidentComment>> ListPagedAsync(Guid incidentId, int skip, int take, CancellationToken cancellationToken)
+            {
+                var filtered = Data.Where(x => x.IncidentId == incidentId).ToList();
+                filtered.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));
+
+                if (skip < 0) skip = 0;
+                if (take <= 0) take = 50;
+
+                var items = filtered.Skip(skip).Take(take).ToList();
+                return Task.FromResult(new PagedResult<IncidentComment>(items, total: filtered.Count, skip, take));
+            }
+
             public Task RemoveAsync(IncidentComment comment, CancellationToken cancellationToken)
                 => Task.CompletedTask;
         }
@@ -47,11 +63,14 @@ namespace IncidentReportingSystem.Tests.Application.Features.Comments
             await repo.AddAsync(new IncidentComment { Id = Guid.NewGuid(), IncidentId = incidentId, UserId = Guid.NewGuid(), Text = "c2", CreatedAtUtc = DateTime.UtcNow.AddSeconds(-1) }, CancellationToken.None);
 
             var handler = new ListCommentsQueryHandler(repo);
-            var list = await handler.Handle(new ListCommentsQuery(incidentId, Skip: 0, Take: 2), CancellationToken.None);
+            var page = await handler.Handle(new ListCommentsQuery(incidentId, Skip: 0, Take: 2), CancellationToken.None);
 
-            Assert.Equal(2, list.Count);
-            Assert.Equal("c2", list[0].Text);
-            Assert.Equal("c1", list[1].Text);
+            Assert.Equal(2, page.Items.Count);
+            Assert.Equal("c2", page.Items[0].Text);
+            Assert.Equal("c1", page.Items[1].Text);
+            Assert.Equal(3, page.Total);
+            Assert.Equal(0, page.Skip);
+            Assert.Equal(2, page.Take);
         }
     }
 }

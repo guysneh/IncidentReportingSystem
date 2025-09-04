@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using IncidentReportingSystem.API.Contracts.Paging;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.BulkUpdateIncidentStatus;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
@@ -21,6 +22,7 @@ namespace IncidentReportingSystem.API.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
+    [Tags("Incident Reports")]
     public class IncidentReportsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -42,6 +44,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize(Policy = PolicyNames.CanCreateIncident)]
         [HttpPost]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> Create([FromBody] CreateIncidentReportCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command,cancellationToken).ConfigureAwait(false);
@@ -85,7 +90,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// </summary>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<IncidentReportDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedResponse<IncidentReportDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(
             IncidentStatus? status, int skip = 0, int take = 50,
             IncidentCategory? category = null, IncidentSeverity? severity = null,
@@ -97,10 +102,18 @@ namespace IncidentReportingSystem.API.Controllers
                 status, skip, take, category, severity, searchText,
                 reportedAfter, reportedBefore, sortBy, direction);
 
-            var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result.Select(x => x.ToDto()));
-        }
+            var result = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
+            var response = new PagedResponse<IncidentReportDto>
+            {
+                Total = result.Total,
+                Skip = result.Skip,
+                Take = result.Take,
+                Items = result.Items
+            };
+
+            return Ok(response);
+        }
 
         /// <summary>
         /// Updates the status of an existing incident report.
@@ -112,7 +125,9 @@ namespace IncidentReportingSystem.API.Controllers
         [Authorize(Policy = PolicyNames.CanManageIncidents)]
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] IncidentStatus newStatus, CancellationToken cancellationToken)
         {
             await _mediator.Send(new UpdateIncidentStatusCommand(id, newStatus), cancellationToken).ConfigureAwait(false);

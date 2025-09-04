@@ -1,8 +1,14 @@
-﻿using System.Net;
-using System.Net.Http.Json;
+﻿using FluentAssertions;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Users.Commands.RegisterUser;
+using IncidentReportingSystem.Infrastructure.Persistence;
 using IncidentReportingSystem.IntegrationTests.Utils;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Xunit;
 using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplicationFactory;
 
@@ -96,6 +102,78 @@ namespace IncidentReportingSystem.IntegrationTests.Authentication
                 new { Email = $"inv.{Guid.NewGuid():N}@example.com", Password = "P@ssw0rd!", Roles = new[] { "Nope" } });
 
             Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_Accepts_FirstAndLastName_And_Persists_Trimmed_With_DisplayName()
+        {
+            var email = $"eve_{Guid.NewGuid():N}@example.com";
+            var payload = new RegisterUserCommand(email, "P@ssw0rd!", new[] { "User" }, "  Eve  ", "  Adams ");
+
+            var resp = await _client.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"), payload);
+            Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Email == email);
+
+            user.FirstName.Should().Be("Eve");
+            user.LastName.Should().Be("Adams");
+            user.DisplayName.Should().Be("Eve Adams"); // default computed when no explicit DisplayName provided
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_NoNames_Persists_DisplayName_As_Email()
+        {
+            var email = $"nonames_{Guid.NewGuid():N}@example.com";
+            var payload = new RegisterUserCommand(email, "P@ssw0rd!", new[] { "User" }, null, null);
+
+            var resp = await _client.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"), payload);
+            Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Email == email);
+
+            user.FirstName.Should().BeNull();
+            user.LastName.Should().BeNull();
+            user.DisplayName.Should().Be(email); // email fallback
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_Returns400_On_Multiple_Roles()
+        {
+            var email = $"multi_{Guid.NewGuid():N}@example.com";
+            var payload = new RegisterUserCommand(email, "P@ssw0rd!", new[] { "User", "Admin" });
+
+            var resp = await _client.PostAsJsonAsync(RouteHelper.R(_factory, "Auth/register"), payload);
+
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_Legacy_SingleRole_Works()
+        {
+            var client = _factory.CreateClient();
+            var res = await client.PostAsJsonAsync(
+                RouteHelper.R(_factory, "api/v1/auth/register"),
+                new { Email = $"{Guid.NewGuid():N}@example.com", Password = "P@ssw0rd!", Role = "User" });
+            res.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task Register_New_MultiRoles_Works()
+        {
+            var client = _factory.CreateClient();
+            var res = await client.PostAsJsonAsync(
+                RouteHelper.R(_factory, "api/v1/auth/register"),
+                new { Email = $"{Guid.NewGuid():N}@example.com", Password = "P@ssw0rd!", Roles = new[] { "User" }, FirstName = "A", LastName = "B" });
+            res.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
         }
     }
 }

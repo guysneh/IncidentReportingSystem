@@ -11,7 +11,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.OpenA
     public sealed record OpenAttachmentStreamQuery(Guid AttachmentId) : IRequest<OpenAttachmentStreamResponse>;
 
     /// <summary>Result of opening an attachment stream.</summary>
-    public sealed record OpenAttachmentStreamResponse(Stream Stream, string ContentType, string FileName);
+    public sealed record OpenAttachmentStreamResponse(Stream Stream, string ContentType, string FileName, string ETag);
 
 
 }

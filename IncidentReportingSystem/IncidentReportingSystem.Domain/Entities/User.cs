@@ -45,6 +45,8 @@ namespace IncidentReportingSystem.Domain.Entities
 
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
+        public DateTime? ModifiedAtUtc { get; set; }
+
         /// <summary>Validates and assigns roles using the centralized Roles.Allowed set (case-insensitive).</summary>
         public void SetRoles(IEnumerable<string> roles)
         {
@@ -63,6 +65,21 @@ namespace IncidentReportingSystem.Domain.Entities
                 throw new ArgumentException("One or more roles are invalid.", nameof(roles));
 
             Roles = distinct;
+        }
+
+        /// <summary>
+        /// Updates first/last name, recomputes display name, touches ModifiedAt.
+        /// Invariants for names are enforced here at the domain level.
+        /// </summary>
+        public void UpdateNames(string firstName, string lastName)
+        {
+            FirstName = firstName;
+            LastName = lastName;
+
+            DisplayName = string.Join(" ", new[] { firstName, lastName }
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            ModifiedAtUtc = DateTime.UtcNow;
         }
     }
 }

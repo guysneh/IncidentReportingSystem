@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Xunit.Abstractions;
 
+namespace IncidentReportingSystem.IntegrationTests.IncidentReports;
+
 public class BulkEndpointIdempotencyBehaviorTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;

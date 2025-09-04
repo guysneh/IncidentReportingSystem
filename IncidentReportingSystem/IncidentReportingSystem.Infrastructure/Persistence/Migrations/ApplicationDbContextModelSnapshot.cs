@@ -73,6 +73,15 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
 
                     b.HasIndex("ParentType", "ParentId");
 
+                    b.HasIndex("ParentType", "ParentId", "CreatedAt")
+                        .HasDatabaseName("IX_Attachments_Parent_CreatedAt");
+
+                    b.HasIndex("ParentType", "ParentId", "FileName")
+                        .HasDatabaseName("IX_Attachments_Parent_FileName");
+
+                    b.HasIndex("ParentType", "ParentId", "Size")
+                        .HasDatabaseName("IX_Attachments_Parent_Size");
+
                     b.ToTable("attachments", (string)null);
                 });
 
@@ -173,6 +182,9 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
                     b.Property<string>("LastName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NormalizedEmail")
                         .IsRequired()

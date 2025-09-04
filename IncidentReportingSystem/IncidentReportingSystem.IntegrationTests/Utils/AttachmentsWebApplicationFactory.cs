@@ -40,14 +40,18 @@ public class AttachmentsWebApplicationFactory : CustomWebApplicationFactory
         builder.ConfigureServices(services =>
         {
             // 1) Force Loopback for ALL attachment ops (Start/Complete/Upload) in tests:
-            var toRemove = services.Where(d => d.ServiceType == typeof(IAttachmentStorage)).ToList();
+            var toRemove = services
+                .Where(d => d.ServiceType == typeof(IAttachmentStorage)
+                         || d.ServiceType == typeof(LoopbackAttachmentStorage))
+                .ToList();
             foreach (var d in toRemove) services.Remove(d);
 
+            // single, shared instance for both controller and handlers
             services.AddSingleton<LoopbackAttachmentStorage>();
             services.AddSingleton<IAttachmentStorage>(sp => sp.GetRequiredService<LoopbackAttachmentStorage>());
 
             using var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
+            using var scope = sp.CreateScope(); ;
 
             var cfg = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 

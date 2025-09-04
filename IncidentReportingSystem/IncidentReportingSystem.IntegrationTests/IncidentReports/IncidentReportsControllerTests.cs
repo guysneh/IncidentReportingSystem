@@ -12,7 +12,7 @@ using static IncidentReportingSystem.IntegrationTests.Utils.CustomWebApplication
 using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 
-namespace IncidentReportingSystem.Tests.Integration;
+namespace IncidentReportingSystem.IntegrationTests;
 
 public class IncidentReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
 {
@@ -306,6 +306,22 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
         var admin = _factory.AsAdmin();
         var res = await admin.PutAsJsonAsync(RouteHelper.R(_factory, $"incidentreports/{Guid.NewGuid()}/status"), "Closed");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact(DisplayName = "GET /incidentreports returns PagedResponse contract")]
+    [Trait("Category", "Integration")]
+    public async Task GetIncidentReports_ShouldReturnPagedResponseContract()
+    {
+        var command = GenerateValidCommand();
+        using var _client = _factory.AsUser();
+        await _client.PostAsJsonAsync(RouteHelper.R(_factory, "incidentreports"), command, _jsonOptions);
+
+        var response = await _client.GetAsync(RouteHelper.R(_factory, "incidentreports"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var json = await response.Content.ReadAsStringAsync();
+        json.Should().Contain("\"total\"");
+        json.Should().Contain("\"items\"");
     }
 }
 

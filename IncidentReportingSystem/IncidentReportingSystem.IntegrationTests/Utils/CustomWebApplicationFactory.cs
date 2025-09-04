@@ -17,6 +17,7 @@ namespace IncidentReportingSystem.IntegrationTests.Utils;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    public TestLoggerProvider Provider { get; } = new();
     public string BasePath { get; private set; } = "/";
     public string ApiVersionSegment { get; private set; } = "v1";
     public IReadOnlyList<string> ApiVersions { get; private set; } = Array.Empty<string>();
@@ -24,7 +25,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Test");
-
+      
         builder.ConfigureAppConfiguration((context, cfg) =>
         {
             cfg.Sources.Clear();
@@ -32,7 +33,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
                .AddEnvironmentVariables();
+
+            // Force an allowed origin for tests
+            cfg.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Cors:AllowedOrigins:0"] = "http://example.com"
+            });
         });
+
 
         builder.ConfigureLogging(lb =>
         {

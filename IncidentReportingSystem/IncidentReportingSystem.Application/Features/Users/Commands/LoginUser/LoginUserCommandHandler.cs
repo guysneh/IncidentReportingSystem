@@ -2,11 +2,13 @@
 using IncidentReportingSystem.Application.Abstractions.Security;
 using IncidentReportingSystem.Application.Common.Exceptions;
 using MediatR;
+using System.Collections.Generic;
 
 namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
 {
     /// <summary>
-    /// Verifies credentials and issues a JWT through the IJwtTokenService port.
+    /// Verifies credentials and issues a JWT through the <see cref="IJwtTokenService"/> port.
+    /// Enriches the token with OIDC-style name claims built from the persisted user profile.
     /// </summary>
     public sealed class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginResultDto>
     {
@@ -21,6 +23,7 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
             _jwt = jwt;
         }
 
+        /// <inheritdoc />
         public async Task<LoginResultDto> Handle(LoginUserCommand request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -29,13 +32,25 @@ namespace IncidentReportingSystem.Application.Features.Users.Commands.LoginUser
             var user = await _users.FindByNormalizedEmailAsync(normalized, cancellationToken).ConfigureAwait(false);
             if (user is null)
                 throw new InvalidCredentialsException();
+
             if (!_hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt))
                 throw new InvalidCredentialsException();
-            var ok = _hasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt);
-            if (!ok)
-                throw new InvalidCredentialsException();
 
-            var (token, expiresAtUtc) = _jwt.Generate(user.Id.ToString(), user.Roles, user.Email);
+            // Build OIDC-style claims from persisted profile
+            var extra = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (!string.IsNullOrWhiteSpace(user.FirstName))
+                extra["given_name"] = user.FirstName!;
+            if (!string.IsNullOrWhiteSpace(user.LastName))
+                extra["family_name"] = user.LastName!;
+            if (!string.IsNullOrWhiteSpace(user.DisplayName))
+                extra["name"] = user.DisplayName!; // JwtTokenService will fallback to email if not provided
+
+            var (token, expiresAtUtc) = _jwt.Generate(
+                userId: user.Id.ToString(),
+                roles: user.Roles,
+                email: user.Email,
+                extraClaims: extra);
+
             return new LoginResultDto(token, expiresAtUtc);
         }
     }

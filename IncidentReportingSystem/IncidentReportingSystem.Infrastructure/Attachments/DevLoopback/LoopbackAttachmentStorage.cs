@@ -54,7 +54,18 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             var uploadUrl = new Uri(
                 $"{_publicBaseUrl}{basePart}{apiSegment}/{_apiVersion}/attachments/_loopback/upload?path={Uri.EscapeDataString(storagePath)}");
 
-            return Task.FromResult(new CreateUploadSlotResult(storagePath, uploadUrl, DateTimeOffset.UtcNow.AddMinutes(10)));
+            // Loopback doesn't require any special headers; UI still gets a definitive method.
+            var headers = (IReadOnlyDictionary<string, string>)new Dictionary<string, string>();
+
+            return Task.FromResult(
+                new CreateUploadSlotResult(
+                    storagePath,
+                    uploadUrl,
+                    DateTimeOffset.UtcNow.AddMinutes(10),
+                    method: "PUT",
+                    headers: new Dictionary<string, string>() // loopback needs no special headers
+                )
+            );
         }
 
         // ---------- Upload endpoints write to disk ----------
@@ -68,6 +79,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
             await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
             await body.CopyToAsync(fs, 81920, ct);
+            await fs.FlushAsync(ct);
 
             var normalized = NormalizeContentType(contentType, relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
@@ -83,6 +95,7 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
 
             await using var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
             await file.CopyToAsync(fs, ct);
+            await fs.FlushAsync(ct);
 
             var normalized = NormalizeContentType(file.ContentType ?? "application/octet-stream", relativePath);
             await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
@@ -155,6 +168,22 @@ namespace IncidentReportingSystem.Infrastructure.Attachments.DevLoopback
             var meta = full + ".contentType";
             if (File.Exists(meta)) File.Delete(meta);
             return Task.CompletedTask;
+        }
+
+        public async Task OverwriteAsync(string storagePath, Stream content, string contentType, CancellationToken ct)
+        {
+            var full = CanonicalizeUnderRoot(_root, storagePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+
+            await using (var fs = new FileStream(full, FileMode.Create, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                content.Position = 0;
+                await content.CopyToAsync(fs, 81920, ct);
+                await fs.FlushAsync(ct);
+            }
+
+            var normalized = NormalizeContentType(contentType, storagePath);
+            await File.WriteAllTextAsync(full + ".contentType", normalized, ct);
         }
 
 
