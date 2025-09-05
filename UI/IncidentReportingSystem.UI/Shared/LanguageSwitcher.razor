@@ -1,21 +1,14 @@
-﻿@using System.Globalization
-@inject IJSRuntime JS
+﻿@inject IJSRuntime JS
 @inject NavigationManager Nav
 
-<div class="segmented">
-    <button class="seg @Active("en")" @onclick='() => SetCulture("en")'>EN</button>
-    <button class="seg @Active("de")" @onclick='() => SetCulture("de")'>DE</button>
-    <button class="seg @Active("he")" @onclick='() => SetCulture("he")'>עב</button>
-</div>
+<button class="seg" @onclick='() => SetLang("en")'>EN</button>
+<button class="seg" @onclick='() => SetLang("de")'>DE</button>
+<button class="seg" @onclick='() => SetLang("he")'>עבר</button>
 
 @code {
-    string Active(string c) => (Current == c) ? "active" : "";
-    string Current => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-
-    async Task SetCulture(string c)
+    private async Task SetLang(string culture)
     {
-        await JS.InvokeVoidAsync("irsCulture.set", c);
-
-        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+        await JS.InvokeVoidAsync("irsCulture.set", culture);
+        Nav.NavigateTo(Nav.Uri, new NavigationOptions { ForceLoad = true, ReplaceHistoryEntry = true });
     }
 }

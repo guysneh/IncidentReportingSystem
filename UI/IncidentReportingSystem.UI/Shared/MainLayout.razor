@@ -42,4 +42,19 @@
         var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
         try { await JS.InvokeVoidAsync("irsRtl.applyByCulture", culture); } catch { }
     }
+
+    protected override void OnInitialized()
+    {
+        AuthState.Changed += OnAuthChanged;
+    }
+    public void Dispose()
+    {
+        AuthState.Changed -= OnAuthChanged;
+    }
+    private Task OnAuthChanged()
+    {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
 }

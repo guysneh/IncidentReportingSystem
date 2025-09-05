@@ -171,7 +171,8 @@
             var ok = await Auth.SignInAsync(login.Email, login.Password);
             if (ok)
             {
-                Nav.NavigateTo("/account");
+                Nav.NavigateTo("/account", forceLoad:true);
+                return;
             }
             else
             {
@@ -182,7 +183,7 @@
         {
             errorKey = "Auth.SignIn.Failed";
         }
-        finally { busyLogin = false; }
+        finally { busyLogin = false; StateHasChanged(); }
     }
 
 
@@ -206,12 +207,12 @@
                 LastName: register.LastName
             );
 
-            var ok = await Auth.RegisterAsync(req.Email,req.Password,req.Role,req.FirstName,req.LastName);
-            if (ok)
+            try
             {
-                Nav.NavigateTo("/account");
+                await Auth.RegisterAsync(req.Email, req.Password, req.Role, req.FirstName, req.LastName);
+                Nav.NavigateTo("/account", forceLoad: true);
             }
-            else
+            catch (Exception)
             {
                 errorKey = "Auth.Register.Failed";
             }

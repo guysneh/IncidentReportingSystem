@@ -383,6 +383,16 @@ html[dir="rtl"] .ms-2 {
     background: #ffcd00;
     color: #1a1a1a;
 }
+.role-other {
+    background: #6c757d;
+    color: #fff;
+}
+
+/* optional: force LTR for emails even under RTL UI */
+.force-ltr {
+    direction: ltr;
+    unicode-bidi: bidi-override;
+}
 /* brand amber with high contrast */
 
 html[dir="rtl"] .account-dl {

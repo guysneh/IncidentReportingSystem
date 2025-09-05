@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,70 +11,47 @@ namespace IncidentReportingSystem.UI.Core.Auth
         public DateTimeOffset? ExpiresAtUtc { get; private set; }
         public bool IsHydrated { get; private set; }
 
-        // Async event
+        // Async event ONLY — all handlers must be Func<Task>
         public event Func<Task>? Changed;
 
-        public Task SetAsync(string? token)
+        // TCS to allow pages to await hydration
+        private readonly TaskCompletionSource<bool> _hydratedTcs =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task HydrateAsync(string? token, DateTimeOffset? expUtc)
         {
             AccessToken = string.IsNullOrWhiteSpace(token) ? null : token;
-            IsHydrated = true;         
-            Changed?.Invoke();
-            return Task.CompletedTask;
-        }
-
-        public Task ClearAsync()
-        {
-            AccessToken = null;
-            IsHydrated = true;         
-            Changed?.Invoke();
-            return Task.CompletedTask;
-        }
-
-        public async Task HydrateAsync(string? token, DateTimeOffset? exp)
-        {
-            AccessToken = token;
-            ExpiresAtUtc = exp;
-            IsHydrated = true;               // ← important: end hydration even when token is null
+            ExpiresAtUtc = expUtc;
+            IsHydrated = true;
+            _hydratedTcs.TrySetResult(true);
             await RaiseChangedAsync();
         }
 
-        private async Task RaiseChangedAsync()
-        {
-            var handlers = Changed;
-            if (handlers is null) return;
+        public Task SetAsync(string? token) => HydrateAsync(token, ExpiresAtUtc);
+        public Task ClearAsync() => HydrateAsync(null, null);
 
-            foreach (Func<Task> h in handlers.GetInvocationList())
-            {
-                try { await h(); } catch { /* do not break others */ }
-            }
+        public Task WaitForHydrationAsync(TimeSpan? timeout = null)
+        {
+            if (IsHydrated) return Task.CompletedTask;
+            return timeout is null
+                ? _hydratedTcs.Task
+                : Task.WhenAny(_hydratedTcs.Task, Task.Delay(timeout.Value));
         }
 
-        public async Task<bool> WaitForHydrationAsync(TimeSpan? timeout = null, CancellationToken ct = default)
+        private Task RaiseChangedAsync()
         {
-            if (IsHydrated) return true;
+            var handlers = Changed;
+            if (handlers is null) return Task.CompletedTask;
 
-            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tasks = handlers.GetInvocationList()
+                                .Cast<Func<Task>>()
+                                .Select(h =>
+                                {
+                                    try { return h(); }
+                                    catch { return Task.CompletedTask; }
+                                });
 
-            Func<Task>? handler = null;
-            handler = () =>
-            {
-                tcs.TrySetResult(true);
-                Changed -= handler;
-                return Task.CompletedTask;
-            };
-            Changed += handler;
-
-            Task task = tcs.Task;
-
-            if (timeout.HasValue)
-            {
-                var delay = Task.Delay(timeout.Value, ct);
-                var done = await Task.WhenAny(task, delay);
-                return done == task && tcs.Task.IsCompleted;
-            }
-
-            await task;
-            return true;
+            return Task.WhenAll(tasks);
         }
     }
 }

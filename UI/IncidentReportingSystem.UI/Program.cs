@@ -43,18 +43,21 @@ static string Slash(string u) => string.IsNullOrWhiteSpace(u) ? u : (u.EndsWith(
 
 builder.Services.AddTransient<AuthHeaderHandler>();
 
-builder.Services.AddHttpClient("Api", (sp, http) =>
-{
-    var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
-    http.BaseAddress = new Uri(api.BaseUrl.EndsWith("/") ? api.BaseUrl : api.BaseUrl + "/");
-    http.Timeout = TimeSpan.FromSeconds(30);
-}).AddHttpMessageHandler<AuthHeaderHandler>();  
 builder.Services.AddHttpClient("ApiPublic", (sp, http) =>
 {
     var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
-    http.BaseAddress = new Uri(api.BaseUrl.EndsWith("/") ? api.BaseUrl : api.BaseUrl + "/");
+    http.BaseAddress = new Uri(api.BaseUrl.TrimEnd('/') + "/");
     http.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler(() => new ProblemDetailsHandler());
+
+builder.Services.AddHttpClient("Api", (sp, http) =>
+{
+    var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    http.BaseAddress = new Uri(api.BaseUrl.TrimEnd('/') + "/");
+    http.Timeout = TimeSpan.FromSeconds(30);
+}).AddHttpMessageHandler<AuthHeaderHandler>()
+  .AddHttpMessageHandler(() => new ProblemDetailsHandler());
+
 
 // ***** THIS IS THE IMPORTANT PART FOR GUARANTEED INTERACTIVITY *****
 builder.Services.AddRazorPages();

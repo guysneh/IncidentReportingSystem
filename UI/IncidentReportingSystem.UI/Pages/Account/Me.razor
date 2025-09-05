@@ -1,102 +1,135 @@
 ﻿@page "/account"
-@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+@using System.Globalization
+@using IncidentReportingSystem.UI.Core.Auth
 @inject IAuthService Auth
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
-@inject IAppTexts T
+@inject AuthState AuthState
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@rendermode RenderMode.InteractiveServer
 
-@if (!AuthState.IsHydrated || Busy)
-{
-    <div class="text-center py-5"><div class="spinner-border" role="status"></div></div>
-}
-else if (ErrorKey is not null)
-{
-    <div class="alert alert-danger">@T[ErrorKey]</div>
-}
-else if (me is not null)
-{
-    <div class="container py-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card auth-card p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h2 class="h4 m-0">@T["Account.Title"]</h2>
-                        @if (me.Roles?.Length > 0)
-                        {
-                            <span class="badge @RoleBadgeClass(PrimaryRole(me))">@PrimaryRole(me)</span>
-                        }
+<div dir="@(CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr")">
+
+    @if (!AuthState.IsHydrated || Busy)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorKey))
+    {
+        <div class="container py-4">
+            <div class="alert alert-danger">@T[ErrorKey]</div>
+        </div>
+    }
+    else if (me is not null)
+    {
+        <div class="container py-4 text-start">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-10 col-lg-8">
+                    <div class="card auth-card p-4 position-relative">
+                        <!-- colored role badge in the corner -->
+                        <span class="@RoleBadgeClass(PrimaryRole())"
+                              title="@string.Join(", ", me.Roles ?? Array.Empty<string>())">
+                            @PrimaryRole()
+                        </span>
+
+                        <h2 class="h4 m-0 pe-5 mb-3">@T["Account.Title"]</h2>
+
+                        <dl class="row mb-0">
+                            <dt class="col-5 col-sm-4 text-muted">@T["Field.Email"]</dt>
+                            <dd class="col-7 col-sm-8 force-ltr">@me.Email</dd>
+
+                            <dt class="col-5 col-sm-4 text-muted">@T["Field.Name"]</dt>
+                            <dd class="col-7 col-sm-8">@((me.DisplayName ?? $"{me.FirstName} {me.LastName}").Trim())</dd>
+
+                            <dt class="col-5 col-sm-4 text-muted">@T["Field.Roles"]</dt>
+                            <dd class="col-7 col-sm-8">@string.Join(", ", me.Roles ?? Array.Empty<string>())</dd>
+                        </dl>
                     </div>
-
-                    <dl class="row">
-                        <dt class="col-4 text-muted">@T["Field.Email"]</dt>
-                        <dd class="col-8">@me.Email</dd>
-                        <dt class="col-4 text-muted">@T["Field.Name"]</dt>
-                        <dd class="col-8">@((me.DisplayName ?? $"{me.FirstName} {me.LastName}").Trim())</dd>
-                        <dt class="col-4 text-muted">@T["Field.Roles"]</dt>
-                        <dd class="col-8">@string.Join(", ", me.Roles ?? Array.Empty<string>())</dd>
-                    </dl>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+
+</div>
 
 @code {
-    bool Busy;
-    string? ErrorKey;
-    AuthModels.WhoAmI? me;
-    bool _loaded;
+    private AuthModels.WhoAmI? me;
+    private bool Busy;              // start false; spinner is gated by IsHydrated
+    private string? ErrorKey;
+    private bool _loaded;
 
     protected override void OnInitialized()
     {
         AuthState.Changed += OnAuthChanged;
     }
-    public void Dispose() => AuthState.Changed -= OnAuthChanged;
+
+    public void Dispose()
+    {
+        AuthState.Changed -= OnAuthChanged;   // ✅ implements IDisposable.Dispose()
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // hydrate complete -> fetch profile once
-        if ((firstRender || !_loaded) && AuthState.IsHydrated)
-            await EnsureLoadedAsync();
+        if (firstRender)
+            await TryLoadAsync();
     }
 
-    private async Task OnAuthChanged()
+    private Task OnAuthChanged()
     {
-        if (AuthState.IsHydrated && !_loaded)
-            await EnsureLoadedAsync();
-        await InvokeAsync(StateHasChanged);
+        return InvokeAsync(TryLoadAsync); 
     }
 
-    async Task EnsureLoadedAsync()
+    private async Task TryLoadAsync()
     {
         if (_loaded || Busy) return;
-        Busy = true; ErrorKey = null;
+        if (!AuthState.IsHydrated) return;    // wait for AuthHydrator to finish
+
+        if (string.IsNullOrWhiteSpace(AuthState.AccessToken))
+        {
+            ErrorKey = "Account.NotAuthorized.Body";
+            Busy = false;
+            StateHasChanged();
+            return;
+        }
+
+        Busy = true;
+        ErrorKey = null;
+        StateHasChanged();
+
         try
         {
-            if (string.IsNullOrWhiteSpace(AuthState.AccessToken))
-            {
-                ErrorKey = "Account.NotAuthorized.Body";
-                return;  
-            }
-
             me = await Auth.MeAsync();
+
             if (me is null)
             {
-                await Task.Delay(150);            // small race guard on first connect
+                // tiny retry to cover header injection race after reload/language switch
+                await Task.Delay(150);
                 me = await Auth.MeAsync();
             }
-            if (me is null) ErrorKey = "Account.NotAuthorized.Body";
-            else _loaded = true;
+
+            _loaded = me is not null;
+            if (!_loaded) ErrorKey = "Account.NotAuthorized.Body";
         }
-        finally { Busy = false; StateHasChanged(); }
+        catch
+        {
+            ErrorKey = "Account.NotAuthorized.Body";
+        }
+        finally
+        {
+            Busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
-    static string PrimaryRole(AuthModels.WhoAmI m)
-      => m.Roles?.FirstOrDefault() ?? "User";
+    // === helpers for the colored role badge ===
+    private string PrimaryRole() => me?.Roles?.FirstOrDefault() ?? "User";
 
-    static string RoleBadgeClass(string r) => r switch
-    {
-        "Admin" => "text-bg-danger",
-        "User" => "text-bg-primary",
-        _ => "text-bg-secondary"
-    };
+    private static string RoleBadgeClass(string role)
+        => role.ToLowerInvariant() switch
+        {
+            "admin" => "role-badge role-admin",
+            "user" => "role-badge role-user",
+            _ => "role-badge role-other"
+        };
 }

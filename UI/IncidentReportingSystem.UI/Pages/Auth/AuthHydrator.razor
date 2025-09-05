@@ -1,23 +1,15 @@
-﻿@inject IJSRuntime JS
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
+﻿@* Pages/Auth/AuthHydrator.razor *@
+@inject IJSRuntime JS
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState Auth
 
 @code {
+    private sealed record Payload(string? token, DateTimeOffset? expUtc);
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return; // חשוב: לרוץ פעם אחת בלבד אחרי שה-circuit אינטראקטיבי
-
-        string? token = null;
-        try
-        {
-            // ודא שirsAuth מוגדר בסקריפט לפני blazor.server.js
-            token = await JS.InvokeAsync<string?>("irsAuth.get");
-        }
-        catch
-        {
-            // אם הסקריפט לא נטען מסיבה כלשהי – לא להפיל את ה-UI
-        }
-
-        // מסמנים שההידרציה הושלמה גם אם אין טוקן
-        await AuthState.SetAsync(token);
+        if (!firstRender) return;
+        Payload? p = null;
+        try { p = await JS.InvokeAsync<Payload>("irsAuth.get"); } catch { }
+        Console.WriteLine($"[HYDRATE] tokenLen={(p?.token?.Length ?? 0)}, exp={p?.expUtc:O}");
+        await Auth.HydrateAsync(p?.token, p?.expUtc); // marks IsHydrated=true always
     }
 }

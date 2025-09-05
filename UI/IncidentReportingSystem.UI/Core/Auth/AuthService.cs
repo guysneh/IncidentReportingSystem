@@ -1,107 +1,118 @@
-﻿using System.Net;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using IncidentReportingSystem.UI.Core.Auth;
+using IncidentReportingSystem.UI.Core.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
-namespace IncidentReportingSystem.UI.Core.Auth
+public sealed class AuthService : IAuthService
 {
-    public sealed class AuthService : IAuthService
+    private readonly HttpClient _public; // בלי Authorization
+    private readonly HttpClient _api;    // עם Authorization (AuthHeaderHandler)
+    private readonly IJSRuntime _js;
+    private readonly AuthState _state;
+
+    public AuthService(IHttpClientFactory factory, IJSRuntime js, AuthState state)
     {
-        private readonly HttpClient _api;   // Protected (adds Bearer via AuthHeaderHandler)
-        private readonly HttpClient _pub;   // Public (login/register)
-        private readonly AuthState _state;
-        private readonly IJSRuntime _js;
+        _public = factory.CreateClient("ApiPublic");
+        _api = factory.CreateClient("Api");
+        _js = js; _state = state;
+    }
 
-        public AuthService(IHttpClientFactory httpFactory, AuthState state, IJSRuntime js)
+    private sealed class LoginResponse
+    {
+        public string? AccessToken { get; set; }
+        public DateTimeOffset? ExpiresAtUtc { get; set; }
+    }
+
+    public async Task<bool> SignInAsync(string email, string password, CancellationToken ct = default)
+    {
+        // IMPORTANT: relative paths, baseUrl already includes /api/v1/
+        var resp = await _public.PostAsJsonAsync("auth/login", new { email, password }, ct);
+        if (!resp.IsSuccessStatusCode) return false;
+
+        var dto = await resp.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: ct);
+        if (dto?.AccessToken is null) return false;
+        var expJwt = JwtExpUtc(dto.AccessToken);
+        Console.WriteLine($"[LOGIN] jwtExp={expJwt:O}, apiExp={dto.ExpiresAtUtc:O}, now={DateTimeOffset.UtcNow:O}");
+
+        // persist token to localStorage (object with token + exp)
+        await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
+
+        // update in-memory state so subsequent calls attach Bearer
+        await _state.SetAsync(dto.AccessToken);
+        return true;
+    }
+
+    public async Task RegisterAsync(string email, string password, string role, string first, string last, CancellationToken ct = default)
+    {
+        var payload = new
         {
-            _api = httpFactory.CreateClient("Api");        
-            _pub = httpFactory.CreateClient("ApiPublic");  
-            _state = state;
-            _js = js;
-        }
+            email,
+            password,
+            roles = new[] { string.IsNullOrWhiteSpace(role) ? "User" : role },
+            firstName = first,
+            lastName = last
+        };
 
-        private sealed record TokenDto(string? AccessToken, System.DateTimeOffset? ExpiresAtUtc);
+        var resp = await _public.PostAsJsonAsync("auth/register", payload, ct); // ← relative
+        resp.EnsureSuccessStatusCode();
 
-        // ---------- API calls ----------
-        public async Task<bool> SignInAsync(string email, string password, CancellationToken ct = default)
+        var dto = await resp.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: ct);
+        if (!string.IsNullOrWhiteSpace(dto?.AccessToken))
         {
-            var resp = await _pub.PostAsJsonAsync("auth/login", new { email, password }, ct);
-            if (!resp.IsSuccessStatusCode) return false;
-
-            var dto = await resp.Content.ReadFromJsonAsync<TokenDto>(cancellationToken: ct);
-            if (string.IsNullOrWhiteSpace(dto?.AccessToken)) return false;
-
-            // 1) persist to localStorage
-            try { await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc); } catch { }
-
-            // 2) update in-memory state
-            await _state.SetAsync(dto.AccessToken!);
-
-            // 3) give the pipeline a tick
-            await Task.Yield();
-
-            return true;
-        }
-
-        public async Task<bool> RegisterAsync(
-            string email, string password, string role, string firstName, string lastName, CancellationToken ct = default)
-        {
-            var body = new { email, password, roles = new[] { role }, firstName, lastName };
-            var resp = await _pub.PostAsJsonAsync("auth/register", body, ct);
-            if (!resp.IsSuccessStatusCode) return false;
-
-            TokenDto? dto = null;
-            try { dto = await resp.Content.ReadFromJsonAsync<TokenDto>(cancellationToken: ct); } catch { }
-
-            if (string.IsNullOrWhiteSpace(dto?.AccessToken))
-                return await SignInAsync(email, password, ct);
-
+            await _js.InvokeVoidAsync("irsAuth.set", dto!.AccessToken!, dto!.ExpiresAtUtc);
             await _state.SetAsync(dto!.AccessToken!);
-            try { await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc); } catch { }
-            return true;
-        }
-
-        public async Task<AuthModels.WhoAmI?> MeAsync(CancellationToken ct = default)
-        {
-            // Build request explicitly and attach Authorization from AuthState
-            using var req = new HttpRequestMessage(HttpMethod.Get, "auth/me");
-
-            var token = _state.AccessToken;
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                req.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            }
-
-            // IMPORTANT: use the protected client (_api) that points to .../api/v1/
-            var resp = await _api.SendAsync(req, ct);
-
-            if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return null;
-
-            resp.EnsureSuccessStatusCode();
-            return await resp.Content.ReadFromJsonAsync<AuthModels.WhoAmI>(cancellationToken: ct);
-        }
-
-        public async Task<bool> UpdateMeAsync(string firstName, string lastName, CancellationToken ct = default)
-        {
-            var resp = await _api.PatchAsJsonAsync("auth/me", new { firstName, lastName }, ct);
-            return resp.IsSuccessStatusCode;
-        }
-
-        public async Task<bool> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken ct = default)
-        {
-            var resp = await _api.PostAsJsonAsync("auth/me/change-password",
-                new { currentPassword, newPassword }, ct);
-            return resp.IsSuccessStatusCode;
-        }
-
-        public async Task SignOutAsync(CancellationToken ct = default)
-        {
-            await _state.ClearAsync();
-            try { await _js.InvokeVoidAsync("irsAuth.clear"); } catch { }
         }
     }
+
+    public async Task<AuthModels.WhoAmI?> MeAsync(CancellationToken ct = default)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, "auth/me");
+
+        var tok = _state.AccessToken;
+        if (!string.IsNullOrWhiteSpace(tok))
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tok);
+
+        Console.WriteLine($"[ME] sending Authorization={(tok is { Length: > 0 })} len={tok?.Length ?? 0}");
+
+        var resp = await _api.SendAsync(req, ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var authHdr = resp.Headers.WwwAuthenticate.FirstOrDefault()?.ToString() ?? "-";
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            Console.WriteLine($"[ME] {(int)resp.StatusCode} (WWW-Authenticate={authHdr}) body={body}");
+            return null;
+        }
+
+        return await resp.Content.ReadFromJsonAsync<AuthModels.WhoAmI?>(cancellationToken: ct);
+    }
+
+    public Task UpdateMeAsync(string first, string last, CancellationToken ct = default)
+        => _api.PatchAsJsonAsync("auth/me", new { firstName = first, lastName = last }, ct);
+
+    public Task ChangePasswordAsync(string current, string @new, CancellationToken ct = default)
+        => _api.PostAsJsonAsync("auth/me/change-password", new { currentPassword = current, newPassword = @new }, ct);
+
+    public async Task SignOutAsync(CancellationToken ct = default)
+    {
+        try { await _js.InvokeVoidAsync("irsAuth.clear"); } catch { }
+        await _state.ClearAsync();
+    }
+
+    private static DateTimeOffset? JwtExpUtc(string? jwt)
+    {
+        if (string.IsNullOrWhiteSpace(jwt) || jwt.Count(c => c == '.') != 2) return null;
+        try
+        {
+            var payload = jwt.Split('.')[1];
+            var padded = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("exp", out var expEl)) return null;
+            return DateTimeOffset.FromUnixTimeSeconds(expEl.GetInt64()).ToUniversalTime();
+        }
+        catch { return null; }
+    }
+
 }
