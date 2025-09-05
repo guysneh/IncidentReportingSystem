@@ -1,0 +1,21 @@
+﻿@page "/auth/signed-in"
+
+@using IncidentReportingSystem.UI.Localization
+@inject IAppTexts T
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="alert alert-success shadow-sm rounded-4">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2">✓</span>
+                    <div class="fw-semibold">@T["SignedIn.Message"]</div>
+                </div>
+                <div class="mt-3">
+                    <a class="btn btn-primary" href="/account">@T["Nav.Account"]</a>
+                    <a class="btn btn-outline-secondary ms-2" href="/">@T["Nav.Home"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

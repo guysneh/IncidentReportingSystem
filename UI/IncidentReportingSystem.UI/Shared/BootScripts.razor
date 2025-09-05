@@ -1,0 +1,64 @@
+﻿<script>
+    // ---------- THEME ----------
+    (function () {
+      try {
+        var mode = localStorage.getItem('irs.theme') || 'light';
+        if (mode === 'system') {
+          mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', mode);
+      } catch {}
+    })();
+
+    window.irsTheme = {
+      get: function () {
+        try { return localStorage.getItem('irs.theme') || 'light'; } catch { return 'light'; }
+      },
+      set: function (mode) {
+        try {
+          localStorage.setItem('irs.theme', mode);
+          if (mode === 'system') {
+            mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', mode);
+        } catch {}
+      }
+    };
+
+    // ---------- CULTURE ----------
+    (function () {
+      try {
+        var lang = localStorage.getItem('irs.culture') || 'en';
+        document.documentElement.lang = lang;
+        document.documentElement.dir  = (lang === 'he' ? 'rtl' : 'ltr');
+      } catch {}
+    })();
+
+    window.setCulture = function (lang) {
+      try {
+        localStorage.setItem('irs.culture', lang);
+        document.cookie = ".AspNetCore.Culture=c=" + lang + "|uic=" + lang + "; path=/";
+      } finally {
+        location.reload();
+      }
+    };
+    window.getCulture = function () {
+      try { return localStorage.getItem('irs.culture') || document.documentElement.lang || 'en'; }
+      catch { return 'en'; }
+    };
+
+    // ---------- DEBUG: ----------
+      // inject blazor.server.js if missing (so interactivity can hydrate)
+    (function ensureBlazorJs(){
+      if(!document.querySelector('script[src*="_framework/blazor.server.js"]')){
+        var s=document.createElement('script');
+        s.src='/_framework/blazor.server.js';
+        s.defer=true;
+        document.body.appendChild(s);
+        console.info('[irs] injected blazor.server.js');
+      }
+    })();
+    console.info('[irs] css?', !!document.querySelector('link[href*="lib/css/site.css"]'));
+    console.info('[irs] blazor?', !!document.querySelector('script[src*="_framework/blazor.server.js"]'));
+    console.info('[irs] theme=', document.documentElement.getAttribute('data-theme'), 'lang=', document.documentElement.lang, 'dir=', document.documentElement.dir);
+</script>

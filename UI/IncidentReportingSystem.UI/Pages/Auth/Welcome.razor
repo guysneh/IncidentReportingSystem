@@ -1,0 +1,241 @@
+﻿@page "/"
+@rendermode RenderMode.InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using IncidentReportingSystem.UI.Core.Auth
+@using static IncidentReportingSystem.UI.Core.Auth.AuthModels
+@inject IAuthService Auth
+@inject AuthState State
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+
+<div class="container hero-bg py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <div class="card auth-card p-4">
+                <div class="row g-4 align-items-start">
+
+                    <!-- Right: intro -->
+                    <div class="col-lg-6 order-lg-2">
+                        <h1 class="h3 mb-3">@T["Brand.Title"]</h1>
+                        <p class="text-muted mb-4">@T["Welcome.Subtitle"]</p>
+                        <ul class="text-muted small mb-0">
+                            <li>@T["Welcome.Point.Secure"]</li>
+                            <li>@T["Welcome.Point.Fast"]</li>
+                            <li>@T["Welcome.Point.Modern"]</li>
+                        </ul>
+                    </div>
+
+                    <!-- Left: forms -->
+                    <div class="col-lg-6 order-lg-1">
+
+                        <!-- Tabs -->
+                        <ul class="nav nav-pills mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button type="button" class="@TabClass(LOGIN)" @onclick="() => SetTab(LOGIN)">
+                                    @T["Auth.SignIn.Title"]
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button type="button" class="@TabClass(REGISTER)" @onclick="() => SetTab(REGISTER)">
+                                    @T["Auth.Register.Title"]
+                                </button>
+                            </li>
+                        </ul>
+
+                        @if (!string.IsNullOrWhiteSpace(errorKey))
+                        {
+                            <div class="alert alert-danger" role="alert">@T[errorKey]</div>
+                        }
+
+                        @if (activeTab == LOGIN)
+                        {
+                            <EditForm EditContext="@_loginCtx" FormName="loginForm" OnValidSubmit="OnLogin">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="mb-3">
+                                    <label class="form-label" for="l-email">@T["Field.Email"]</label>
+                                    <InputText id="l-email" class="form-control" @bind-Value="login.Email" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="l-pass">@T["Field.Password"]</label>
+                                    <InputText id="l-pass" type="password" class="form-control" @bind-Value="login.Password" />
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100" disabled="@busyLogin">
+                                    @if (busyLogin)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    @T["Action.SignIn"]
+                                </button>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <EditForm EditContext="@_registerCtx" FormName="registerForm" OnValidSubmit="RegisterClick">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="form-label" for="r-first">@T["Field.FirstName"]</label>
+                                        <InputText id="r-first" class="form-control" @bind-Value="register.FirstName" />
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label" for="r-last">@T["Field.LastName"]</label>
+                                        <InputText id="r-last" class="form-control" @bind-Value="register.LastName" />
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="form-label" for="r-email">@T["Field.Email"]</label>
+                                    <InputText id="r-email" class="form-control" @bind-Value="register.Email" />
+                                </div>
+                                <div class="mt-3">
+                                    <label class="form-label" for="r-pass">@T["Field.Password"]</label>
+                                    <InputText id="r-pass" type="password" class="form-control" @bind-Value="register.Password" />
+                                </div>
+                                <div class="mt-3">
+                                    <label class="form-label" for="r-role">@T["Field.Role"]</label>
+                                    <InputSelect id="r-role" class="form-select" @bind-Value="register.Role">
+                                        <option value="">@T["Role.SelectPlaceholder"]</option>
+                                        <option value="User">@T["Role.User"]</option>
+                                        <option value="Admin">@T["Role.Admin"]</option>
+                                    </InputSelect>
+                                </div>
+
+                                <button type="submit" class="btn btn-success w-100 mt-3" disabled="@busyRegister">
+                                    @if (busyRegister)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    @T["Action.Register"]
+                                </button>
+                            </EditForm>
+                        }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // --- tabs ---
+    private const string LOGIN = "login";
+    private const string REGISTER = "register";
+    private string activeTab = LOGIN;
+
+    private string? errorKey;
+
+    // --- busy flags ---
+    private bool busyLogin;
+    private bool busyRegister;
+
+    // --- VMs + EditContext ---
+    private readonly LoginVm login = new();
+    private readonly RegisterVm register = new();
+    private EditContext _loginCtx = default!;
+    private EditContext _registerCtx = default!;
+
+    protected override void OnInitialized()
+    {
+        _loginCtx = new EditContext(login);
+        _registerCtx = new EditContext(register);
+    }
+
+    private string TabClass(string tab) => $"nav-link {(activeTab == tab ? "active" : "")}";
+    private void SetTab(string tab)
+    {
+        if (activeTab == tab) return;
+        activeTab = tab;
+        errorKey = null;
+        StateHasChanged();
+    }
+
+    // --- actions ---
+    private async Task OnLogin()
+    {
+        if (busyLogin) return;
+        errorKey = null;
+
+        if (!_loginCtx.Validate()) return;
+
+        busyLogin = true;
+        try
+        {
+            var ok = await Auth.SignInAsync(login.Email, login.Password);
+            if (ok)
+            {
+                Nav.NavigateTo("/account");
+            }
+            else
+            {
+                errorKey = "Auth.SignIn.Failed";
+            }
+        }
+        catch
+        {
+            errorKey = "Auth.SignIn.Failed";
+        }
+        finally { busyLogin = false; }
+    }
+
+
+    private async Task RegisterClick()
+    {
+        if (busyRegister) return;
+        errorKey = null;
+
+        if (!_registerCtx.Validate()) return;
+
+        busyRegister = true;
+        try
+        {
+            var role = string.IsNullOrWhiteSpace(register.Role) ? "User" : register.Role!;
+            var req = new RegisterRequest(
+                Email: register.Email,
+                Password: register.Password,
+                Role: role,
+                Roles: System.Array.Empty<string>(),
+                FirstName: register.FirstName,
+                LastName: register.LastName
+            );
+
+            var ok = await Auth.RegisterAsync(req.Email,req.Password,req.Role,req.FirstName,req.LastName);
+            if (ok)
+            {
+                Nav.NavigateTo("/account");
+            }
+            else
+            {
+                errorKey = "Auth.Register.Failed";
+            }
+        }
+        catch
+        {
+            errorKey = "Auth.Register.Failed";
+        }
+        finally { busyRegister = false; }
+    }
+
+    // --- view models ---
+    public sealed class LoginVm
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string Password { get; set; } = string.Empty;
+    }
+
+    public sealed class RegisterVm
+    {
+        [Required] public string FirstName { get; set; } = string.Empty;
+        [Required] public string LastName { get; set; } = string.Empty;
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required, MinLength(6)] public string Password { get; set; } = string.Empty;
+        public string? Role { get; set; }
+    }
+}

@@ -1,0 +1,34 @@
+﻿@inject IJSRuntime JS
+
+<div class="theme-toggle">
+    <input id="irs-theme" type="checkbox" checked="@_dark" @onchange="OnToggle" />
+    <label for="irs-theme">
+        <span class="icon sun">☀️</span>
+        <span class="icon moon">🌙</span>
+    </label>
+</div>
+
+@code {
+    bool _dark;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var mode = await JS.InvokeAsync<string>("irsTheme.get");
+                _dark = (mode == "dark");
+                StateHasChanged();
+            }
+            catch { }
+        }
+    }
+
+    async Task OnToggle(ChangeEventArgs _)
+    {
+        _dark = !_dark;
+        try { await JS.InvokeVoidAsync("irsTheme.set", _dark ? "dark" : "light"); }
+        catch { }
+    }
+}

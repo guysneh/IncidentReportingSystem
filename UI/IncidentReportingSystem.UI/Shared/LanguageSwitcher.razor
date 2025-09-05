@@ -1,0 +1,19 @@
+﻿@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<div class="segmented">
+    <a class="seg @Active("en")" href="" @onclick='e => Switch(e,"en")'>EN</a>
+    <a class="seg @Active("de")" href="" @onclick='e => Switch(e,"de")'>DE</a>
+    <a class="seg @Active("he")" href="" @onclick='e => Switch(e,"he")'>עב</a>
+</div>
+
+@code {
+    [Parameter] public string Current { get; set; } = "en";
+    string Active(string c) => Current == c ? "active" : "";
+
+    async Task Switch(MouseEventArgs e, string code)
+    {
+        Nav.NavigateTo($"/ui/culture/{code}", forceLoad: true);
+        await JS.InvokeVoidAsync("irsDir.apply", code);
+    }
+}

@@ -1,0 +1,32 @@
+﻿@using System.Text.Json.Serialization
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState State
+
+@code {
+    private bool _done;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _done) return;
+        try
+        {
+            var payload = await JS.InvokeAsync<AuthPayload>("irsAuth.get");
+            if (!string.IsNullOrWhiteSpace(payload?.token))
+                await State.SetAsync(payload!.token!, payload!.expUtc);
+            else
+                await State.SetAsync(null, null);
+        }
+        catch
+        {
+            await State.SetAsync(null, null);
+        }
+        _done = true;
+        StateHasChanged();
+    }
+
+    public sealed class AuthPayload
+    {
+        public string? token { get; set; }
+        public DateTimeOffset? expUtc { get; set; }
+    }
+}

@@ -1,0 +1,10 @@
+﻿window.irsCulture = (function () {
+  function set(code){ try{
+    localStorage.setItem('irs.culture', code);
+    document.documentElement.lang = code;
+    document.documentElement.dir  = (code === 'he' ? 'rtl' : 'ltr');
+  }catch{}}
+  function get(){ try{return localStorage.getItem('irs.culture')||'en';}catch{ return 'en'; } }
+  try{ set(get()); }catch{}
+  return { get, set };
+})();

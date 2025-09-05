@@ -1,0 +1,32 @@
+﻿@page "/"
+@namespace IncidentReportingSystem.UI.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using System.Globalization
+@{
+    var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var dir = CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@lang" dir="@dir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Incident Reporting</title>
+
+    <!-- CSS (absolute paths from wwwroot) -->
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/lib/css/site.css?v=13" />
+    <script src="/lib/js/auth.js"></script>
+    <script src="/lib/js/culture.js"></script>
+    <script src="/lib/js/theme.js"></script>
+    <script src="/lib/js/dir.js"></script>
+</head>
+<body>
+    <app>
+        <component type="typeof(App)" render-mode="Server" />
+    </app>
+
+    <!-- Blazor Server bootstrap -->
+    <script src="/_framework/blazor.server.js"></script>
+</body>
+</html>

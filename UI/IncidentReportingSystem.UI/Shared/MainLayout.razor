@@ -1,22 +1,38 @@
 ﻿@inherits LayoutComponentBase
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
+@inject IncidentReportingSystem.UI.Core.Auth.IAuthService Auth
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject Microsoft.JSInterop.IJSRuntime JS  
 
-<!--
-  Main application layout using MudBlazor providers.
-  Provides global theme, dialogs, and snackbars across pages.
--->
+<AuthHydrator />   @* hydrate token from localStorage as early as possible *@
 
-<MudThemeProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<header class="navbar px-3">
+     <DirHydrator />
+     <AuthHydrator />
+  <div class="ms-auto d-flex align-items-center gap-2">
+      <LanguageSwitcher />
+      <ThemeSwitch />
+      @if (!IsWelcome)
+      {
+          <button class="btn btn-outline-secondary" @onclick="OnLogout">@T["Action.Logout"]</button>
+      }
+  </div>
+</header>
 
-<MudAppBar Elevation="4">
-    <MudText Typo="Typo.h6">Incident UI</MudText>
-    <MudSpacer />
-    <MudText Color="Color.Secondary">v0</MudText>
-</MudAppBar>
+<main>
+  @Body
+</main>
 
-<MudContainer Class="pa-4">
-    <MudPaper Class="pa-4">
-        @Body
-    </MudPaper>
-</MudContainer>
+@code {
+    bool IsWelcome => Nav.Uri.EndsWith("/", StringComparison.OrdinalIgnoreCase) ||
+                      Nav.Uri.EndsWith("/welcome", StringComparison.OrdinalIgnoreCase);
+
+    private async Task OnLogout()
+    {
+        try { await Auth.SignOutAsync(); } catch {}
+        await AuthState.ClearAsync();
+        try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch {}  
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}
