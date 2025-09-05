@@ -312,4 +312,44 @@ html[dir="rtl"], html.rtl {
 
 
 
+/* Account card visuals */
+.account-card {
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+}
+
+/* Details list */
+.account-dl dt {
+    font-weight: 600;
+    color: var(--muted);
+}
+
+html[dir="rtl"] .account-dl,
+html.rtl .account-dl {
+    text-align: right !important; /* assure right alignment in RTL */
+}
+
+/* Email/number always LTR for readability */
+.force-ltr {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+    .account-card {
+        padding: 1rem !important;
+    }
+
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Better tap highlights on mobile */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
 

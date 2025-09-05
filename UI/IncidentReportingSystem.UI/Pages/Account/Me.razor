@@ -1,113 +1,89 @@
 ﻿@page "/account"
+@rendermode RenderMode.InteractiveServer
 
 @using IncidentReportingSystem.UI.Core.Auth
+@using static IncidentReportingSystem.UI.Core.Auth.AuthModels
 @inject IAuthService Auth
 @inject AuthState AuthState
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
-@inject Microsoft.JSInterop.IJSRuntime JS
 
-
-@rendermode RenderMode.InteractiveServer
-
-@if (Busy)
-{
-    <div class="text-center py-5">
-        <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
-    </div>
-}
-else if (ErrorKey is not null)
-{
-    <div class="container py-4">
+<div class="container py-4 text-start">
+    @* text-start -> left in LTR, right in RTL with Bootstrap RTL *@
+    @if (Busy)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="min-height:40vh">
+            <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorKey))
+    {
         <div class="row justify-content-center">
-            <div class="col-md-7 col-lg-6">
-                <div class="card auth-card p-4">
-                    <div class="d-flex align-items-center mb-2">
-                        <span class="badge rounded-pill text-bg-warning me-2">⚠️</span>
+            <div class="col-12 col-md-10 col-lg-8">
+                <div class="card account-card p-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge rounded-pill text-bg-warning">⚠️</span>
                         <h2 class="h5 m-0">@T["Account.NotAuthorized.Title"]</h2>
                     </div>
                     <p class="mb-0 text-muted">@T[ErrorKey]</p>
                 </div>
             </div>
         </div>
-    </div>
-}
-else if (Profile is not null)
-{
-    <div class="container py-4">
+    }
+    else if (Profile is not null)
+    {
         <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card auth-card p-4 shadow-sm">
-                    <h2 class="h4 mb-4">@T["Account.Title"]</h2>
-                    <dl class="row">
-                        <dt class="col-4 text-muted">@T["Field.Email"]</dt>
-                        <dd class="col-8">@Profile.Email</dd>
+            <div class="col-12 col-md-10 col-lg-8">
+                <div class="card account-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h4 m-0">@T["Account.Title"]</h2>
+                        <span class="badge bg-primary-subtle text-primary-emphasis">@string.Join(", ", Profile.Roles ?? Array.Empty<string>())</span>
+                    </div>
 
-                        <dt class="col-4 text-muted">@T["Field.Name"]</dt>
-                        <dd class="col-8">@((Profile.DisplayName ?? $"{Profile.FirstName} {Profile.LastName}").Trim())</dd>
+                    <dl class="row account-dl mb-0">
+                        <dt class="col-5 col-sm-4">@T["Field.Email"]</dt>
+                        <dd class="col-7 col-sm-8 force-ltr">@Profile.Email</dd>
 
-                        <dt class="col-4 text-muted">@T["Field.Roles"]</dt>
-                        <dd class="col-8">@string.Join(", ", Profile.Roles ?? Array.Empty<string>())</dd>
+                        <dt class="col-5 col-sm-4">@T["Field.Name"]</dt>
+                        <dd class="col-7 col-sm-8">@((Profile.DisplayName ?? $"{Profile.FirstName} {Profile.LastName}").Trim())</dd>
+
+                        <dt class="col-5 col-sm-4">@T["Field.Roles"]</dt>
+                        <dd class="col-7 col-sm-8">@string.Join(", ", Profile.Roles ?? Array.Empty<string>())</dd>
                     </dl>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
-    bool _started, _loaded;
-    bool Busy;
-    string? ErrorKey;
-    AuthModels.WhoAmI? Profile;
+    public WhoAmI? Profile { get; set; }
+    public bool Busy { get; set; } = true;
+    public string? ErrorKey { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _started) return;
-        _started = true;
-        await EnsureLoadedAsync();
-    }
-
-    private sealed class Payload { public string? token { get; set; } public DateTimeOffset? expUtc { get; set; } }
-
-    private async Task EnsureLoadedAsync()
-    {
-        if (_loaded) return;
-        Busy = true; ErrorKey = null;
+        if (!firstRender) return;
 
         try
         {
-            for (var i = 0; i < 200 && !AuthState.IsHydrated; i++)
-                await Task.Delay(10);
-
-            if (string.IsNullOrWhiteSpace(AuthState.AccessToken))
-            {
-                try
-                {
-                    var p = await JS.InvokeAsync<Payload>("irsAuth.get");
-                    if (!string.IsNullOrWhiteSpace(p?.token))
-                        await AuthState.SetAsync(p!.token!, p.expUtc);
-                }
-                catch { }
-            }
-
+            // If token missing, go back to welcome
             if (string.IsNullOrWhiteSpace(AuthState.AccessToken))
             {
                 ErrorKey = "Account.NotAuthorized.Body";
-                Nav.NavigateTo("/", forceLoad: true);
+                Nav.NavigateTo("/");
                 return;
             }
 
+            // MeAsync must attach Bearer (you already patched it); single call is enough
             Profile = await Auth.MeAsync();
 
             if (Profile is null)
             {
                 ErrorKey = "Account.NotAuthorized.Body";
-                Nav.NavigateTo("/", forceLoad: true);
+                Nav.NavigateTo("/");
                 return;
             }
-
-            _loaded = true;
         }
         finally
         {
