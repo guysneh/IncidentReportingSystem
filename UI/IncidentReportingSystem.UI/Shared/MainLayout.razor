@@ -40,8 +40,11 @@
 
             <!-- ACTIONS RIGHT -->
             <div class="toolbar-right">
-                <LanguageSwitcher />
-                <ThemeSwitch />
+                <div class="hide-xs d-flex align-items-center gap-2">
+                    <LanguageSwitcher />
+                    <ThemeSwitch />
+                </div>
+
                 @if (!IsWelcome)
                 {
                     <button class="btn btn-outline-secondary btn-sm" @onclick="OnLogout">
@@ -61,6 +64,7 @@
                     </button>
                 }
             </div>
+
         </div>
     </div>
 

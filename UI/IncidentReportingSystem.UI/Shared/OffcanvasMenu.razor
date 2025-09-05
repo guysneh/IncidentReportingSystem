@@ -1,10 +1,23 @@
 ﻿@inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @inject IJSRuntime JS
+@inject IAuthService Auth
+
 
 <div class="offcanvas offcanvas-end irs-offcanvas"
      id="appSideNav" tabindex="-1" aria-labelledby="appSideNavLabel"
      data-bs-backdrop="false" data-bs-scroll="true">
+    <div class="d-md-none mb-3">
+        <h6 class="menu-title mb-2">@T["Quick.Settings"]</h6>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <LanguageSwitcher />
+            <ThemeSwitch />
+            <button class="btn btn-outline-secondary btn-sm ms-auto" @onclick="LogoutAndClose">
+                @T["Action.Logout"]
+            </button>
+        </div>
+        <hr />
+    </div>
     <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="appSideNavLabel">@T["Nav.Side"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="@T["Action.Close"]"></button>
@@ -42,5 +55,11 @@
     private async Task HideMenuOnClick(MouseEventArgs _)
     {
         try { await JS.InvokeVoidAsync("irsUi.offcanvasHide", "#appSideNav"); } catch { }
+    }
+    private async Task LogoutAndClose()
+    {
+        try { await Auth.SignOutAsync(); } catch { }
+        try { await JS.InvokeVoidAsync("irsUi.offcanvasHide", "#appSideNav"); } catch { }
+        Nav.NavigateTo("/", forceLoad: true);
     }
 }

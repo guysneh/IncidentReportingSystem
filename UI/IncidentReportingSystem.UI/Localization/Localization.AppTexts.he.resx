@@ -297,4 +297,7 @@
   <data name="Ation.Close" xml:space="preserve">
     <value>סגירה</value>
   </data>
+  <data name="Quick.Settings" xml:space="preserve">
+    <value>הגדרות</value>
+  </data>
 </root>

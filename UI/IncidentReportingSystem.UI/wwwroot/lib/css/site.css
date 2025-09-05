@@ -520,6 +520,49 @@ html[dir="rtl"] .account-dl, html.rtl .account-dl {
 
 
 
+/* Desktop/default */
+.app-toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* left | spacer | right */
+    align-items: center;
+    direction: ltr;
+}
 
+.toolbar-right {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
 
+@media (max-width: 576px) {
+    .toolbar-right {
+        flex-direction: column; 
+        align-items: flex-end;
+        gap: .35rem;
+    }
 
+    .hide-xs {
+        display: none !important;
+    }
+
+    .btn, .btn-icon {
+        min-height: 36px;
+        min-width: 44px;
+    }
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .irs-offcanvas {
+        --bs-offcanvas-width: 100vw;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        touch-action: pan-y;
+    }
+}
