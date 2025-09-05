@@ -2,24 +2,22 @@
 @using IncidentReportingSystem.UI.Core.Dashboard
 
 <MudCard Class="chart-block">
-    <MudCardHeader>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1" Class="w-100">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                <MudIcon Icon="@HeaderIcon" />
-                <MudText Typo="Typo.subtitle2">@Title</MudText>
-            </MudStack>
+    <MudCardHeader Class="chart-header">
+        <div class="chart-title">
+            <MudIcon Icon="@HeaderIcon" />
+            <MudText Typo="Typo.subtitle2">@Title</MudText>
+        </div>
 
-            <!-- Mode selector: icons only -->
-            <MudTabs @bind-ActivePanelIndex="_tab"
-                     KeepPanelsAlive="false"
-                     Rounded="true"
-                     Dense="true"
-                     Class="chart-tabs">
-                <MudTabPanel Icon="@Icons.Material.Filled.BarChart" />
-                <MudTabPanel Icon="@Icons.Material.Filled.PieChart" />
-                <MudTabPanel Icon="@Icons.Material.Filled.DashboardCustomize" />
-            </MudTabs>
-        </MudStack>
+        <!-- Mode selector (icons only) -->
+        <MudTabs @bind-ActivePanelIndex="_tab"
+                 KeepPanelsAlive="false"
+                 Rounded="true"
+                 Dense="true"
+                 Class="chart-tabs">
+            <MudTabPanel Icon="@Icons.Material.Filled.BarChart" />
+            <MudTabPanel Icon="@Icons.Material.Filled.PieChart" />
+            <MudTabPanel Icon="@Icons.Material.Filled.DashboardCustomize" />
+        </MudTabs>
     </MudCardHeader>
 
     <MudCardContent>
@@ -28,33 +26,31 @@
             <MudText Class="text-muted">@EmptyText</MudText>
         }
         else if (_tab == 2)
- @* Both *@
         {
             <div class="dual-wrap">
-                <MudChart ChartType="ChartType.Bar"
-                          ChartSeries="@BarSeries"
-                          XAxisLabels="@Labels"
-                          Height="@($"{Height}px")"
-                          Width="100%"
-                          @key=@($"bar_{Height}_{BarSeries[0].Data.Sum()}_{_tab}") />
-
+                <div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@BarSeries"
+                              XAxisLabels="@Labels"
+                              Height="100%" Width="100%"
+                              @key=@($"bar_{Height}_{BarSeries[0].Data.Sum()}_{_tab}") />
+                </div>
                 <PieRawChart Data="Data" Height="@Height" />
             </div>
         }
         else if (_tab == 1)
- @* Pie only *@
         {
             <PieRawChart Data="Data" Height="@Height" />
         }
         else
- @* Bar only *@
         {
-            <MudChart ChartType="ChartType.Bar"
-                      ChartSeries="@BarSeries"
-                      XAxisLabels="@Labels"
-                      Height="@($"{Height}px")"
-                      Width="100%"
-                      @key=@($"bar_{Height}_{BarSeries[0].Data.Sum()}_{_tab}") />
+            <div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+                <MudChart ChartType="ChartType.Bar"
+                          ChartSeries="@BarSeries"
+                          XAxisLabels="@Labels"
+                          Height="100%" Width="100%"
+                          @key=@($"bar_{Height}_{BarSeries[0].Data.Sum()}_{_tab}") />
+            </div>
         }
     </MudCardContent>
 </MudCard>
@@ -65,26 +61,16 @@
     [Parameter] public string HeaderIcon { get; set; } = Icons.Material.Filled.Insights;
     [Parameter] public IReadOnlyList<KeyCount>? Data { get; set; }
     [Parameter] public int Height { get; set; } = 360;
-
-    // Choose initial mode: 0=Bar, 1=Pie, 2=Both
     [Parameter] public int DefaultMode { get; set; } = 0;
 
-    private int _tab;
-    private bool _init;
+    private int _tab; private bool _init;
 
     protected override void OnParametersSet()
     {
-        if (!_init)
-        {
-            _tab = DefaultMode switch { 0 => 0, 1 => 1, 2 => 2, _ => 0 };
-            _init = true;
-        }
+        if (!_init) { _tab = DefaultMode is >= 0 and <= 2 ? DefaultMode : 0; _init = true; }
     }
 
     private string[] Labels => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Key).ToArray();
-
     private List<ChartSeries> BarSeries => new()
-    {
-        new ChartSeries { Name = "Count", Data = (Data ?? Array.Empty<KeyCount>()).Select(x => (double)x.Count).ToArray() }
-    };
+    { new ChartSeries { Name = "Count", Data = (Data ?? Array.Empty<KeyCount>()).Select(x => (double)x.Count).ToArray() } };
 }

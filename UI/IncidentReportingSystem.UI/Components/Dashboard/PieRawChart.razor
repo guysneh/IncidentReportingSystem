@@ -2,8 +2,8 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div style="height:@($"{Height}px"); width:100%;">
-    <canvas id="@_id" style="display:block; width:100%; height:100%;"></canvas>
+<div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+    <canvas id="@_id"></canvas>
 </div>
 
 @code {

@@ -831,3 +831,147 @@ html[dir="rtl"] .account-dl, html.rtl .account-dl {
 
 
 
+/* Prevent horizontal scroll on small screens */
+html, body {
+    overflow-x: hidden;
+}
+
+/* Grid items must be allowed to shrink inside flex/grid layouts */
+.mud-grid-item {
+    min-width: 0;
+}
+
+/* Keep the app bar above charts (adjust selector to your header if needed) */
+.mud-appbar, .app-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1100;
+}
+
+/* Frame for any chart (Bar or Pie) – controls height responsively */
+.chart-frame {
+    position: relative;
+    width: 100%;
+    min-height: var(--chart-h, 320px); /* default height if not provided */
+}
+
+    /* Make the drawing surface fill the frame without overflowing */
+    .chart-frame canvas {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+
+    /* MudChart uses an internal canvas – force it to fill the frame too */
+    .chart-frame .mud-chart,
+    .chart-frame .mud-chart canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+/* “Both” layout is always vertical (no side-by-side on desktop) */
+.dual-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+/* Small phones: slightly shorter charts */
+@media (max-width: 576px) {
+    .chart-frame {
+        min-height: var(--chart-h-sm, 260px);
+    }
+}
+/* Global: prevent horizontal scroll on small screens */
+html, body {
+    overflow-x: hidden;
+}
+
+/* Grid items must be allowed to shrink inside flex/grid layouts */
+.mud-grid-item {
+    min-width: 0;
+}
+
+/* Header (banner) – desktop: row, mobile: column */
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.chart-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0; /* allows text to truncate instead of pushing width */
+}
+
+.chart-tabs {
+    max-width: 100%;
+}
+
+    .chart-tabs .mud-tabs-toolbar {
+        display: flex;
+        gap: 4px;
+        overflow: hidden; /* avoid scrollbar overflow */
+    }
+
+    .chart-tabs .mud-tab {
+        min-width: 40px;
+        justify-content: center;
+        border-radius: 999px;
+    }
+
+/* Charts layout */
+.dual-wrap {
+    display: grid;
+    grid-template-columns: 1fr; /* always vertical */
+    gap: 12px;
+}
+
+/* Frame that controls chart height responsively */
+.chart-frame {
+    position: relative;
+    width: 100%;
+    min-height: var(--chart-h, 320px);
+}
+
+    .chart-frame canvas {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+    /* MudChart internal canvas should also fill the frame */
+    .chart-frame .mud-chart,
+    .chart-frame .mud-chart canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+    .chart-header {
+        flex-direction: column;
+        align-items: stretch; /* make tabs full width */
+    }
+
+    .chart-tabs .mud-tabs-toolbar {
+        flex-direction: column; /* icon buttons stacked vertically */
+        width: 100%;
+        padding: 2px;
+    }
+
+    .chart-tabs .mud-tab {
+        width: 100%;
+    }
+
+    .chart-frame {
+        min-height: var(--chart-h-sm, 260px);
+    }
+}
