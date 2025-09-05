@@ -6,75 +6,100 @@
     var ci = CultureInfo.CurrentUICulture;
     var isRtl = ci.TextInfo.IsRightToLeft;
     var lang = ci.TwoLetterISOLanguageName;
-    var bootstrapHref = isRtl
-        ? "lib/bootstrap/dist/css/bootstrap.rtl.min.css"
-        : "lib/bootstrap/dist/css/bootstrap.min.css";
 }
 <!DOCTYPE html>
 <html lang="@lang" dir="@(isRtl ? "rtl" : "ltr")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Load both, enable only the right one -->
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-          crossorigin="anonymous">
-
-    <!-- CRITICAL: ensures relative static paths resolve correctly when hosted under subpaths -->
     <base href="~/" />
-
     <title>Incident Reporting</title>
 
-    <!-- Your CSS must come AFTER Bootstrap -->
+    <!-- Bootstrap (both; toggled below) -->
+    <link id="bs-ltr" rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          crossorigin="anonymous" disabled />
+    <link id="bs-rtl" rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"
+          crossorigin="anonymous" disabled />
+
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+
+    <!-- MudBlazor CSS (prefer local; CDN also included) -->
+    <link rel="stylesheet" href="/_content/MudBlazor/MudBlazor.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mudblazor@8.12.0/dist/mudblazor.min.css" />
+
+    <!-- Your CSS -->
     <link rel="stylesheet" href="~/lib/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
 
-    <!-- Favicon (avoid 404 on /favicon.ico) -->
-    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
     <script>
         (function () {
-          var dir = (document.documentElement.getAttribute('dir') || 'ltr').toLowerCase();
+          var isRtl = (document.documentElement.getAttribute('dir') || 'ltr').toLowerCase() === 'rtl';
           var ltr = document.getElementById('bs-ltr');
           var rtl = document.getElementById('bs-rtl');
-          if (!ltr || !rtl) return;
-
-          if (dir === 'rtl') {
-            rtl.disabled = false; ltr.disabled = true;
-            document.documentElement.classList.add('rtl');
-            document.documentElement.classList.remove('ltr');
-          } else {
-            ltr.disabled = false; rtl.disabled = true;
-            document.documentElement.classList.add('ltr');
-            document.documentElement.classList.remove('rtl');
-          }
-
-          window.irsCss = {
-            apply: function (d) {
-              var isRtl = (d || document.documentElement.dir || 'ltr').toLowerCase() === 'rtl';
-              ltr.disabled = isRtl; rtl.disabled = !isRtl;
-              document.documentElement.classList.toggle('rtl', isRtl);
-              document.documentElement.classList.toggle('ltr', !isRtl);
-            }
-          };
+          if (ltr && rtl) { rtl.disabled = !isRtl; ltr.disabled = isRtl; }
         })();
     </script>
+
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
 </head>
 <body>
     <app>
         <component type="typeof(App)" render-mode="Server" />
+        <noscript><div style="padding:12px;background:#fee;border:1px solid #f99;margin:12px;">Enable JavaScript.</div></noscript>
     </app>
 
-    <!-- Blazor Server bootstrap -->
+    <!-- Your scripts -->
     <script src="/lib/js/culture.js"></script>
     <script src="/lib/js/dir.js"></script>
     <script src="/lib/js/theme.js"></script>
     <script src="/lib/js/rtl.js"></script>
     <script src="/lib/js/auth.js"></script>
     <script src="/lib/js/nav.js"></script>
+    <script src="/lib/js/irs-charts.js"></script>
+
+    <!-- Bootstrap bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
             crossorigin="anonymous"></script>
-    <script src="/_framework/blazor.server.js"></script>
+
+    <!-- Load MudBlazor JS (local first, CDN fallback), then Blazor -->
+    <script>
+        (function () {
+          var CHART_JS     = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
+          var CHART_JS_ALT = "https://unpkg.com/chart.js@4.4.3/dist/chart.umd.min.js";
+          var MUD_JS_CDN   = "https://cdn.jsdelivr.net/npm/mudblazor@8.12.0/dist/mudblazor.min.js";
+          var MUD_JS_LOCAL = "/_content/MudBlazor/MudBlazor.min.js"; // requires UseStaticFiles + UseStaticWebAssets
+
+          function load(src) {
+            return new Promise(function (res, rej) {
+              var s = document.createElement('script');
+              s.src = src;
+              s.onload = res;
+              s.onerror = function(){ rej(src); };
+              document.body.appendChild(s);
+            });
+          }
+          function startBlazor() {
+            var b = document.createElement('script');
+            b.src = "/_framework/blazor.server.js";
+            document.body.appendChild(b);
+          }
+
+          // 1) Chart.js (CDN with alternate CDN fallback)
+          load(CHART_JS).catch(function(){ return load(CHART_JS_ALT); })
+          // 2) MudBlazor JS (CDN with local fallback)
+          .then(function(){ return load(MUD_JS_CDN).catch(function(){ return load(MUD_JS_LOCAL); }); })
+          // 3) Start Blazor
+          .then(startBlazor)
+          .catch(function (src) {
+            console.error("Failed to load:", src);
+            startBlazor(); // start anyway so you at least see error UI
+          });
+        })();
+    </script>
 </body>
 </html>

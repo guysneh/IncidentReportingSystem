@@ -1,15 +1,24 @@
-﻿@using Microsoft.AspNetCore.Components.Routing
-<Router AppAssembly="@typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData"
-                   DefaultLayout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)" />
-    </Found>
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
 
-    <NotFound>
-        <LayoutView Layout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)">
-            <div class="container py-5">
-                <div class="alert alert-warning">Page not found.</div>
-            </div>
-        </LayoutView>
-    </NotFound>
-</Router>
+<ErrorBoundary>
+    <ChildContent>
+        <Router AppAssembly="@typeof(App).Assembly" PreferExactMatches="true">
+            <Found Context="rd">
+                <RouteView RouteData="@rd" DefaultLayout="@typeof(Shared.MainLayout)" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(Shared.MainLayout)">
+                    <h3>404</h3>
+                    <p>Page not found.</p>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </ChildContent>
+    <ErrorContent>
+        <div style="padding:16px;border:1px solid #f99;background:#fee">
+            <h4>Unhandled UI error</h4>
+            <p>Something went wrong while rendering.</p>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>

@@ -214,11 +214,29 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Login successful.
+        /// </summary>
+        internal static string Auth_Login_Success {
+            get {
+                return ResourceManager.GetString("Auth.Login.Success", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Registration failed.
         /// </summary>
         internal static string Auth_Register_Failed {
             get {
                 return ResourceManager.GetString("Auth.Register.Failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Registration successful.
+        /// </summary>
+        internal static string Auth_Register_Success {
+            get {
+                return ResourceManager.GetString("Auth.Register.Success", resourceCulture);
             }
         }
         
@@ -273,6 +291,69 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Btn_SignIn {
             get {
                 return ResourceManager.GetString("Btn.SignIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents by category.
+        /// </summary>
+        internal static string Dashboard_Chart_ByCategory {
+            get {
+                return ResourceManager.GetString("Dashboard.Chart.ByCategory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents by severity.
+        /// </summary>
+        internal static string Dashboard_Chart_BySeverity {
+            get {
+                return ResourceManager.GetString("Dashboard.Chart.BySeverity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents by status.
+        /// </summary>
+        internal static string Dashboard_Chart_ByStatus {
+            get {
+                return ResourceManager.GetString("Dashboard.Chart.ByStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No data available.
+        /// </summary>
+        internal static string Dashboard_Empty {
+            get {
+                return ResourceManager.GetString("Dashboard.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Closed incidents.
+        /// </summary>
+        internal static string Dashboard_Kpi_Closed {
+            get {
+                return ResourceManager.GetString("Dashboard.Kpi.Closed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open incidents.
+        /// </summary>
+        internal static string Dashboard_Kpi_Open {
+            get {
+                return ResourceManager.GetString("Dashboard.Kpi.Open", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Total incidents.
+        /// </summary>
+        internal static string Dashboard_Kpi_Total {
+            get {
+                return ResourceManager.GetString("Dashboard.Kpi.Total", resourceCulture);
             }
         }
         

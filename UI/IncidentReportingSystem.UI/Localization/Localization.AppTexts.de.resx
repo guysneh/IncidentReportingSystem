@@ -300,4 +300,31 @@
   <data name="Quick.Settings" xml:space="preserve">
     <value>Einstellungen</value>
   </data>
+  <data name="Dashboard.Kpi.Total" xml:space="preserve">
+    <value>Gesamtvorfälle</value>
+  </data>
+  <data name="Dashboard.Kpi.Open" xml:space="preserve">
+    <value>Offene Vorfälle</value>
+  </data>
+  <data name="Dashboard.Kpi.Closed" xml:space="preserve">
+    <value>Geschlossene Vorfälle</value>
+  </data>
+  <data name="Dashboard.Chart.ByStatus" xml:space="preserve">
+    <value>Vorfälle nach Status</value>
+  </data>
+  <data name="Dashboard.Chart.BySeverity" xml:space="preserve">
+    <value>Vorfälle nach Schweregrad</value>
+  </data>
+  <data name="Dashboard.Chart.ByCategory" xml:space="preserve">
+    <value>Vorfälle nach Kategorie</value>
+  </data>
+  <data name="Dashboard.Empty" xml:space="preserve">
+    <value>Keine Daten verfügbar</value>
+  </data>
+  <data name="Auth.Register.Success" xml:space="preserve">
+    <value>Registrierung erfolgreich</value>
+  </data>
+  <data name="Auth.Login.Success" xml:space="preserve">
+    <value>Anmeldung erfolgreich</value>
+  </data>
 </root>

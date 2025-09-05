@@ -300,4 +300,31 @@
   <data name="Quick.Settings" xml:space="preserve">
     <value>הגדרות</value>
   </data>
+  <data name="Dashboard.Kpi.Total" xml:space="preserve">
+    <value>סה"כ תקלות</value>
+  </data>
+  <data name="Dashboard.Kpi.Open" xml:space="preserve">
+    <value>תקלות פתוחות</value>
+  </data>
+  <data name="Dashboard.Kpi.Closed" xml:space="preserve">
+    <value>תקלות סגורות</value>
+  </data>
+  <data name="Dashboard.Chart.ByStatus" xml:space="preserve">
+    <value>תקלות לפי סטטוס</value>
+  </data>
+  <data name="Dashboard.Chart.BySeverity" xml:space="preserve">
+    <value>תקלות לפי רמת חומרה</value>
+  </data>
+  <data name="Dashboard.Chart.ByCategory" xml:space="preserve">
+    <value>תקלות לפי קטגוריה</value>
+  </data>
+  <data name="Dashboard.Empty" xml:space="preserve">
+    <value>אין נתונים זמינים</value>
+  </data>
+  <data name="Auth.Register.Success" xml:space="preserve">
+    <value>ההרשמה הצליחה</value>
+  </data>
+  <data name="Auth.Login.Success" xml:space="preserve">
+    <value>ההתחברות הצליחה</value>
+  </data>
 </root>

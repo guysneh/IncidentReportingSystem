@@ -1,12 +1,85 @@
 ﻿@page "/dashboard"
-@rendermode RenderMode.InteractiveServer
+@using MudBlazor
+@using IncidentReportingSystem.UI.Core.Dashboard
+@using IncidentReportingSystem.UI.Core.Auth
+@using IncidentReportingSystem.UI.Components.Dashboard
+@implements IDisposable
 
-    <div class="container py-4">
-        <h2 class="h4 mb-3">@T["Dashboard.Title"]</h2>
-        <div class="alert alert-info">
-            @T["Dashboard.Mvp.Placeholder"]
-            <a href="/account" class="alert-link">@T["Dashboard.Link.Profile"]</a>
-        </div>
-    </div>
+@inject DashboardState State
+@inject AuthState Auth
+@inject IAppTexts T
+@inject NavigationManager Nav
 
-@code { [Inject] IncidentReportingSystem.UI.Localization.IAppTexts T { get; set; } = default!; }
+<PageTitle>@(T["Dashboard.Title"])</PageTitle>
+
+@if (State.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Filled">@State.Error</MudAlert>
+}
+else if (State.Overview is null)
+{
+    <MudGrid GutterSize="GutterSize.Small" Class="mt-2">
+        @for (var i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" lg="4"><MudSkeleton Height="220px" /></MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    var o = State.Overview;
+    <MudGrid GutterSize="GutterSize.Small">
+        <MudItem xs="12">
+            <DualChartBlock Title="@(T["Dashboard.Chart.ByStatus"])"
+                            EmptyText="@(T["Dashboard.Empty"])"
+                            HeaderIcon="@Icons.Material.Filled.Timeline"
+                            Data="o.ByStatus"
+                            Height="380"
+                            DefaultMode="0" />  @* start with Bar *@
+        </MudItem>
+
+        <MudItem xs="12">
+            <DualChartBlock Title="@(T["Dashboard.Chart.BySeverity"])"
+                            EmptyText="@(T["Dashboard.Empty"])"
+                            HeaderIcon="@Icons.Material.Filled.Warning"
+                            Data="o.BySeverity"
+                            Height="380"
+                            DefaultMode="0" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <DualChartBlock Title="@(T["Dashboard.Chart.ByCategory"])"
+                            EmptyText="@(T["Dashboard.Empty"])"
+                            HeaderIcon="@Icons.Material.Filled.PieChart"
+                            Data="o.ByCategory"
+                            Height="380"
+                            DefaultMode="1" />  @* start with Pie *@
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnStateChanged;
+        _cts = new CancellationTokenSource();
+
+        if (string.IsNullOrWhiteSpace(Auth.AccessToken))
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+        await State.LoadAsync(_cts.Token);
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnStateChanged;
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

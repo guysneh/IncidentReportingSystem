@@ -189,7 +189,7 @@
             var ok = await Auth.SignInAsync(login.Email, login.Password);
             if (ok)
             {
-                Nav.NavigateTo("/account", forceLoad:true);
+                Nav.NavigateTo("/dashboard", forceLoad: true);
                 return;
             }
             else
@@ -228,7 +228,7 @@
             try
             {
                 await Auth.RegisterAsync(req.Email, req.Password, req.Role, req.FirstName, req.LastName);
-                Nav.NavigateTo("/account", forceLoad: true);
+                Nav.NavigateTo("/dashboard", forceLoad: true);
             }
             catch (Exception)
             {

@@ -1,11 +1,13 @@
 using IncidentReportingSystem.UI;
 using IncidentReportingSystem.UI.Core.Auth;
+using IncidentReportingSystem.UI.Core.Dashboard;
 using IncidentReportingSystem.UI.Core.Http;
 using IncidentReportingSystem.UI.Core.Options;
 using IncidentReportingSystem.UI.Localization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
+using MudBlazor.Services;
 using System.Globalization;
 using System.Net.Http.Headers;
 
@@ -69,15 +71,16 @@ builder.Services.AddHttpClient("Api", (sp, c) =>
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 })
 .AddHttpMessageHandler<AuthHeaderHandler>()          
-.AddHttpMessageHandler<ProblemDetailsHandler>();     
+.AddHttpMessageHandler<ProblemDetailsHandler>();
 
 // ***** THIS IS THE IMPORTANT PART FOR GUARANTEED INTERACTIVITY *****
+builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor(options =>
-{
-    options.DetailedErrors = true;           
-});
-
+builder.Services.AddServerSideBlazor().AddCircuitOptions(o => o.DetailedErrors = true);
+builder.Services.AddMudServices();
+// Dashboard
+builder.Services.AddScoped<DashboardState>();
+builder.Services.AddScoped<IDashboardService, ApiDashboardService>();
 
 var app = builder.Build();
 

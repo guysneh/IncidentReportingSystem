@@ -1,4 +1,5 @@
 ﻿@using IncidentReportingSystem.UI.Pages.Auth
+@using MudBlazor
 @inherits LayoutComponentBase
 @inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
 @inject IncidentReportingSystem.UI.Core.Auth.IAuthService Auth
@@ -35,7 +36,7 @@
             </div>
 
 
-            <!-- center spacer (ריק) -->
+            <!-- center spacer -->
             <div class="toolbar-center"></div>
 
             <!-- ACTIONS RIGHT -->
@@ -73,7 +74,11 @@
         <OffcanvasMenu />
     }
 </header>
-
+<body>
+    <MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <main>
     @if (IsWelcome)
     {
@@ -98,7 +103,7 @@
         </AuthGuard>
     }
 </main>
-
+</body>
 @code {
     bool IsWelcome => Nav.Uri.EndsWith("/", StringComparison.OrdinalIgnoreCase) ||
                       Nav.Uri.EndsWith("/welcome", StringComparison.OrdinalIgnoreCase);
