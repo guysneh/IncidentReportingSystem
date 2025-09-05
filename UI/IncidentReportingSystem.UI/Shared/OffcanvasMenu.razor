@@ -1,0 +1,46 @@
+﻿@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject IJSRuntime JS
+
+<div class="offcanvas offcanvas-end irs-offcanvas"
+     id="appSideNav" tabindex="-1" aria-labelledby="appSideNavLabel"
+     data-bs-backdrop="false" data-bs-scroll="true">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="appSideNavLabel">@T["Nav.Side"]</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="@T["Action.Close"]"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <nav class="irs-menu" aria-label="@T["Nav.Side"]">
+            <div class="menu-section">
+                <h6 class="menu-title mb-2">@T["Dashboard.Title"]</h6>
+                <a class="@ItemClass("/dashboard")"
+                   href="/dashboard"
+                   @onclick="HideMenuOnClick">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" /></svg>
+                    <span>@T["Nav.Dashboard"]</span>
+                </a>
+            </div>
+
+            <div class="menu-section mt-3">
+                <h6 class="menu-title mb-2">@T["Account.Title"]</h6>
+                <a class="@ItemClass("/account")"
+                   href="/account"
+                   @onclick="HideMenuOnClick">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-9 9a9 9 0 1118 0H3z" /></svg>
+                    <span>@T["Nav.MyProfile"]</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+</div>
+
+@code {
+    private string ItemClass(string href)
+        => $"menu-item {(Nav.Uri.Contains(href, StringComparison.OrdinalIgnoreCase) ? "active" : "")}";
+
+    private async Task HideMenuOnClick(MouseEventArgs _)
+    {
+        try { await JS.InvokeVoidAsync("irsUi.offcanvasHide", "#appSideNav"); } catch { }
+    }
+}

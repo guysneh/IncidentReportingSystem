@@ -1,0 +1,49 @@
+﻿@using IncidentReportingSystem.UI.Core.Auth
+@inject AuthState AuthState
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+
+@if (!_hydrated)
+{
+    <div class="container py-5 text-center">
+        <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
+    </div>
+}
+else if (_authorized)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _hydrated;
+    private bool _authorized;
+
+    protected override void OnInitialized()
+    {
+        AuthState.Changed += OnAuthChanged;
+        UpdateFlags();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_hydrated && !_authorized)
+            Nav.NavigateTo("/", forceLoad: true);
+    }
+
+    private Task OnAuthChanged()
+    {
+        UpdateFlags();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void UpdateFlags()
+    {
+        _hydrated = AuthState.IsHydrated;
+        _authorized = !string.IsNullOrWhiteSpace(AuthState.AccessToken);
+    }
+
+    public void Dispose() => AuthState.Changed -= OnAuthChanged;
+}

@@ -146,9 +146,27 @@
     {
         _loginCtx = new EditContext(login);
         _registerCtx = new EditContext(register);
+        State.Changed += OnAuthChanged;
+        RedirectIfAuthenticated();
+    }
+    private Task OnAuthChanged()
+    {
+        RedirectIfAuthenticated();
+        return Task.CompletedTask;
+    }
+    private void RedirectIfAuthenticated()
+    {
+        if (State.IsHydrated && !string.IsNullOrWhiteSpace(State.AccessToken))
+            Nav.NavigateTo("/dashboard", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnAuthChanged;
     }
 
     private string TabClass(string tab) => $"nav-link {(activeTab == tab ? "active" : "")}";
+
     private void SetTab(string tab)
     {
         if (activeTab == tab) return;

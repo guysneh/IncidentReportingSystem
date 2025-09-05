@@ -1,4 +1,5 @@
 ﻿using IncidentReportingSystem.UI.Core.Auth;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 
 public sealed class AuthHeaderHandler : DelegatingHandler
@@ -6,26 +7,20 @@ public sealed class AuthHeaderHandler : DelegatingHandler
     private readonly AuthState _state;
     private readonly ILogger<AuthHeaderHandler> _log;
     public AuthHeaderHandler(AuthState state, ILogger<AuthHeaderHandler> log)
-    {
-        _state = state; _log = log;
-    }
+    { _state = state; _log = log; }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        var hadBefore = req.Headers.Authorization is not null; 
-        var tok = _state.AccessToken;
-
-        if (!string.IsNullOrWhiteSpace(tok))
+        if (!string.IsNullOrWhiteSpace(_state.AccessToken))
         {
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tok);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _state.AccessToken);
+            _log.LogDebug("AuthHeaderHandler: attached bearer (len={Len}) to {Method} {Path}",
+                _state.AccessToken.Length, request.Method, request.RequestUri?.ToString());
         }
-
-        _log.LogInformation("[HTTP] {m} {u} | hadBefore={before} stateHas={has} final={final} len={len}",
-            req.Method, req.RequestUri,
-            hadBefore, !string.IsNullOrWhiteSpace(tok),
-            req.Headers.Authorization is not null,
-            req.Headers.Authorization?.Parameter?.Length ?? 0);
-
-        return base.SendAsync(req, ct);
+        else
+        {
+            _log.LogDebug("AuthHeaderHandler: no token for {Method} {Path}", request.Method, request.RequestUri);
+        }
+        return await base.SendAsync(request, ct);
     }
 }

@@ -240,4 +240,61 @@
   <data name="Auth.SignIn.Title" xml:space="preserve">
     <value>Anmelden</value>
   </data>
+  <data name="Account.Edit.Title" xml:space="preserve">
+    <value>Profil bearbeiten</value>
+  </data>
+  <data name="Account.Edit.Success" xml:space="preserve">
+    <value>Profil geändert</value>
+  </data>
+  <data name="Account.Edit.Failed" xml:space="preserve">
+    <value>Profil konnte nicht aktualisiert werden</value>
+  </data>
+  <data name="Account.Action.ChangePassword" xml:space="preserve">
+    <value>Kennwort ändern</value>
+  </data>
+  <data name="Account.ChangePassword.Title" xml:space="preserve">
+    <value>Kennwort ändern</value>
+  </data>
+  <data name="Account.ChangePassword.Success" xml:space="preserve">
+    <value>Kennwort geändert</value>
+  </data>
+  <data name="Field.Password.Current" xml:space="preserve">
+    <value>Aktuelles Kennwort</value>
+  </data>
+  <data name="Field.Password.New" xml:space="preserve">
+    <value>Neues Kennwort</value>
+  </data>
+  <data name="Field.Password.Confirm" xml:space="preserve">
+    <value>Neues Kennwort bestätigen</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Dashboard.Mvp.Placeholder" xml:space="preserve">
+    <value>Dashboard placeholder</value>
+  </data>
+  <data name="Dashboard.Link.Profile" xml:space="preserve">
+    <value>Zu meinem Profil</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Error.Generic" xml:space="preserve">
+    <value>Etwas ist schief gelaufen</value>
+  </data>
+  <data name="Nav.Dashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav.MyProfile" xml:space="preserve">
+    <value>Mein Profil</value>
+  </data>
+  <data name="Nav.Side" xml:space="preserve">
+    <value>Navigation</value>
+  </data>
+  <data name="Nav.Menu" xml:space="preserve">
+    <value>Menü</value>
+  </data>
+  <data name="Ation.Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
 </root>

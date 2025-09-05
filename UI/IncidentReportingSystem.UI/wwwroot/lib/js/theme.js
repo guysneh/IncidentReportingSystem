@@ -13,3 +13,13 @@
     try { set(get()); } catch { }
     return { get, set, toggle };
 })();
+
+window.irsUi = window.irsUi || {};
+window.irsUi.offcanvasHide = function (selector) {
+    try {
+        var el = document.querySelector(selector);
+        if (!el || !window.bootstrap) return;
+        var inst = bootstrap.Offcanvas.getOrCreateInstance(el);
+        inst.hide();
+    } catch { }
+};

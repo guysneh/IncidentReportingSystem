@@ -1,14 +1,10 @@
-﻿// Set/Get culture cookie used by ASP.NET Core RequestLocalization
-window.irsCulture = {
-    set: function (culture) {
-        var d = new Date();
-        d.setFullYear(d.getFullYear() + 1);
-        // cookie format: c=<culture>|uic=<culture>
-        document.cookie = ".AspNetCore.Culture=c=" + culture + "|uic=" + culture +
-            "; path=/; expires=" + d.toUTCString();
-    },
-    get: function () {
-        var m = document.cookie.match(/(?:^|; )\.AspNetCore\.Culture=([^;]+)/);
-        return m ? decodeURIComponent(m[1]) : null;
+﻿window.irsCulture = {
+    // "EN" | "DE" | "HE"
+    set(code) {
+        const c = (code || "EN").toLowerCase(); // en/de/he
+        document.cookie = `.AspNetCore.Culture=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; samesite=lax`;
+        document.cookie = `.AspNetCore.Culture=c=${c}|uic=${c}; path=/; samesite=lax; max-age=31536000`;
+        try { localStorage.setItem("irs.culture", c); } catch { }
+        console.log("[irsCulture] culture ->", c);
     }
 };

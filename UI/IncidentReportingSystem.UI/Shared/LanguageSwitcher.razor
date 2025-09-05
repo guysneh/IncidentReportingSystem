@@ -1,14 +1,29 @@
-﻿@inject IJSRuntime JS
-@inject NavigationManager Nav
-
-<button class="seg" @onclick='() => SetLang("en")'>EN</button>
-<button class="seg" @onclick='() => SetLang("de")'>DE</button>
-<button class="seg" @onclick='() => SetLang("he")'>עבר</button>
+﻿@using System.Globalization
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
 
 @code {
-    private async Task SetLang(string culture)
+    private string current = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToUpperInvariant();
+
+    private async Task OnChanged(ChangeEventArgs e)
     {
-        await JS.InvokeVoidAsync("irsCulture.set", culture);
-        Nav.NavigateTo(Nav.Uri, new NavigationOptions { ForceLoad = true, ReplaceHistoryEntry = true });
+        var code = (e?.Value?.ToString() ?? "EN").ToUpperInvariant(); // EN|DE|HE
+        await JS.InvokeVoidAsync("irsCulture.set", code);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
     }
 }
+
+<div class="btn-group" role="group" aria-label="@T["Language.Select"]" dir="ltr">
+    <input type="radio" class="btn-check" name="lang" id="lang-en" value="EN"
+           checked="@("EN" == current)" @onchange="OnChanged" />
+    <label class="btn btn-outline-secondary btn-sm" for="lang-en">En</label>
+
+    <input type="radio" class="btn-check" name="lang" id="lang-de" value="DE"
+           checked="@("DE" == current)" @onchange="OnChanged" />
+    <label class="btn btn-outline-secondary btn-sm" for="lang-de">De</label>
+
+    <input type="radio" class="btn-check" name="lang" id="lang-he" value="HE"
+           checked="@("HE" == current)" @onchange="OnChanged" />
+    <label class="btn btn-outline-secondary btn-sm" for="lang-he">עב</label>
+</div>

@@ -61,6 +61,60 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Change password.
+        /// </summary>
+        internal static string Account_Action_ChangePassword {
+            get {
+                return ResourceManager.GetString("Account.Action.ChangePassword", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Password changed.
+        /// </summary>
+        internal static string Account_ChangePassword_Success {
+            get {
+                return ResourceManager.GetString("Account.ChangePassword.Success", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Change password.
+        /// </summary>
+        internal static string Account_ChangePassword_Title {
+            get {
+                return ResourceManager.GetString("Account.ChangePassword.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not update profile.
+        /// </summary>
+        internal static string Account_Edit_Failed {
+            get {
+                return ResourceManager.GetString("Account.Edit.Failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Profile updated.
+        /// </summary>
+        internal static string Account_Edit_Success {
+            get {
+                return ResourceManager.GetString("Account.Edit.Success", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Edit profile.
+        /// </summary>
+        internal static string Account_Edit_Title {
+            get {
+                return ResourceManager.GetString("Account.Edit.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to You are not authorized or your session expired. Please sign in again..
         /// </summary>
         internal static string Account_NotAuthorized_Body {
@@ -124,6 +178,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Save.
+        /// </summary>
+        internal static string Action_Save {
+            get {
+                return ResourceManager.GetString("Action.Save", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Sign in.
         /// </summary>
         internal static string Action_SignIn {
@@ -138,6 +201,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Aria_Loading {
             get {
                 return ResourceManager.GetString("Aria.Loading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Close.
+        /// </summary>
+        internal static string Ation_Close {
+            get {
+                return ResourceManager.GetString("Ation.Close", resourceCulture);
             }
         }
         
@@ -205,6 +277,42 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Go to My Profile.
+        /// </summary>
+        internal static string Dashboard_Link_Profile {
+            get {
+                return ResourceManager.GetString("Dashboard.Link.Profile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This is a minimal dashboard placeholder..
+        /// </summary>
+        internal static string Dashboard_Mvp_Placeholder {
+            get {
+                return ResourceManager.GetString("Dashboard.Mvp.Placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Dashboard.
+        /// </summary>
+        internal static string Dashboard_Title {
+            get {
+                return ResourceManager.GetString("Dashboard.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Something went wrong..
+        /// </summary>
+        internal static string Error_Generic {
+            get {
+                return ResourceManager.GetString("Error.Generic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Invalid email or password..
         /// </summary>
         internal static string Error_Login {
@@ -268,6 +376,33 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Confirm new password.
+        /// </summary>
+        internal static string Field_Password_Confirm {
+            get {
+                return ResourceManager.GetString("Field.Password.Confirm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Current password.
+        /// </summary>
+        internal static string Field_Password_Current {
+            get {
+                return ResourceManager.GetString("Field.Password.Current", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to New password.
+        /// </summary>
+        internal static string Field_Password_New {
+            get {
+                return ResourceManager.GetString("Field.Password.New", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Role.
         /// </summary>
         internal static string Field_Role {
@@ -304,11 +439,47 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Dashboard.
+        /// </summary>
+        internal static string Nav_Dashboard {
+            get {
+                return ResourceManager.GetString("Nav.Dashboard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Home.
         /// </summary>
         internal static string Nav_Home {
             get {
                 return ResourceManager.GetString("Nav.Home", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Menu.
+        /// </summary>
+        internal static string Nav_Menu {
+            get {
+                return ResourceManager.GetString("Nav.Menu", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to My Profile.
+        /// </summary>
+        internal static string Nav_MyProfile {
+            get {
+                return ResourceManager.GetString("Nav.MyProfile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Navigation.
+        /// </summary>
+        internal static string Nav_Side {
+            get {
+                return ResourceManager.GetString("Nav.Side", resourceCulture);
             }
         }
         

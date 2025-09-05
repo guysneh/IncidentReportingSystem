@@ -7,18 +7,30 @@
     --logo-start: #111;
     --logo-end: #ffcd00;
     --logo-fg: #fff;
+    /* derived (used by components) */
+    --card-bg: var(--surface);
+    --text-color: var(--text);
+    --link-color: var(--text);
+    --icon-filter: invert(0);
 }
 
     :root[data-theme="dark"] {
-        --surface: #15181f;
-        --text: #f3f5f8;
-        --muted: #c2c7d1;
-        --border: #2b2f38;
+        /* final dark palette (bottom-most in your file) */
+        --surface: #1a1f28;
+        --text: #f4f6fb;
+        --muted: #d2d7e1;
+        --control-bg: #232a35;
+        --border: #3a4252;
         --logo-start: #ffcd00;
         --logo-end: #a67600;
         --logo-fg: #0b0d10;
+        --card-bg: var(--surface);
+        --text-color: var(--text);
+        --link-color: var(--text);
+        --icon-filter: invert(1);
     }
 
+/* ===== Base ===== */
 body {
     background: #eef0f6;
     color: var(--text);
@@ -50,17 +62,7 @@ body {
     direction: ltr;
 }
 
-.brand {
-    order: 0;
-}
-
-.header-actions {
-    order: 1;
-    margin-left: auto;
-    white-space: nowrap;
-    direction: ltr;
-}
-
+/* ===== Forms/Cards ===== */
 .card.auth-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -93,9 +95,11 @@ body {
         background: linear-gradient(135deg,#4f8cff,#8ab4ff);
     }
 
+/* ===== Theme toggle (single final version) ===== */
 .theme-toggle {
     display: inline-flex;
     align-items: center;
+    gap: .5rem;
 }
 
     .theme-toggle input {
@@ -104,12 +108,11 @@ body {
 
     .theme-toggle label {
         position: relative;
-        width: 64px;
-        height: 32px;
+        width: 56px;
+        height: 28px;
         border-radius: 999px;
         background: var(--border);
         cursor: pointer;
-        display: inline-block;
         box-shadow: inset 0 2px 6px rgba(0,0,0,.12);
     }
 
@@ -117,7 +120,7 @@ body {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 14px;
+            font-size: 13px;
             opacity: .9;
         }
 
@@ -134,22 +137,19 @@ body {
             position: absolute;
             top: 3px;
             left: 3px;
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             background: var(--surface);
             box-shadow: 0 4px 12px rgba(0,0,0,.25);
-            transition: left .18s;
+            transition: left .18s ease;
         }
 
-:root[data-theme="dark"] .theme-toggle label {
-    background: #3a3f48;
-}
+    .theme-toggle input:checked + label::after {
+        left: 31px;
+    }
 
-.theme-toggle input:checked + label::after {
-    left: 35px;
-}
-
+/* ===== Segmented (language switch) ===== */
 .segmented {
     display: inline-flex;
     align-items: center;
@@ -182,7 +182,15 @@ body {
     background: rgba(255,255,255,.08);
 }
 
-/* RTL polish */
+/* ===== RTL polish ===== */
+html[dir="rtl"], html.rtl {
+    direction: rtl;
+}
+
+    html[dir="rtl"] body, html.rtl body {
+        text-align: right;
+    }
+
 [dir="rtl"] .form-label {
     text-align: right;
 }
@@ -197,13 +205,30 @@ body {
     margin-left: .5rem !important;
 }
 
-/* Dark contrast polishing */
-:root[data-theme="dark"] {
-    --surface: #1a1f28;
-    --text: #f4f6fb;
-    --muted: #d2d7e1;
-    --control-bg: #232a35;
-    --border: #3a4252;
+html[dir="rtl"] .text-start {
+    text-align: right !important;
+}
+
+.force-ltr, html[dir="rtl"] input[type="email"], html[dir="rtl"] input[type="number"],
+html.rtl input[type="email"], html.rtl input[type="number"] {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* ===== Account visuals ===== */
+.account-card {
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: 0 12px 36px rgba(0,0,0,.08);
+}
+
+.account-dl dt {
+    font-weight: 600;
+    color: var(--muted);
+}
+
+html[dir="rtl"] .account-dl, html.rtl .account-dl {
+    text-align: right !important;
 }
 
 .auth-card h1, .auth-card h2, .auth-card h3 {
@@ -213,161 +238,12 @@ body {
 .auth-card .text-muted {
     color: var(--muted) !important;
 }
-.theme-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem
-}
 
-    .theme-toggle input {
-        display: none
-    }
-
-    .theme-toggle label {
-        position: relative;
-        width: 56px;
-        height: 28px;
-        border-radius: 999px;
-        background: var(--border);
-        cursor: pointer;
-        box-shadow: inset 0 2px 6px rgba(0,0,0,.12)
-    }
-
-        .theme-toggle label .icon {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 13px;
-            opacity: .9
-        }
-
-        .theme-toggle label .sun {
-            left: 8px
-        }
-
-        .theme-toggle label .moon {
-            right: 8px
-        }
-
-        .theme-toggle label::after {
-            content: "";
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: var(--surface);
-            box-shadow: 0 4px 12px rgba(0,0,0,.25);
-            transition: left .18s ease
-        }
-
-    .theme-toggle input:checked + label::after {
-        left: 31px
-    }
-/* --- Global RTL overrides (load AFTER bootstrap) --- */
-/* Load AFTER bootstrap! */
-html[dir="rtl"], html.rtl {
-    direction: rtl;
-}
-
-    html[dir="rtl"] body, html.rtl body {
-        text-align: right;
-    }
-
-    html[dir="rtl"] .container,
-    html[dir="rtl"] .card,
-    html[dir="rtl"] .auth-card,
-    html[dir="rtl"] .form-label,
-    html[dir="rtl"] .form-text,
-    html[dir="rtl"] .form-control,
-    html[dir="rtl"] .form-select,
-    html[dir="rtl"] .text-start,
-    html[dir="rtl"] dl, html[dir="rtl"] dt, html[dir="rtl"] dd,
-    html.rtl .container,
-    html.rtl .card,
-    html.rtl .auth-card,
-    html.rtl .form-label,
-    html.rtl .form-text,
-    html.rtl .form-control,
-    html.rtl .form-select,
-    html.rtl .text-start,
-    html.rtl dl, html.rtl dt, html.rtl dd {
-        text-align: right !important;
-    }
-
-    /* Inputs direction in RTL */
-    html[dir="rtl"] .form-control, html[dir="rtl"] .form-select,
-    html.rtl .form-control, html.rtl .form-select {
-        direction: rtl;
-    }
-
-    /* Keep emails/numbers LTR for readability */
-    .force-ltr,
-    html[dir="rtl"] input[type="email"], html[dir="rtl"] input[type="number"],
-    html.rtl input[type="email"], html.rtl input[type="number"] {
-        direction: ltr !important;
-        text-align: left !important;
-    }
-
-
-
-/* Account card visuals */
-.account-card {
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    background: var(--surface);
-}
-
-/* Details list */
-.account-dl dt {
-    font-weight: 600;
-    color: var(--muted);
-}
-
-html[dir="rtl"] .account-dl,
-html.rtl .account-dl {
-    text-align: right !important; /* assure right alignment in RTL */
-}
-
-/* Email/number always LTR for readability */
-.force-ltr {
-    direction: ltr !important;
-    text-align: left !important;
-}
-
-/* Mobile tweaks */
-@media (max-width: 576px) {
-    .account-card {
-        padding: 1rem !important;
-    }
-
-    .container {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-}
-
-/* Better tap highlights on mobile */
-* {
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Respect RTL when authors accidentally used "start" utilities inside RTL */
-html[dir="rtl"] .text-start {
-    text-align: right !important;
-}
-
-html[dir="rtl"] .ms-2 {
-    margin-left: 0 !important;
-    margin-right: var(--bs-spacer, .5rem) !important;
-}
-
-/* Colored role badge in the top corner (logical sides = flip in RTL) */
+/* Role badge */
 .role-badge {
     position: absolute;
-    inset-block-start: 1rem; /* top */
-    inset-inline-end: 1rem; /* right in LTR, left in RTL */
+    inset-block-start: 1rem;
+    inset-inline-end: 1rem;
     padding: .35rem .6rem;
     border-radius: 12px;
     font-weight: 600;
@@ -378,25 +254,204 @@ html[dir="rtl"] .ms-2 {
     background: #0d6efd;
     color: #fff;
 }
-/* primary */
+
 .role-admin {
     background: #ffcd00;
     color: #1a1a1a;
 }
+
 .role-other {
     background: #6c757d;
     color: #fff;
 }
 
-/* optional: force LTR for emails even under RTL UI */
-.force-ltr {
-    direction: ltr;
-    unicode-bidi: bidi-override;
-}
-/* brand amber with high contrast */
-
-html[dir="rtl"] .account-dl {
-    text-align: right !important;
+/* ===== Offcanvas (side menu) – final (full background, no dim) ===== */
+.irs-offcanvas {
+    --bs-offcanvas-width: 300px;
+    background-color: #fff; /* FULL color (light) */
+    color: var(--text-color);
+    border-left: 1px solid var(--border);
 }
 
+:root[data-theme="dark"] .irs-offcanvas {
+    background-color: #121212;
+}
+/* FULL dark */
+.irs-offcanvas .offcanvas-header {
+    border-bottom: 1px solid var(--border);
+}
 
+.irs-offcanvas .btn-close {
+    filter: var(--icon-filter);
+}
+
+.irs-offcanvas a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+    .irs-offcanvas a:hover {
+        text-decoration: underline;
+    }
+
+/* ===== Side menu items (modern) ===== */
+.irs-menu .menu-title {
+    font-weight: 600;
+    opacity: .85;
+}
+
+.irs-menu .menu-item {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .6rem .75rem;
+    border-radius: .75rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+    .irs-menu .menu-item svg {
+        opacity: .8;
+    }
+
+    .irs-menu .menu-item:hover {
+        background: rgba(0,0,0,.06);
+    }
+
+:root[data-theme="dark"] .irs-menu .menu-item:hover {
+    background: rgba(255,255,255,.08);
+}
+
+.irs-menu .menu-item.active {
+    font-weight: 600;
+    background: rgba(0,123,255,.12);
+    border: 1px solid var(--border);
+}
+
+/* ===== Mobile polish ===== */
+@media (max-width:576px) {
+    .account-card {
+        padding: 1rem !important;
+    }
+
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* ===== Touch polish ===== */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.brand-left {
+    position: absolute;
+    left: .75rem;
+    top: .5rem;
+    z-index: 1030;
+    white-space: nowrap;
+}
+
+.brand-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: .5rem;
+    white-space: nowrap;
+    z-index: 1030;
+}
+
+.actions-right {
+    position: absolute;
+    right: 0;
+    top: .5rem; 
+    padding-inline-end: .5rem;
+    z-index: 1031;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.app-logo {
+    color: var(--logo-end);
+}
+
+:root[data-theme="dark"] .app-logo {
+    color: var(--logo-start);
+}
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .5rem;
+    padding: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+    .btn-icon svg {
+        opacity: .85;
+    }
+
+:root[data-theme="dark"] .btn-icon svg {
+    opacity: .95;
+}
+
+
+.app-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    direction: ltr !important;
+}
+
+.toolbar-center {
+    justify-self: center !important;
+}
+
+.toolbar-right {
+    justify-self: end !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: .5rem !important;
+}
+
+
+/* Grid header – תוחם ימין/מרכז/שמאל, בלי absolute */
+.app-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    direction: ltr !important; /* שלא יתהפך ב-RTL */
+}
+
+.toolbar-center {
+    justify-self: center !important;
+}
+
+.toolbar-right {
+    justify-self: end !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: .5rem !important;
+}
+
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .5rem;
+    padding: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+.app-logo {
+    color: var(--logo-end);
+}
+
+:root[data-theme="dark"] .app-logo {
+    color: var(--logo-start);
+}

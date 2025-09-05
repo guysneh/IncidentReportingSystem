@@ -1,0 +1,12 @@
+﻿@page "/dashboard"
+@rendermode RenderMode.InteractiveServer
+
+    <div class="container py-4">
+        <h2 class="h4 mb-3">@T["Dashboard.Title"]</h2>
+        <div class="alert alert-info">
+            @T["Dashboard.Mvp.Placeholder"]
+            <a href="/account" class="alert-link">@T["Dashboard.Link.Profile"]</a>
+        </div>
+    </div>
+
+@code { [Inject] IncidentReportingSystem.UI.Localization.IAppTexts T { get; set; } = default!; }

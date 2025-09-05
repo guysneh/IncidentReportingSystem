@@ -240,4 +240,61 @@
   <data name="Auth.SignIn.Title" xml:space="preserve">
     <value>Sign In</value>
   </data>
+  <data name="Account.Edit.Title" xml:space="preserve">
+    <value>Edit profile</value>
+  </data>
+  <data name="Account.Edit.Success" xml:space="preserve">
+    <value>Profile updated</value>
+  </data>
+  <data name="Account.Edit.Failed" xml:space="preserve">
+    <value>Could not update profile</value>
+  </data>
+  <data name="Account.Action.ChangePassword" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Account.ChangePassword.Title" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Account.ChangePassword.Success" xml:space="preserve">
+    <value>Password changed</value>
+  </data>
+  <data name="Field.Password.Current" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="Field.Password.New" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="Field.Password.Confirm" xml:space="preserve">
+    <value>Confirm new password</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Dashboard.Mvp.Placeholder" xml:space="preserve">
+    <value>This is a minimal dashboard placeholder.</value>
+  </data>
+  <data name="Dashboard.Link.Profile" xml:space="preserve">
+    <value>Go to My Profile</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Error.Generic" xml:space="preserve">
+    <value>Something went wrong.</value>
+  </data>
+  <data name="Nav.Dashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav.MyProfile" xml:space="preserve">
+    <value>My Profile</value>
+  </data>
+  <data name="Nav.Side" xml:space="preserve">
+    <value>Navigation</value>
+  </data>
+  <data name="Nav.Menu" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="Ation.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
 </root>

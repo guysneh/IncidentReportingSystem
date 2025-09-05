@@ -240,4 +240,61 @@
   <data name="Auth.SignIn.Title" xml:space="preserve">
     <value>התחברות</value>
   </data>
+  <data name="Account.Edit.Title" xml:space="preserve">
+    <value>עריכת פרופיל</value>
+  </data>
+  <data name="Account.Edit.Success" xml:space="preserve">
+    <value>הפרופיל עודכן</value>
+  </data>
+  <data name="Account.Edit.Failed" xml:space="preserve">
+    <value>עדכון פרופיל נכשל</value>
+  </data>
+  <data name="Account.Action.ChangePassword" xml:space="preserve">
+    <value>שינוי סיסמה</value>
+  </data>
+  <data name="Account.ChangePassword.Title" xml:space="preserve">
+    <value>שינוי סיסמה</value>
+  </data>
+  <data name="Account.ChangePassword.Success" xml:space="preserve">
+    <value>סיסמא שונתה</value>
+  </data>
+  <data name="Field.Password.Current" xml:space="preserve">
+    <value>סיסמה נוכחית</value>
+  </data>
+  <data name="Field.Password.New" xml:space="preserve">
+    <value>סיסמה חדשה</value>
+  </data>
+  <data name="Field.Password.Confirm" xml:space="preserve">
+    <value>אישור סיסמה חדשה</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>לוח מחוונים</value>
+  </data>
+  <data name="Dashboard.Mvp.Placeholder" xml:space="preserve">
+    <value>ממלא מקום לוח מחוונים</value>
+  </data>
+  <data name="Dashboard.Link.Profile" xml:space="preserve">
+    <value>הפרופיל שלי</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>שמירה</value>
+  </data>
+  <data name="Error.Generic" xml:space="preserve">
+    <value>משהו לא הלך כשורה</value>
+  </data>
+  <data name="Nav.Dashboard" xml:space="preserve">
+    <value>לוח מחוונים</value>
+  </data>
+  <data name="Nav.MyProfile" xml:space="preserve">
+    <value>הפרופיל שלי</value>
+  </data>
+  <data name="Nav.Side" xml:space="preserve">
+    <value>ניווט</value>
+  </data>
+  <data name="Nav.Menu" xml:space="preserve">
+    <value>תפריט</value>
+  </data>
+  <data name="Ation.Close" xml:space="preserve">
+    <value>סגירה</value>
+  </data>
 </root>

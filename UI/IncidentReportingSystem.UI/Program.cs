@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Globalization;
+using System.Net.Http.Headers;
 
 // Must be set before any hosting/builder is created
 AppContext.SetSwitch("Microsoft.AspNetCore.Watch.BrowserRefreshEnabled", false);
@@ -37,27 +38,38 @@ builder.Services.AddScoped<IAppTexts, AppTexts>();
 // Auth
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddTransient<AuthHeaderHandler>();
+
+// Problems
+builder.Services.AddTransient<ProblemDetailsHandler>();
 
 // HTTP clients
 static string Slash(string u) => string.IsNullOrWhiteSpace(u) ? u : (u.EndsWith("/") ? u : u + "/");
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.PublicApiClient>();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.SecureApiClient>();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.IApiClient>(sp =>
+    sp.GetRequiredService<IncidentReportingSystem.UI.Core.Http.SecureApiClient>());
 
-builder.Services.AddTransient<AuthHeaderHandler>();
 
-builder.Services.AddHttpClient("ApiPublic", (sp, http) =>
+builder.Services.AddHttpClient("ApiPublic", (sp, c) =>
 {
-    var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
-    http.BaseAddress = new Uri(api.BaseUrl.TrimEnd('/') + "/");
-    http.Timeout = TimeSpan.FromSeconds(30);
-}).AddHttpMessageHandler(() => new ProblemDetailsHandler());
+    var opts = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(opts.BaseUrl))
+        throw new InvalidOperationException("Api:BaseUrl is missing");
+    c.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/"); // e.g. https://localhost:7001/api/v1/
+    c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+});
 
-builder.Services.AddHttpClient("Api", (sp, http) =>
+builder.Services.AddHttpClient("Api", (sp, c) =>
 {
-    var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
-    http.BaseAddress = new Uri(api.BaseUrl.TrimEnd('/') + "/");
-    http.Timeout = TimeSpan.FromSeconds(30);
-}).AddHttpMessageHandler<AuthHeaderHandler>()
-  .AddHttpMessageHandler(() => new ProblemDetailsHandler());
-
+    var opts = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(opts.BaseUrl))
+        throw new InvalidOperationException("Api:BaseUrl is missing");
+    c.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/"); // e.g. https://localhost:7001/api/v1/
+    c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+})
+.AddHttpMessageHandler<AuthHeaderHandler>()          
+.AddHttpMessageHandler<ProblemDetailsHandler>();     
 
 // ***** THIS IS THE IMPORTANT PART FOR GUARANTEED INTERACTIVITY *****
 builder.Services.AddRazorPages();
@@ -82,14 +94,14 @@ app.UseStaticFiles();
 // RequestLocalization (en default; de, he)
 // --- Localization: cookie first ---
 var supported = new[] { "en", "de", "he" }.Select(c => new CultureInfo(c)).ToList();
-var loc = new RequestLocalizationOptions
+app.UseRequestLocalization(new RequestLocalizationOptions
 {
     DefaultRequestCulture = new RequestCulture("en"),
     SupportedCultures = supported,
-    SupportedUICultures = supported
-};
-loc.RequestCultureProviders.Insert(0, new CookieRequestCultureProvider());
-app.UseRequestLocalization(loc);
+    SupportedUICultures = supported,
+    FallBackToParentCultures = false,
+    FallBackToParentUICultures = false
+});
 
 app.MapGet("/localize", (HttpContext ctx, string c, string? r) =>
 {

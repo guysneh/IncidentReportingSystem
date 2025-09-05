@@ -2,6 +2,8 @@
 @implements IDisposable
 @using System.Globalization
 @using IncidentReportingSystem.UI.Core.Auth
+@using System.ComponentModel.DataAnnotations
+@using System.Net
 @inject IAuthService Auth
 @inject AuthState AuthState
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
@@ -42,6 +44,42 @@
                             <dt class="col-5 col-sm-4 text-muted">@T["Field.Name"]</dt>
                             <dd class="col-7 col-sm-8">@((me.DisplayName ?? $"{me.FirstName} {me.LastName}").Trim())</dd>
                         </dl>
+                        <h2 class="h4 m-0 pe-5 mb-3">@T["Account.Edit.Title"]</h2>
+
+                        <EditForm EditContext="_editCtx" OnValidSubmit="SaveProfileAsync">
+                            <DataAnnotationsValidator />
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label" for="fn">@T["Field.FirstName"]</label>
+                                    <InputText id="fn" class="form-control" @bind-Value="_edit.FirstName" />
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label" for="ln">@T["Field.LastName"]</label>
+                                    <InputText id="ln" class="form-control" @bind-Value="_edit.LastName" />
+                                </div>
+                            </div>
+
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary"
+                                        disabled="@(Busy || string.IsNullOrWhiteSpace(AuthState.AccessToken))">
+                                    @T["Action.Save"]
+                                </button>
+
+                                <a class="btn btn-outline-secondary" href="/account/change-password">
+                                    @T["Account.Action.ChangePassword"]
+                                </a>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_saveError))
+                            {
+                                <div class="alert alert-danger mt-3">@T[_saveError]</div>
+                            }
+                            @if (_saveSuccess)
+                            {
+                                <div class="alert alert-success mt-3">@T["Account.Edit.Success"]</div>
+                            }
+                        </EditForm>
+
                     </div>
                 </div>
             </div>
@@ -55,11 +93,18 @@
     private bool Busy;              // start false; spinner is gated by IsHydrated
     private string? ErrorKey;
     private bool _loaded;
+    private ProfileEditVm _edit = new();
+    private EditContext _editCtx = default!;
+    private bool _saveSuccess;
+    private string? _saveError;
+
 
     protected override void OnInitialized()
     {
-        AuthState.Changed += OnAuthChanged;
+        AuthState.Changed += OnAuthChanged; 
+        _editCtx = new EditContext(_edit);
     }
+
 
     public void Dispose()
     {
@@ -75,6 +120,35 @@
     private Task OnAuthChanged()
     {
         return InvokeAsync(TryLoadAsync); 
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (Busy) return;
+        _saveError = null; _saveSuccess = false;
+
+        if (!_editCtx.Validate()) return;
+
+        try
+        {
+            Busy = true;
+            await Auth.UpdateMeAsync(_edit.FirstName, _edit.LastName);
+            me = await Auth.MeAsync();
+            _saveSuccess = true;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            _saveError = "Account.NotAuthorized.Body";
+        }
+        catch
+        {
+            _saveError = "Account.Edit.Failed";
+        }
+        finally
+        {
+            Busy = false;
+            StateHasChanged();
+        }
     }
 
     private async Task TryLoadAsync()
@@ -120,6 +194,15 @@
     }
 
     // === helpers for the colored role badge ===
+    public sealed class ProfileEditVm
+    {
+        [Required, MinLength(1), MaxLength(50)]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required, MinLength(1), MaxLength(50)]
+        public string LastName { get; set; } = string.Empty;
+    }
+
     private string PrimaryRole() => me?.Roles?.FirstOrDefault() ?? "User";
 
     private static string RoleBadgeClass(string role)

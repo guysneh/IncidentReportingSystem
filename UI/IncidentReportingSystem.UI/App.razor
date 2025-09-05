@@ -1,11 +1,12 @@
 ﻿@using Microsoft.AspNetCore.Components.Routing
-
-<Router AppAssembly="@typeof(App).Assembly">
+<Router AppAssembly="@typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)" />
+        <RouteView RouteData="@routeData"
+                   DefaultLayout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)" />
     </Found>
+
     <NotFound>
-        <LayoutView Layout="@typeof(Shared.MainLayout)">
+        <LayoutView Layout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)">
             <div class="container py-5">
                 <div class="alert alert-warning">Page not found.</div>
             </div>
