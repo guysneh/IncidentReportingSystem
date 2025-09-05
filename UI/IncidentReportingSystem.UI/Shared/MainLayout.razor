@@ -1,11 +1,11 @@
-﻿@inherits LayoutComponentBase
+﻿@using IncidentReportingSystem.UI.Pages.Auth
+@inherits LayoutComponentBase
 @inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
 @inject IncidentReportingSystem.UI.Core.Auth.IAuthService Auth
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @inject Microsoft.JSInterop.IJSRuntime JS  
 
-<AuthHydrator />   @* hydrate token from localStorage as early as possible *@
 
 <header class="navbar px-3">
      <DirHydrator />

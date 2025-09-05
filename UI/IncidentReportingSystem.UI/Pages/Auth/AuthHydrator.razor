@@ -1,32 +1,25 @@
-﻿@using System.Text.Json.Serialization
-@inject Microsoft.JSInterop.IJSRuntime JS
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState State
+﻿@inject Microsoft.JSInterop.IJSRuntime JS
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState Auth
 
 @code {
-    private bool _done;
+    private sealed record Payload(string? token, DateTimeOffset? expUtc);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _done) return;
+        if (!firstRender) return;
+
+        string? token = null;
+        DateTimeOffset? exp = null;
+
         try
         {
-            var payload = await JS.InvokeAsync<AuthPayload>("irsAuth.get");
-            if (!string.IsNullOrWhiteSpace(payload?.token))
-                await State.SetAsync(payload!.token!, payload!.expUtc);
-            else
-                await State.SetAsync(null, null);
+            var p = await JS.InvokeAsync<Payload>("irsAuth.get");
+            token = p?.token;
+            exp = p?.expUtc;
         }
-        catch
-        {
-            await State.SetAsync(null, null);
-        }
-        _done = true;
-        StateHasChanged();
-    }
+        catch { /* ignore – continue without token */ }
 
-    public sealed class AuthPayload
-    {
-        public string? token { get; set; }
-        public DateTimeOffset? expUtc { get; set; }
+        // Mark hydrated ALWAYS to avoid infinite spinners, even if no token
+        await Auth.HydrateAsync(token, exp);
     }
 }

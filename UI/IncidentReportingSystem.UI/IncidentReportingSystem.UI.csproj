@@ -12,7 +12,12 @@
     <EmbeddedResource Remove="wwwroot\lib\NewFolder\**" />
     <None Remove="wwwroot\lib\NewFolder\**" />
   </ItemGroup>
-
+<ItemGroup>
+    <Content Update="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="8.12.0" />
   </ItemGroup>

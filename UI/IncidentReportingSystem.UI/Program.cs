@@ -6,6 +6,7 @@ using IncidentReportingSystem.UI.Localization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 // Must be set before any hosting/builder is created
 AppContext.SetSwitch("Microsoft.AspNetCore.Watch.BrowserRefreshEnabled", false);
@@ -76,11 +77,31 @@ if (app.Configuration.GetValue<bool>("EnableHttpsRedirection"))
 app.UseStaticFiles();
 
 // RequestLocalization (en default; de, he)
-var supported = new[] { "en", "de", "he" };
-app.UseRequestLocalization(new RequestLocalizationOptions()
-    .SetDefaultCulture("en")
-    .AddSupportedCultures(supported)
-    .AddSupportedUICultures(supported));
+// --- Localization: cookie first ---
+var supported = new[] { "en", "de", "he" }.Select(c => new CultureInfo(c)).ToList();
+var loc = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("en"),
+    SupportedCultures = supported,
+    SupportedUICultures = supported
+};
+loc.RequestCultureProviders.Insert(0, new CookieRequestCultureProvider());
+app.UseRequestLocalization(loc);
+
+app.MapGet("/localize", (HttpContext ctx, string c, string? r) =>
+{
+    var cookie = CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(c));
+    ctx.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        cookie,
+        new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1), IsEssential = true, SameSite = SameSiteMode.Lax, Path = "/" }
+    );
+
+    var back = string.IsNullOrWhiteSpace(r) ? "/" : r;
+    if (Uri.TryCreate(back, UriKind.Absolute, out var abs)) back = abs.PathAndQuery;
+    return Results.LocalRedirect(back); 
+});
+
 
 app.UseAntiforgery();
 

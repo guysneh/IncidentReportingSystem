@@ -1,19 +1,19 @@
 ﻿@inject NavigationManager Nav
-@inject IJSRuntime JS
 
 <div class="segmented">
-    <a class="seg @Active("en")" href="" @onclick='e => Switch(e,"en")'>EN</a>
-    <a class="seg @Active("de")" href="" @onclick='e => Switch(e,"de")'>DE</a>
-    <a class="seg @Active("he")" href="" @onclick='e => Switch(e,"he")'>עב</a>
+    <a class="seg @Active("en")" href="@Href("en")">EN</a>
+    <a class="seg @Active("de")" href="@Href("de")">DE</a>
+    <a class="seg @Active("he")" href="@Href("he")">עב</a>
 </div>
 
 @code {
-    [Parameter] public string Current { get; set; } = "en";
-    string Active(string c) => Current == c ? "active" : "";
+    string Active(string c) =>
+        Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == c ? "active" : "";
 
-    async Task Switch(MouseEventArgs e, string code)
+    string Href(string c)
     {
-        Nav.NavigateTo($"/ui/culture/{code}", forceLoad: true);
-        await JS.InvokeVoidAsync("irsDir.apply", code);
+        var baseUri = Nav.BaseUri.TrimEnd('/');
+        var back = Uri.EscapeDataString(Nav.Uri);
+        return $"{baseUri}/localize?c={Uri.EscapeDataString(c)}&r={back}";
     }
 }

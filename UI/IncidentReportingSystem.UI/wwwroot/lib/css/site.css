@@ -353,3 +353,40 @@ html.rtl .account-dl {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Respect RTL when authors accidentally used "start" utilities inside RTL */
+html[dir="rtl"] .text-start {
+    text-align: right !important;
+}
+
+html[dir="rtl"] .ms-2 {
+    margin-left: 0 !important;
+    margin-right: var(--bs-spacer, .5rem) !important;
+}
+
+/* Colored role badge in the top corner (logical sides = flip in RTL) */
+.role-badge {
+    position: absolute;
+    inset-block-start: 1rem; /* top */
+    inset-inline-end: 1rem; /* right in LTR, left in RTL */
+    padding: .35rem .6rem;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+
+.role-user {
+    background: #0d6efd;
+    color: #fff;
+}
+/* primary */
+.role-admin {
+    background: #ffcd00;
+    color: #1a1a1a;
+}
+/* brand amber with high contrast */
+
+html[dir="rtl"] .account-dl {
+    text-align: right !important;
+}
+
+
