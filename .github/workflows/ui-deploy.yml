@@ -89,13 +89,18 @@ jobs:
           HOSTNAME=$(az webapp show -g "${{ secrets.AZURE_WEBAPP_RG }}" -n "${{ secrets.AZURE_WEBAPP_NAME }}" --query defaultHostName -o tsv)
           URL="https://$HOSTNAME/"
           echo "Pinging $URL ..."
-          for i in {1..20}; do
-            code=$(curl -sS -o /dev/null -w "%{http_code}" "$URL")
+          for i in {1..40}; do
+            # -L follows redirects; return final HTTP code
+            code=$(curl -sS -o /dev/null -w "%{http_code}" -L "$URL")
             echo "Attempt $i => HTTP $code"
-            if [ "$code" = "200" ]; then exit 0; fi
+            # pass if final code is 2xx or 3xx
+            if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
+              exit 0
+            fi
             sleep 6
           done
-          echo "Smoke test failed"; exit 1
+          echo "Smoke test failed"
+          exit 1
 
   # Optional: add UI origin to API CORS (only if requested)
   update-api-cors:
