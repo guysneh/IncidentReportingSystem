@@ -3,18 +3,22 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @using System.Globalization
 @{
-    var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-    var dir = CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+    var ci = CultureInfo.CurrentUICulture;
+    var isRtl = ci.TextInfo.IsRightToLeft;
+    var lang = ci.TwoLetterISOLanguageName;
+    var bootstrapHref = isRtl
+        ? "lib/bootstrap/dist/css/bootstrap.rtl.min.css"
+        : "lib/bootstrap/dist/css/bootstrap.min.css";
 }
 <!DOCTYPE html>
-<html lang="@lang" dir="@dir">
+<html lang="@lang" dir="@(isRtl ? "rtl" : "ltr")">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Incident Reporting</title>
+    <!-- Bootstrap: pick RTL or LTR -->
+    <link id="bootstrap" rel="stylesheet" href="@bootstrapHref" />
 
     <!-- CSS (absolute paths from wwwroot) -->
-    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="/lib/css/site.css?v=13" />
     <script src="/lib/js/auth.js"></script>
     <script src="/lib/js/culture.js"></script>
@@ -27,6 +31,7 @@
     </app>
 
     <!-- Blazor Server bootstrap -->
+    <script src="/lib/js/rtl.js"></script>
     <script src="/_framework/blazor.server.js"></script>
 </body>
 </html>

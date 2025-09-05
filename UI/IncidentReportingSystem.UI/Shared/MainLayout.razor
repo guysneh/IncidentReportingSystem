@@ -35,4 +35,11 @@
         try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch {}  
         Nav.NavigateTo("/", forceLoad: true);
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+        try { await JS.InvokeVoidAsync("irsRtl.applyByCulture", culture); } catch { }
+    }
 }
