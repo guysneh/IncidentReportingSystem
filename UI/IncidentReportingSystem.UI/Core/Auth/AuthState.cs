@@ -13,20 +13,20 @@ namespace IncidentReportingSystem.UI.Core.Auth
         // Async event
         public event Func<Task>? Changed;
 
-        public async Task SetAsync(string token, DateTimeOffset? exp)
+        public Task SetAsync(string? token)
         {
-            AccessToken = token;
-            ExpiresAtUtc = exp;
-            IsHydrated = true;
-            await RaiseChangedAsync();
+            AccessToken = string.IsNullOrWhiteSpace(token) ? null : token;
+            IsHydrated = true;         
+            Changed?.Invoke();
+            return Task.CompletedTask;
         }
 
-        public async Task ClearAsync()
+        public Task ClearAsync()
         {
             AccessToken = null;
-            ExpiresAtUtc = null;
-            IsHydrated = true;
-            await RaiseChangedAsync();
+            IsHydrated = true;         
+            Changed?.Invoke();
+            return Task.CompletedTask;
         }
 
         public async Task HydrateAsync(string? token, DateTimeOffset? exp)

@@ -30,7 +30,7 @@ namespace IncidentReportingSystem.UI.Core.Http
                     var p = await _js.InvokeAsync<Payload>("irsAuth.get");
                     if (!string.IsNullOrWhiteSpace(p?.token))
                     {
-                        await _state.SetAsync(p!.token!, p.expUtc);
+                        await _state.SetAsync(p!.token!);
                         token = p.token;
                     }
                 }

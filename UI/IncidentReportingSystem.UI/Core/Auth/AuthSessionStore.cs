@@ -68,7 +68,7 @@ public sealed class AuthSessionStore
                 snap.LastName,
                 snap.DisplayName);
 
-            await state.SetAsync(snap.AccessToken, snap.ExpiresAtUtc);
+            await state.SetAsync(snap.AccessToken);
             
             return true;
         }

@@ -1,46 +1,38 @@
 ﻿@page "/account"
-@implements IDisposable
-@using IncidentReportingSystem.UI.Core.Auth
-@using static IncidentReportingSystem.UI.Core.Auth.AuthModels
-@inject IAuthService Auth
-@inject AuthState AuthState
-@inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @rendermode RenderMode.InteractiveServer
+@inject IAuthService Auth
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
+@inject IAppTexts T
 
-@if (!_ready)
+@if (!AuthState.IsHydrated || Busy)
 {
-    <div class="text-center py-5">
-        <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
-    </div>
+    <div class="text-center py-5"><div class="spinner-border" role="status"></div></div>
 }
-else if (_errorKey is not null)
+else if (ErrorKey is not null)
+{
+    <div class="alert alert-danger">@T[ErrorKey]</div>
+}
+else if (me is not null)
 {
     <div class="container py-4">
-        <div class="alert alert-danger">@T[_errorKey]</div>
-    </div>
-}
-else if (_me is not null)
-{
-    <div class="container py-4 text-start">
         <div class="row justify-content-center">
-            <div class="col-12 col-md-10 col-lg-8">
-                <div class="card account-card p-4 position-relative">
-                    <!-- colored role badge in the top corner -->
-                    <span class="@RoleBadgeClass(_me)" title="@string.Join(", ", _me.Roles ?? Array.Empty<string>())">
-                        @PrimaryRole(_me)
-                    </span>
+            <div class="col-md-8 col-lg-6">
+                <div class="card auth-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="h4 m-0">@T["Account.Title"]</h2>
+                        @if (me.Roles?.Length > 0)
+                        {
+                            <span class="badge @RoleBadgeClass(PrimaryRole(me))">@PrimaryRole(me)</span>
+                        }
+                    </div>
 
-                    <h2 class="h4 m-0 pe-5 mb-3">@T["Account.Title"]</h2>
-
-                    <dl class="row account-dl mb-0">
-                        <dt class="col-5 col-sm-4">@T["Field.Email"]</dt>
-                        <dd class="col-7 col-sm-8 force-ltr">@_me.Email</dd>
-
-                        <dt class="col-5 col-sm-4">@T["Field.Name"]</dt>
-                        <dd class="col-7 col-sm-8">@((_me.DisplayName ?? $"{_me.FirstName} {_me.LastName}").Trim())</dd>
-
-                        <dt class="col-5 col-sm-4">@T["Field.Roles"]</dt>
-                        <dd class="col-7 col-sm-8">@string.Join(", ", _me.Roles ?? Array.Empty<string>())</dd>
+                    <dl class="row">
+                        <dt class="col-4 text-muted">@T["Field.Email"]</dt>
+                        <dd class="col-8">@me.Email</dd>
+                        <dt class="col-4 text-muted">@T["Field.Name"]</dt>
+                        <dd class="col-8">@((me.DisplayName ?? $"{me.FirstName} {me.LastName}").Trim())</dd>
+                        <dt class="col-4 text-muted">@T["Field.Roles"]</dt>
+                        <dd class="col-8">@string.Join(", ", me.Roles ?? Array.Empty<string>())</dd>
                     </dl>
                 </div>
             </div>
@@ -49,74 +41,62 @@ else if (_me is not null)
 }
 
 @code {
-    private WhoAmI? _me;
-    private string? _errorKey;
-    private bool _ready;
+    bool Busy;
+    string? ErrorKey;
+    AuthModels.WhoAmI? me;
+    bool _loaded;
 
     protected override void OnInitialized()
     {
-        AuthState.Changed += OnAuthStateChanged; // async event (Func<Task>)
+        AuthState.Changed += OnAuthChanged;
     }
-
-    public void Dispose() => AuthState.Changed -= OnAuthStateChanged;
+    public void Dispose() => AuthState.Changed -= OnAuthChanged;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        // hydrate complete -> fetch profile once
+        if ((firstRender || !_loaded) && AuthState.IsHydrated)
+            await EnsureLoadedAsync();
+    }
 
-        // Wait up to 2s for hydration (no infinite spinner)
-        await AuthState.WaitForHydrationAsync(TimeSpan.FromSeconds(2));
-        await LoadAsync();
+    private async Task OnAuthChanged()
+    {
+        if (AuthState.IsHydrated && !_loaded)
+            await EnsureLoadedAsync();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnAuthStateChanged()
+    async Task EnsureLoadedAsync()
     {
-        if (!_ready && AuthState.IsHydrated)
-        {
-            await LoadAsync();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task LoadAsync()
-    {
+        if (_loaded || Busy) return;
+        Busy = true; ErrorKey = null;
         try
         {
             if (string.IsNullOrWhiteSpace(AuthState.AccessToken))
             {
-                _errorKey = "Account.NotAuthorized.Body";
-                return; // stay on page, don't redirect to login
+                ErrorKey = "Account.NotAuthorized.Body";
+                return;  
             }
 
-            _me = await Auth.MeAsync();
-
-            if (_me is null)
+            me = await Auth.MeAsync();
+            if (me is null)
             {
-                await Task.Delay(150); // small retry after full reload / language switch
-                _me = await Auth.MeAsync();
+                await Task.Delay(150);            // small race guard on first connect
+                me = await Auth.MeAsync();
             }
-
-            if (_me is null)
-                _errorKey = "Account.NotAuthorized.Body";
+            if (me is null) ErrorKey = "Account.NotAuthorized.Body";
+            else _loaded = true;
         }
-        finally
-        {
-            _ready = true;
-        }
+        finally { Busy = false; StateHasChanged(); }
     }
 
-    // === helpers for the colored role badge ===
-    private static string PrimaryRole(WhoAmI me)
-        => me.Roles?.FirstOrDefault() ?? "User";
+    static string PrimaryRole(AuthModels.WhoAmI m)
+      => m.Roles?.FirstOrDefault() ?? "User";
 
-    private static string RoleBadgeClass(WhoAmI me)
+    static string RoleBadgeClass(string r) => r switch
     {
-        var r = PrimaryRole(me).ToLowerInvariant();
-        return r switch
-        {
-            "admin" => "role-badge role-admin",
-            _ => "role-badge role-user"
-        };
-    }
+        "Admin" => "text-bg-danger",
+        "User" => "text-bg-primary",
+        _ => "text-bg-secondary"
+    };
 }

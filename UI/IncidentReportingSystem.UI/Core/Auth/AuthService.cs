@@ -37,7 +37,7 @@ namespace IncidentReportingSystem.UI.Core.Auth
             try { await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc); } catch { }
 
             // 2) update in-memory state
-            await _state.SetAsync(dto.AccessToken!, dto.ExpiresAtUtc);
+            await _state.SetAsync(dto.AccessToken!);
 
             // 3) give the pipeline a tick
             await Task.Yield();
@@ -58,7 +58,7 @@ namespace IncidentReportingSystem.UI.Core.Auth
             if (string.IsNullOrWhiteSpace(dto?.AccessToken))
                 return await SignInAsync(email, password, ct);
 
-            await _state.SetAsync(dto!.AccessToken!, dto.ExpiresAtUtc);
+            await _state.SetAsync(dto!.AccessToken!);
             try { await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc); } catch { }
             return true;
         }

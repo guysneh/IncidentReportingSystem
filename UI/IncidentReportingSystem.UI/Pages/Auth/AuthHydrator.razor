@@ -1,25 +1,23 @@
-﻿@inject Microsoft.JSInterop.IJSRuntime JS
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState Auth
+﻿@inject IJSRuntime JS
+@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
 
 @code {
-    private sealed record Payload(string? token, DateTimeOffset? expUtc);
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!firstRender) return; // חשוב: לרוץ פעם אחת בלבד אחרי שה-circuit אינטראקטיבי
 
         string? token = null;
-        DateTimeOffset? exp = null;
-
         try
         {
-            var p = await JS.InvokeAsync<Payload>("irsAuth.get");
-            token = p?.token;
-            exp = p?.expUtc;
+            // ודא שirsAuth מוגדר בסקריפט לפני blazor.server.js
+            token = await JS.InvokeAsync<string?>("irsAuth.get");
         }
-        catch { /* ignore – continue without token */ }
+        catch
+        {
+            // אם הסקריפט לא נטען מסיבה כלשהי – לא להפיל את ה-UI
+        }
 
-        // Mark hydrated ALWAYS to avoid infinite spinners, even if no token
-        await Auth.HydrateAsync(token, exp);
+        // מסמנים שההידרציה הושלמה גם אם אין טוקן
+        await AuthState.SetAsync(token);
     }
 }

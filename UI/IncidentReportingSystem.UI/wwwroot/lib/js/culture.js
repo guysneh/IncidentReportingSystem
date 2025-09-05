@@ -1,20 +1,14 @@
-﻿window.irsCulture = (function () {
-    function set(code) {
-        try {
-            localStorage.setItem('irs.culture', code);
-            document.documentElement.lang = code;
-            document.documentElement.dir = (code === 'he' ? 'rtl' : 'ltr');
-        } catch { /* no-op */ }
+﻿// Set/Get culture cookie used by ASP.NET Core RequestLocalization
+window.irsCulture = {
+    set: function (culture) {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        // cookie format: c=<culture>|uic=<culture>
+        document.cookie = ".AspNetCore.Culture=c=" + culture + "|uic=" + culture +
+            "; path=/; expires=" + d.toUTCString();
+    },
+    get: function () {
+        var m = document.cookie.match(/(?:^|; )\.AspNetCore\.Culture=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
     }
-    function get() {
-        try { return localStorage.getItem('irs.culture') || 'en'; }
-        catch { return 'en'; }
-    }
-    function applyAndReload(code) {
-        set(code);
-        // Avoid race with .NET render batch by letting browser schedule the reload
-        setTimeout(() => location.replace(location.href), 0);
-    }
-    try { set(get()); } catch { }
-    return { get, set, applyAndReload };
-})();
+};
