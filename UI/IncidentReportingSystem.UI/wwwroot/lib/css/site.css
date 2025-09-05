@@ -975,3 +975,28 @@ html, body {
         min-height: var(--chart-h-sm, 260px);
     }
 }
+/* Tabs toolbar: never hide overflow; allow icons to wrap */
+.chart-tabs .mud-tabs-toolbar {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap; 
+    overflow: visible; 
+    max-width: 100%;
+}
+
+.chart-tabs .mud-tab {
+    min-width: 36px; 
+    padding: 4px;
+    border-radius: 999px;
+}
+
+@media (max-width: 576px) {
+    .chart-tabs .mud-tabs-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chart-tabs .mud-tab {
+        width: 100%;
+    }
+}
