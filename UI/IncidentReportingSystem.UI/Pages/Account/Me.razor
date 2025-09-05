@@ -41,9 +41,6 @@
 
                             <dt class="col-5 col-sm-4 text-muted">@T["Field.Name"]</dt>
                             <dd class="col-7 col-sm-8">@((me.DisplayName ?? $"{me.FirstName} {me.LastName}").Trim())</dd>
-
-                            <dt class="col-5 col-sm-4 text-muted">@T["Field.Roles"]</dt>
-                            <dd class="col-7 col-sm-8">@string.Join(", ", me.Roles ?? Array.Empty<string>())</dd>
                         </dl>
                     </div>
                 </div>

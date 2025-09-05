@@ -208,7 +208,7 @@
     <value>Loading</value>
   </data>
   <data name="Field.Name" xml:space="preserve">
-    <value>Username</value>
+    <value>Full Name</value>
   </data>
   <data name="Action.Logout" xml:space="preserve">
     <value>Logout</value>

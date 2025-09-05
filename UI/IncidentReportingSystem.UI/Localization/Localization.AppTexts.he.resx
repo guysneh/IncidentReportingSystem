@@ -208,7 +208,7 @@
     <value>טוען</value>
   </data>
   <data name="Field.Name" xml:space="preserve">
-    <value>שם משתמש</value>
+    <value>שם מלא</value>
   </data>
   <data name="Action.Logout" xml:space="preserve">
     <value>התנתקות</value>
