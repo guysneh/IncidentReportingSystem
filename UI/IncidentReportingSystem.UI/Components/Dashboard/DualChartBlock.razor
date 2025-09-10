@@ -1,5 +1,6 @@
 ﻿@using MudBlazor
 @using IncidentReportingSystem.UI.Core.Dashboard
+@inject IAppTexts T
 
 <MudCard Class="chart-block">
     <MudCardHeader Class="chart-header">
@@ -8,7 +9,6 @@
             <MudText Typo="Typo.subtitle2">@Title</MudText>
         </div>
 
-        <!-- Mode selector (icons only) -->
         <MudTabs @bind-ActivePanelIndex="_tab"
                  KeepPanelsAlive="false"
                  Rounded="true"
@@ -21,7 +21,6 @@
             <MudTabPanel Icon="@Icons.Material.Filled.PieChart" />
             <MudTabPanel Icon="@Icons.Material.Filled.DashboardCustomize" />
         </MudTabs>
-
     </MudCardHeader>
 
     <MudCardContent>
@@ -76,5 +75,7 @@
 
     private string[] Labels => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Key).ToArray();
     private List<ChartSeries> BarSeries => new()
-    { new ChartSeries { Name = "Count", Data = (Data ?? Array.Empty<KeyCount>()).Select(x => (double)x.Count).ToArray() } };
+  {
+      new ChartSeries { Name = T["Dashboard.Chart.Series.Count"], Data = (Data ?? Array.Empty<KeyCount>()).Select(x => (double)x.Count).ToArray() }
+  };
 }

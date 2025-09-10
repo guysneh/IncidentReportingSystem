@@ -327,4 +327,46 @@
   <data name="Auth.Login.Success" xml:space="preserve">
     <value>ההתחברות הצליחה</value>
   </data>
+  <data name="Dashboard.Error" xml:space="preserve">
+    <value>טעינת לוח המחוונים נכשלה</value>
+  </data>
+  <data name="Dashboard.Chart.Timeseries" xml:space="preserve">
+    <value>תקלות לאורך ציר הזמן</value>
+  </data>
+  <data name="Dashboard.Loading" xml:space="preserve">
+    <value>טוען...</value>
+  </data>
+  <data name="Common.Reload" xml:space="preserve">
+    <value>רענן נתונים</value>
+  </data>
+  <data name="Dashboard.Chart.Series.Count" xml:space="preserve">
+    <value>כמות</value>
+  </data>
+  <data name="Dashboard.Total" xml:space="preserve">
+    <value>סה"כ תקלות</value>
+  </data>
+  <data name="Filters.DateRange" xml:space="preserve">
+    <value>טווח תאריכים</value>
+  </data>
+  <data name="Filters.Period" xml:space="preserve">
+    <value>רזולוציה</value>
+  </data>
+  <data name="Filters.Apply" xml:space="preserve">
+    <value>החל</value>
+  </data>
+  <data name="Filters.Reset" xml:space="preserve">
+    <value>איפוס</value>
+  </data>
+  <data name="Period.Daily" xml:space="preserve">
+    <value>יומי</value>
+  </data>
+  <data name="Period.Weekly" xml:space="preserve">
+    <value>שבועי</value>
+  </data>
+  <data name="Export.CSV" xml:space="preserve">
+    <value>יצוא CSV</value>
+  </data>
+  <data name="Period.WeekLabel" xml:space="preserve">
+    <value>שבוע {0}</value>
+  </data>
 </root>

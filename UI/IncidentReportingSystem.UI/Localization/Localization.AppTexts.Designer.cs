@@ -295,6 +295,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Reload.
+        /// </summary>
+        internal static string Common_Reload {
+            get {
+                return ResourceManager.GetString("Common.Reload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Incidents by category.
         /// </summary>
         internal static string Dashboard_Chart_ByCategory {
@@ -322,11 +331,38 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Count.
+        /// </summary>
+        internal static string Dashboard_Chart_Series_Count {
+            get {
+                return ResourceManager.GetString("Dashboard.Chart.Series.Count", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents over time.
+        /// </summary>
+        internal static string Dashboard_Chart_Timeseries {
+            get {
+                return ResourceManager.GetString("Dashboard.Chart.Timeseries", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No data available.
         /// </summary>
         internal static string Dashboard_Empty {
             get {
                 return ResourceManager.GetString("Dashboard.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Dashboard could not be loaded.
+        /// </summary>
+        internal static string Dashboard_Error {
+            get {
+                return ResourceManager.GetString("Dashboard.Error", resourceCulture);
             }
         }
         
@@ -367,6 +403,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Loading....
+        /// </summary>
+        internal static string Dashboard_Loading {
+            get {
+                return ResourceManager.GetString("Dashboard.Loading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This is a minimal dashboard placeholder..
         /// </summary>
         internal static string Dashboard_Mvp_Placeholder {
@@ -381,6 +426,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Dashboard_Title {
             get {
                 return ResourceManager.GetString("Dashboard.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Total Incidents.
+        /// </summary>
+        internal static string Dashboard_Total {
+            get {
+                return ResourceManager.GetString("Dashboard.Total", resourceCulture);
             }
         }
         
@@ -408,6 +462,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Error_Register {
             get {
                 return ResourceManager.GetString("Error.Register", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export CSV.
+        /// </summary>
+        internal static string Export_CSV {
+            get {
+                return ResourceManager.GetString("Export.CSV", resourceCulture);
             }
         }
         
@@ -502,6 +565,42 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Apply.
+        /// </summary>
+        internal static string Filters_Apply {
+            get {
+                return ResourceManager.GetString("Filters.Apply", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Date range.
+        /// </summary>
+        internal static string Filters_DateRange {
+            get {
+                return ResourceManager.GetString("Filters.DateRange", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Period.
+        /// </summary>
+        internal static string Filters_Period {
+            get {
+                return ResourceManager.GetString("Filters.Period", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reset.
+        /// </summary>
+        internal static string Filters_Reset {
+            get {
+                return ResourceManager.GetString("Filters.Reset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to By continuing you agree to the Terms..
         /// </summary>
         internal static string Legal_Continue {
@@ -579,6 +678,33 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Option_User {
             get {
                 return ResourceManager.GetString("Option.User", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Daily.
+        /// </summary>
+        internal static string Period_Daily {
+            get {
+                return ResourceManager.GetString("Period.Daily", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Week {0}.
+        /// </summary>
+        internal static string Period_WeekLabel {
+            get {
+                return ResourceManager.GetString("Period.WeekLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Weekly.
+        /// </summary>
+        internal static string Period_Weekly {
+            get {
+                return ResourceManager.GetString("Period.Weekly", resourceCulture);
             }
         }
         

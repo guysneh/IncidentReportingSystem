@@ -327,4 +327,46 @@
   <data name="Auth.Login.Success" xml:space="preserve">
     <value>Login successful</value>
   </data>
+  <data name="Dashboard.Error" xml:space="preserve">
+    <value>Dashboard could not be loaded</value>
+  </data>
+  <data name="Dashboard.Chart.Timeseries" xml:space="preserve">
+    <value>Incidents over time</value>
+  </data>
+  <data name="Dashboard.Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="Common.Reload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="Dashboard.Chart.Series.Count" xml:space="preserve">
+    <value>Count</value>
+  </data>
+  <data name="Dashboard.Total" xml:space="preserve">
+    <value>Total Incidents</value>
+  </data>
+  <data name="Filters.DateRange" xml:space="preserve">
+    <value>Date range</value>
+  </data>
+  <data name="Filters.Period" xml:space="preserve">
+    <value>Period</value>
+  </data>
+  <data name="Filters.Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Filters.Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Period.Daily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="Period.Weekly" xml:space="preserve">
+    <value>Weekly</value>
+  </data>
+  <data name="Export.CSV" xml:space="preserve">
+    <value>Export CSV</value>
+  </data>
+  <data name="Period.WeekLabel" xml:space="preserve">
+    <value>Week {0}</value>
+  </data>
 </root>

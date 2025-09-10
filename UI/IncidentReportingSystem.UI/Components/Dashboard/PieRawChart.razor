@@ -14,18 +14,19 @@
     private bool _rendered;
 
     private string[] Labels => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Key).ToArray();
-    private double[] Values => (Data ?? Array.Empty<KeyCount>()).Select(x => (double)x.Count).ToArray();
+    private int[] Values => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Count).ToArray();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
         _rendered = true;
-        await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values);
+        try { await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values); } catch { }
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_rendered)
-            await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values);
+        if (!_rendered) return;
+        try { await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values); } catch { }
     }
 
     public async ValueTask DisposeAsync()

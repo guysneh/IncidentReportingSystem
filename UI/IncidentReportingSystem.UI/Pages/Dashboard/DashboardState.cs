@@ -2,60 +2,51 @@
 
 namespace IncidentReportingSystem.UI.Core.Dashboard;
 
-/// <summary>
-/// Holds current dashboard data and notifies subscribers on changes.
-/// The Changed event is synchronous to avoid deadlocks/hangs in UI rendering.
-/// </summary>
 public sealed class DashboardState
 {
     private readonly IDashboardService _svc;
     private readonly ILogger<DashboardState> _log;
 
     public DashboardOverviewDto? Overview { get; private set; }
+    public IReadOnlyList<TrendPoint> Trend { get; private set; } = Array.Empty<TrendPoint>();
+    public DashboardQuery Query { get; private set; } =
+        new(null, null, TimeResolution.Daily); // ← במקום last-30-days
+
+
     public bool IsLoading { get; private set; }
     public string? Error { get; private set; }
-
-    // Synchronous event (no awaiting) to prevent UI hangs
     public event Action? Changed;
 
-    public DashboardState(IDashboardService svc, ILogger<DashboardState> log)
+    public DashboardState(IDashboardService svc, ILogger<DashboardState> log) { _svc = svc; _log = log; }
+
+    public async Task ApplyAsync(DashboardQuery q, CancellationToken ct)
     {
-        _svc = svc;
-        _log = log;
+        Query = q;
+        await LoadAsync(ct);
     }
 
     public async Task LoadAsync(CancellationToken ct)
     {
         try
         {
-            IsLoading = true;
-            Error = null;
-            Notify();
+            IsLoading = true; Error = null; Overview = null; Trend = Array.Empty<TrendPoint>(); Notify();
 
-            // Optional: tiny timeout guard so a hung HTTP call won't freeze the UI forever
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            // linkedCts.CancelAfter(TimeSpan.FromSeconds(15)); // enable if you want a hard cap
+            var oTask = _svc.GetOverviewAsync(Query, ct);
+            var tTask = _svc.GetTrendAsync(Query, ct);
+            await Task.WhenAll(oTask, tTask);
 
-            var dto = await _svc.GetOverviewAsync(linkedCts.Token);
-            Overview = dto;
-            _log.LogInformation("Dashboard overview loaded: total={Total}, status={S}, severity={V}, category={C}",
-                dto.TotalIncidents, dto.ByStatus.Count, dto.BySeverity.Count, dto.ByCategory.Count);
+            Overview = oTask.Result;
+            Trend = tTask.Result;
+
+            _log.LogInformation("Dashboard loaded q={@Q}: total={Total}, points={Pts}",
+                Query, Overview.TotalIncidents, Trend.Count);
         }
-        catch (Exception ex)
-        {
-            Error = ex.Message;
-            _log.LogError(ex, "Failed to load dashboard overview");
-        }
-        finally
-        {
-            IsLoading = false;
-            Notify();
-        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Error = ex.Message; _log.LogError(ex, "Dashboard load failed"); }
+        finally { IsLoading = false; Notify(); }
     }
 
-    private void Notify()
-    {
-        try { Changed?.Invoke(); }
-        catch (Exception ex) { _log.LogError(ex, "DashboardState.Changed handler threw"); }
-    }
+    private void Notify() { try { Changed?.Invoke(); } catch (Exception ex) { _log.LogError(ex, "DashboardState notify failed"); } }
+
+ 
 }

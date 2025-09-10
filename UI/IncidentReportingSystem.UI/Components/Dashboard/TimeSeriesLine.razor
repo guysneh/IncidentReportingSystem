@@ -1,0 +1,51 @@
+﻿@using System.Globalization
+@using MudBlazor
+@using IncidentReportingSystem.UI.Core.Dashboard
+@inject IAppTexts T
+
+@if (Data is null || Data.Count == 0)
+{
+    <MudText Class="text-muted">@EmptyText</MudText>
+}
+else
+{
+    <div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+        <MudChart ChartType="ChartType.Line"
+                  ChartSeries="@Series"
+                  XAxisLabels="@Labels"
+                  Height="100%" Width="100%"
+                  @key="@($"ts_{Labels.Length}_{Series[0].Data.Length}_{Resolution}")" />
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TrendPoint>? Data { get; set; }
+    [Parameter] public string EmptyText { get; set; } = "—";
+    [Parameter] public int Height { get; set; } = 360;
+    [Parameter] public TimeResolution Resolution { get; set; } = TimeResolution.Daily;
+
+    private string[] Labels => (Data ?? Array.Empty<TrendPoint>())
+        .Select(p => Resolution == TimeResolution.Weekly
+            ? WeekLabel(p.Date)
+            : p.Date.ToString("yyyy-MM-dd", CultureInfo.CurrentUICulture))
+        .ToArray();
+
+    private List<ChartSeries> Series => new()
+  {
+    new ChartSeries
+    {
+      Name = T["Dashboard.Chart.Series.Count"],
+      Data = (Data ?? Array.Empty<TrendPoint>()).Select(p => (double)p.Count).ToArray()
+    }
+  };
+
+    private string WeekLabel(DateOnly weekStart)
+    {
+        // ISO שבוע: Wxx שנה (מתורגם)
+        var dt = weekStart.ToDateTime(TimeOnly.MinValue);
+        var week = ISOWeek.GetWeekOfYear(dt);
+        var year = ISOWeek.GetYear(dt);
+        // המפתח הזה ב-resx: Period.WeekLabel = "שבוע {0}" / "Woche {0}" / "Week {0}"
+        return $"{T["Period.WeekLabel", week]} {year}";
+    }
+}

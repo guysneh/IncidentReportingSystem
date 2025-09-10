@@ -31,5 +31,18 @@
     destroy: function (id) {
         var cv = document.getElementById(id);
         if (cv && cv._chart) { cv._chart.destroy(); cv._chart = null; }
+    },
+    downloadCsv: function (fileName, csvText) {
+        try {
+            const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) { console.error(e); }
     }
 };

@@ -2,5 +2,6 @@
 
 public interface IDashboardService
 {
-    Task<DashboardOverviewDto> GetOverviewAsync(CancellationToken ct);
+    Task<DashboardOverviewDto> GetOverviewAsync(DashboardQuery q, CancellationToken ct);
+    Task<IReadOnlyList<TrendPoint>> GetTrendAsync(DashboardQuery q, CancellationToken ct);
 }

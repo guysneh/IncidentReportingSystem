@@ -1000,3 +1000,52 @@ html, body {
         width: 100%;
     }
 }
+
+html[dir="rtl"] .mud-input-adorned-end .mud-input-slot {
+    padding-left: 2.5rem; 
+}
+
+html[dir="rtl"] .mud-input-adornment-end {
+    left: 0.5rem;
+    right: auto;
+}
+/* DateRange RTL fix: אייקון + ריווח תקין */
+html[dir="rtl"] .rtl-date .mud-input-adornment-end {
+    left: .5rem;
+    right: auto;
+}
+
+html[dir="rtl"] .rtl-date .mud-input-adornment-start {
+    right: .5rem;
+    left: auto;
+}
+
+/* ריווח בטוח סביב האייקון, לפי מיקום ה-adornment */
+html[dir="rtl"] .rtl-date .mud-input-root.mud-input-adorned-end .mud-input-slot {
+    padding-left: 2.5rem; /* מקום לאייקון משמאל */
+    padding-right: .75rem;
+}
+
+html[dir="rtl"] .rtl-date .mud-input-root.mud-input-adorned-start .mud-input-slot {
+    padding-right: 2.5rem; /* מקום לאייקון מימין */
+    padding-left: .75rem;
+}
+
+
+/* תיקון ל-RTL בלבד עבור ה-DateRangePicker */
+html[dir="rtl"] .drp-rtl-fix .mud-input-underline {
+    display: none !important; /* מבטל את הקו שחוצה את הלייבל */
+}
+
+/* יישור ותצוגה נקייה של הלייבל ב-RTL */
+html[dir="rtl"] .drp-rtl-fix .mud-input-label {
+    right: .75rem; /* נקודת התחלה מימין */
+    left: auto;
+    z-index: 1; /* מעל כל קווים/רקעים */
+}
+
+/* אם יש אייקון בקצה ימין/שמאל - תן ריווח לטקסט */
+html[dir="rtl"] .drp-rtl-fix .mud-input-root.mud-input-adorned-end .mud-input-slot {
+    padding-left: 2.5rem; /* מקום לאייקון משמאל */
+    padding-right: .75rem;
+}
