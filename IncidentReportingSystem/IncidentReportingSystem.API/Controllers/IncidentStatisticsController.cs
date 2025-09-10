@@ -1,41 +1,26 @@
-﻿using Asp.Versioning;
-using IncidentReportingSystem.Application.Common.Auth;
-using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
-using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentStatistics;
+﻿using IncidentReportingSystem.Application.Features.Statistics.Contracts;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IncidentReportingSystem.API.Controllers;
+namespace IncidentReportingSystem.Api.Controllers.V1;
 
-/// <summary>
-/// Controller for retrieving aggregated incident statistics.
-/// </summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/[controller]")]
-[ApiVersion("1.0")]
-[Tags("Statistics")]
-public class IncidentStatisticsController : ControllerBase
+[Route("api/v1/stats/incidents")]
+public sealed class IncidentStatsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly ISender _sender;
+    public IncidentStatsController(ISender sender) => _sender = sender;
 
-    public IncidentStatisticsController(IMediator mediator)
+    // GET /api/v1/stats/incidents/series?from=2025-06-01&to=2025-09-10&granularity=week
+    [HttpGet("series")]
+    [ProducesResponseType(typeof(IReadOnlyList<IncidentSeriesPoint>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSeries(
+        [FromQuery] DateTime from,
+        [FromQuery] DateTime to,
+        [FromQuery] TimeGranularity granularity = TimeGranularity.Day,
+        CancellationToken ct = default)
     {
-        _mediator = mediator;
-    }
-
-    /// <summary>Retrieves aggregated incident statistics (counts per severity, etc.).</summary>
-    /// <response code="200">Statistics returned successfully.</response>
-    /// <response code="401">Authentication required.</response>
-    /// <response code="403">Not authorized to read incidents.</response>
-    [HttpGet]
-    [Authorize(Policy = PolicyNames.CanReadIncidents)]
-    [ProducesResponseType(typeof(IncidentStatisticsDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IncidentStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetIncidentStatisticsQuery(), cancellationToken).ConfigureAwait(false);
+        var result = await _sender.Send(new GetIncidentSeriesQuery(from, to, granularity), ct);
         return Ok(result);
     }
 }
