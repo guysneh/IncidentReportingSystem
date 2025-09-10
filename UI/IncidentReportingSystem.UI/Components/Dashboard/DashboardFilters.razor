@@ -1,13 +1,12 @@
-﻿@using MudBlazor
+﻿@using System.Globalization
+@using MudBlazor
 @using IncidentReportingSystem.UI.Core.Dashboard
-@using System.Globalization
 @inject IAppTexts T
 
-<MudPaper Class="pa-3 d-flex flex-wrap gap-3 align-center">
-
-    @if (IsRtl)
-    {
-        <div dir="rtl">
+@if (CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft)
+{
+    <div dir="rtl">
+        <MudPaper Class="pa-3 d-flex flex-wrap gap-3 align-center">
             <MudDateRangePicker @bind-DateRange="_range"
                                 Label="@T["Filters.DateRange"]"
                                 Dense="true"
@@ -16,33 +15,43 @@
                                 Adornment="Adornment.End"
                                 Class="drp-rtl-fix" />
 
-        </div>
-    }
-    else
-    {
+            <MudSelect T="TimeResolution" @bind-Value="_resolution" Label="@T["Filters.Period"]" Dense="true" Style="width:160px">
+                <MudSelectItem Value="TimeResolution.Daily">@T["Period.Daily"]</MudSelectItem>
+                <MudSelectItem Value="TimeResolution.Weekly">@T["Period.Weekly"]</MudSelectItem>
+            </MudSelect>
+
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Apply">@T["Filters.Apply"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Reset">@T["Filters.Reset"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="ExportCsv" StartIcon="@Icons.Material.Filled.Download">
+                @T["Export.CSV"]
+            </MudButton>
+        </MudPaper>
+    </div>
+}
+else
+{
+    <MudPaper Class="pa-3 d-flex flex-wrap gap-3 align-center">
         <MudDateRangePicker @bind-DateRange="_range"
                             Label="@T["Filters.DateRange"]"
                             Dense="true"
                             Variant="Variant.Outlined"
                             ShrinkLabel="true"
-                            Adornment="Adornment.Start"
-                            Class="date-range" />
-    }
+                            Adornment="Adornment.Start" />
 
-    <MudSelect TimeResolution @bind-Value="_resolution" Label="@T["Filters.Period"]" Dense="true" Style="width:160px">
-        <MudSelectItem Value="TimeResolution.Daily">@T["Period.Daily"]</MudSelectItem>
-        <MudSelectItem Value="TimeResolution.Weekly">@T["Period.Weekly"]</MudSelectItem>
-    </MudSelect>
+        <MudSelect T="TimeResolution" @bind-Value="_resolution" Label="@T["Filters.Period"]" Dense="true" Style="width:160px">
+            <MudSelectItem Value="TimeResolution.Daily">@T["Period.Daily"]</MudSelectItem>
+            <MudSelectItem Value="TimeResolution.Weekly">@T["Period.Weekly"]</MudSelectItem>
+        </MudSelect>
 
-    <MudSpacer />
-
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Apply">@T["Filters.Apply"]</MudButton>
-    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Reset">@T["Filters.Reset"]</MudButton>
-    <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="ExportCsv" StartIcon="@Icons.Material.Filled.Download">
-        @T["Export.CSV"]
-    </MudButton>
-
-</MudPaper>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Apply">@T["Filters.Apply"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Reset">@T["Filters.Reset"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="ExportCsv" StartIcon="@Icons.Material.Filled.Download">
+            @T["Export.CSV"]
+        </MudButton>
+    </MudPaper>
+}
 
 @code {
     [Parameter, EditorRequired] public DashboardQuery Query { get; set; } = new();
@@ -51,14 +60,13 @@
 
     private DateRange? _range;
     private TimeResolution _resolution;
-    private bool IsRtl => CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft;
 
     protected override void OnParametersSet()
     {
         _resolution = Query.Resolution;
         _range = new DateRange(
-          Query.From.HasValue ? Query.From.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
-          Query.To.HasValue ? Query.To.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null
+            Query.From.HasValue ? Query.From.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+            Query.To.HasValue ? Query.To.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null
         );
     }
 
@@ -71,8 +79,7 @@
 
     private Task Reset()
     {
-        _range = null;
-        _resolution = TimeResolution.Daily;
+        _range = null; _resolution = TimeResolution.Daily;
         return OnApply.InvokeAsync(new DashboardQuery(null, null, _resolution));
     }
 

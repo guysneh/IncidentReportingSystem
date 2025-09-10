@@ -53,23 +53,39 @@ else
                     </div>
                 </MudCardHeader>
                 <MudCardContent>
-                    <TimeSeriesLine Data="State.Trend"
-                                    Resolution="State.Query.Resolution"
-                                    EmptyText="@T["Dashboard.Empty"]"
-                                    Height="380" />
-
+                    <TimeSeriesRawChart Data="State.Trend"
+                                        Resolution="State.Query.Resolution"
+                                        SeriesLabel="@T["Dashboard.Chart.Series.Count"]"
+                                        Height="380" />
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
         <MudItem xs="12">
-            <DualChartBlock Title="@T["Dashboard.Chart.ByStatus"]" EmptyText="@T["Dashboard.Empty"]" HeaderIcon="@Icons.Material.Filled.Timeline" Data="o.ByStatus" Height="380" DefaultMode="0" />
+            <DualChartBlock Title="@T["Dashboard.Chart.ByStatus"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.Timeline"
+                            Data="o.ByStatus"
+                            Height="380"
+                            DefaultMode="0" />
         </MudItem>
+
         <MudItem xs="12">
-            <DualChartBlock Title="@T["Dashboard.Chart.BySeverity"]" EmptyText="@T["Dashboard.Empty"]" HeaderIcon="@Icons.Material.Filled.Warning" Data="o.BySeverity" Height="380" DefaultMode="0" />
+            <DualChartBlock Title="@T["Dashboard.Chart.BySeverity"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.Warning"
+                            Data="o.BySeverity"
+                            Height="380"
+                            DefaultMode="0" />
         </MudItem>
+
         <MudItem xs="12">
-            <DualChartBlock Title="@T["Dashboard.Chart.ByCategory"]" EmptyText="@T["Dashboard.Empty"]" HeaderIcon="@Icons.Material.Filled.PieChart" Data="o.ByCategory" Height="380" DefaultMode="1" />
+            <DualChartBlock Title="@T["Dashboard.Chart.ByCategory"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.PieChart"
+                            Data="o.ByCategory"
+                            Height="380"
+                            DefaultMode="1" />
         </MudItem>
 
     </MudGrid>
@@ -101,7 +117,6 @@ else
 
     private async Task ExportCsv()
     {
-        // CSV: Date,Count – מתוך State.Trend (עומד בפילטרים)
         var lines = new List<string> { "date,count" };
         foreach (var p in State.Trend) lines.Add($"{p.Date:yyyy-MM-dd},{p.Count}");
         var csv = string.Join("\n", lines);

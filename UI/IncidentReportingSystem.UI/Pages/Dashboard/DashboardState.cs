@@ -10,14 +10,18 @@ public sealed class DashboardState
     public DashboardOverviewDto? Overview { get; private set; }
     public IReadOnlyList<TrendPoint> Trend { get; private set; } = Array.Empty<TrendPoint>();
     public DashboardQuery Query { get; private set; } =
-        new(null, null, TimeResolution.Daily); // ← במקום last-30-days
-
+        new(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-84)), // 12 שבועות אחרונים כברירת מחדל
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            TimeResolution.Weekly);
 
     public bool IsLoading { get; private set; }
     public string? Error { get; private set; }
     public event Action? Changed;
 
-    public DashboardState(IDashboardService svc, ILogger<DashboardState> log) { _svc = svc; _log = log; }
+    public DashboardState(IDashboardService svc, ILogger<DashboardState> log)
+    {
+        _svc = svc; _log = log;
+    }
 
     public async Task ApplyAsync(DashboardQuery q, CancellationToken ct)
     {
@@ -38,15 +42,12 @@ public sealed class DashboardState
             Overview = oTask.Result;
             Trend = tTask.Result;
 
-            _log.LogInformation("Dashboard loaded q={@Q}: total={Total}, points={Pts}",
-                Query, Overview.TotalIncidents, Trend.Count);
+            _log.LogInformation("Dashboard loaded q={@Q}: total={Total}, points={Pts}", Query, Overview.TotalIncidents, Trend.Count);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Error = ex.Message; _log.LogError(ex, "Dashboard load failed"); }
         finally { IsLoading = false; Notify(); }
     }
 
-    private void Notify() { try { Changed?.Invoke(); } catch (Exception ex) { _log.LogError(ex, "DashboardState notify failed"); } }
-
- 
+    private void Notify() { try { Changed?.Invoke(); } catch { } }
 }

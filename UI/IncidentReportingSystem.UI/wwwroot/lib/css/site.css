@@ -1049,3 +1049,25 @@ html[dir="rtl"] .drp-rtl-fix .mud-input-root.mud-input-adorned-end .mud-input-sl
     padding-left: 2.5rem; /* מקום לאייקון משמאל */
     padding-right: .75rem;
 }
+/* מבטל קו חוצה לייבל ומפנה מקום לאייקון ב-RTL */
+html[dir="rtl"] .drp-rtl-fix .mud-input-underline {
+    display: none !important;
+}
+
+html[dir="rtl"] .drp-rtl-fix .mud-input-root.mud-input-adorned-end .mud-input-slot {
+    padding-left: 2.5rem;
+    padding-right: .75rem;
+}
+/* DateRange RTL – מניעת קו על התגית וריווח לאייקון */
+html[dir="rtl"] .drp-rtl-fix .mud-input-underline {
+    display: none !important;
+}
+
+html[dir="rtl"] .drp-rtl-fix .mud-input-root.mud-input-adorned-end .mud-input-slot {
+    padding-left: 2.5rem; /* מקום לאייקון משמאל */
+    padding-right: .75rem;
+}
+
+html[dir="rtl"] .drp-rtl-fix .mud-input-adornment-end {
+    margin-left: .25rem;
+}

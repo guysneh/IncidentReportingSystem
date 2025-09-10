@@ -14,4 +14,4 @@ internal static class DashboardModelHelpers
         => list.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase))?.Count ?? 0;
 }
 
-public sealed record TrendPoint(DateOnly Date, int Count);
+public sealed record SeriesPoint(string Label, int Count);

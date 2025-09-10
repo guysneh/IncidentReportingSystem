@@ -7,3 +7,5 @@ public sealed record DashboardQuery(
     DateOnly? To = null,
     TimeResolution Resolution = TimeResolution.Daily
 );
+
+public sealed record TrendPoint(DateOnly Date, int Count);
