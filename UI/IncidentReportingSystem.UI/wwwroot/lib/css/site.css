@@ -1265,3 +1265,65 @@ body.app-drawer-open {
         background: var(--chart-canvas-bg) !important;
     }
 
+/* --- light defaults --- */
+:root {
+    --panel-bg: #fff;
+    --panel-border: rgba(0,0,0,.10);
+    --chart-frame-border: rgba(0,0,0,.12);
+    --chart-fore: #222;
+    --chart-grid: rgba(0,0,0,.12);
+    --chart-tip-bg: rgba(0,0,0,.85);
+    --chart-tip-fg: #fff;
+    --chart-canvas-bg: transparent;
+    --chart-area-bg: transparent;
+}
+
+    /* --- dark overrides --- */
+    :root[data-bs-theme="dark"],
+    :root[data-theme="dark"],
+    body.dark {
+        --panel-bg: #0f0f10;
+        --panel-border: rgba(255,255,255,.10);
+        --chart-frame-border: rgba(255,255,255,.18);
+        --chart-fore: #e6e6e6;
+        --chart-grid: rgba(255,255,255,.14);
+        --chart-tip-bg: rgba(20,20,20,.92);
+        --chart-tip-fg: #fff;
+        --chart-canvas-bg: #000; /* canvas itself */
+        --chart-area-bg: #0b0b0c; /* plot area */
+    }
+
+/* cards that hold charts */
+.mud-card.chart-block,
+.chart-block.mud-card {
+    background: var(--panel-bg) !important;
+    border: 1px solid var(--panel-border);
+    box-shadow: none;
+    border-radius: 12px;
+}
+
+.chart-header {
+    border-bottom: 1px solid var(--panel-border);
+}
+
+/* the frame around <canvas> */
+.chart-frame {
+    position: relative;
+    height: var(--chart-h, 360px);
+    max-height: 100%;
+    border: 1px solid var(--chart-frame-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+@media (max-width: 576px) {
+    .chart-frame {
+        height: var(--chart-h-sm, 240px);
+    }
+}
+
+/* make sure nothing else paints a light gradient behind charts */
+.chart-block::before,
+.chart-block::after {
+    content: none !important;
+}

@@ -61,24 +61,30 @@
     function applyLineLikeTheme(cfg, th) {
         cfg.options = cfg.options || {};
         cfg.options.plugins = cfg.options.plugins || {};
-        // legend
         (cfg.options.plugins.legend ||= {}).labels = { ...(cfg.options.plugins.legend.labels || {}), color: th.fore };
-        // tooltip
+
         (cfg.options.plugins.tooltip ||= {});
         cfg.options.plugins.tooltip.backgroundColor = th.tipBg;
         cfg.options.plugins.tooltip.titleColor = th.tipFg;
         cfg.options.plugins.tooltip.bodyColor = th.tipFg;
-        // bg
+
         cfg.options.plugins.irsBg = { canvas: th.canvasBg, area: th.areaBg };
-        // scales
+
         (cfg.options.scales ||= {});
         (cfg.options.scales.x ||= {});
         (cfg.options.scales.y ||= {});
+
+        // grid & ticks
         (cfg.options.scales.x.grid ||= {}).color = th.grid;
         (cfg.options.scales.y.grid ||= {}).color = th.grid;
         (cfg.options.scales.x.ticks ||= {}).color = th.fore;
         (cfg.options.scales.y.ticks ||= {}).color = th.fore;
+
+        // NEW: axis frame (left/bottom border)
+        (cfg.options.scales.x.border ||= {}).color = th.grid;
+        (cfg.options.scales.y.border ||= {}).color = th.grid;
     }
+
 
     function applyPieTheme(cfg, th) {
         cfg.options = cfg.options || {};
