@@ -1,5 +1,6 @@
 ﻿using IncidentReportingSystem.UI.Core.Auth;
 using IncidentReportingSystem.UI.Core.Http;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 public sealed class AuthService : IAuthService
@@ -9,19 +10,22 @@ public sealed class AuthService : IAuthService
     private readonly IJSRuntime _js;
     private readonly AuthState _state;
     private readonly ILogger<AuthService> _log;
+    private readonly NavigationManager _nav;
 
     public AuthService(
         PublicApiClient publicApi,
         SecureApiClient secureApi,
         IJSRuntime js,
         AuthState state,
-        ILogger<AuthService> log)
+        ILogger<AuthService> log,
+        NavigationManager nav)
     {
         _publicApi = publicApi;
         _secureApi = secureApi;
         _js = js;
         _state = state;
         _log = log;
+        _nav = nav;
     }
 
     private sealed class LoginResponse
@@ -80,7 +84,7 @@ public sealed class AuthService : IAuthService
 
     public async Task SignOutAsync(CancellationToken ct = default)
     {
-        try { await _js.InvokeVoidAsync("irsAuth.clear"); } catch { }
         await _state.ClearAsync();
+        try { _nav.NavigateTo("/login", forceLoad: true); } catch { /* ignore */ }
     }
 }
