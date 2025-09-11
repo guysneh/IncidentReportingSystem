@@ -1327,3 +1327,189 @@ body.app-drawer-open {
 .chart-block::after {
     content: none !important;
 }
+/* ---------- Light defaults ---------- */
+:root {
+    /* app */
+    --panel-bg: #fff;
+    --panel-border: rgba(0,0,0,.10);
+    /* Chart vars already used by irs-charts.js */
+    --chart-fore: #222;
+    --chart-grid: rgba(0,0,0,.12);
+    --chart-tip-bg: rgba(0,0,0,.85);
+    --chart-tip-fg: #fff;
+    --chart-canvas-bg: transparent;
+    --chart-area-bg: transparent;
+    /* Bootstrap tokens (light) */
+    --bs-body-bg: #f7f7f8;
+    --bs-body-color: #212529;
+    --bs-border-color: rgba(0,0,0,.12);
+    --bs-card-bg: #ffffff;
+    --bs-card-border-color: rgba(0,0,0,.12);
+    --bs-tertiary-bg: #f1f3f5;
+    --bs-secondary-bg: #f6f7f9;
+    --bs-link-color: #0d6efd;
+    --bs-link-hover-color: #0b5ed7;
+    --bs-input-bg: #fff;
+    --bs-input-color: #212529;
+    --bs-input-border-color: rgba(0,0,0,.2);
+    --bs-input-focus-border-color: #60a5fa;
+    --bs-input-placeholder-color: #6c757d;
+    --bs-dropdown-bg: #fff;
+    --bs-popover-bg: #fff;
+    --bs-popover-border-color: rgba(0,0,0,.12);
+    --bs-modal-bg: #fff;
+    --bs-tooltip-bg: rgba(0,0,0,.9);
+    --bs-tooltip-color: #fff;
+}
+
+    /* ---------- Dark overrides ---------- */
+    :root[data-bs-theme="dark"],
+    :root[data-theme="dark"],
+    body.dark {
+        --panel-bg: #111216;
+        --panel-border: rgba(255,255,255,.10);
+        --chart-fore: #e6e6e6;
+        --chart-grid: rgba(255,255,255,.14);
+        --chart-tip-bg: rgba(18,19,22,.95);
+        --chart-tip-fg: #fff;
+        --chart-canvas-bg: #000; /* canvas */
+        --chart-area-bg: #0b0c10; /* plot area */
+        /* Bootstrap tokens (dark) */
+        --bs-body-bg: #0b0c10;
+        --bs-body-color: #e6e6e6;
+        --bs-border-color: rgba(255,255,255,.14);
+        --bs-card-bg: #111216;
+        --bs-card-border-color: rgba(255,255,255,.12);
+        --bs-tertiary-bg: #0f1014;
+        --bs-secondary-bg: #0e0f13;
+        --bs-link-color: #8ab4ff;
+        --bs-link-hover-color: #a8c7ff;
+        --bs-input-bg: #0f1113;
+        --bs-input-color: #e6e6e6;
+        --bs-input-border-color: rgba(255,255,255,.16);
+        --bs-input-focus-border-color: #60a5fa;
+        --bs-input-placeholder-color: #98a2b3;
+        --bs-dropdown-bg: #111216;
+        --bs-popover-bg: #111216;
+        --bs-popover-border-color: rgba(255,255,255,.12);
+        --bs-modal-bg: #111216;
+        --bs-tooltip-bg: #15171b;
+        --bs-tooltip-color: #eaeaea;
+    }
+
+/* Apply body colors */
+body {
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+/* Cards (Bootstrap + Mud) */
+.card,
+.mud-card,
+.mud-paper {
+    background: var(--panel-bg) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid var(--panel-border) !important;
+    box-shadow: none !important;
+    border-radius: 12px;
+}
+
+.card-header,
+.chart-header {
+    border-bottom: 1px solid var(--panel-border);
+}
+
+/* Chart frame (around <canvas>) */
+.chart-frame {
+    position: relative;
+    height: var(--chart-h, 360px);
+    max-height: 100%;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+@media (max-width: 576px) {
+    .chart-frame {
+        height: var(--chart-h-sm, 240px);
+    }
+}
+
+/* Offcanvas / modal / dropdown / popover */
+.offcanvas,
+.modal-content,
+.dropdown-menu,
+.popover,
+.mud-popover,
+.mud-dialog {
+    background: var(--bs-card-bg) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid var(--panel-border) !important;
+    box-shadow: none !important;
+}
+
+/* Inputs (Bootstrap + Mud) */
+.form-control,
+.form-select {
+    background-color: var(--bs-input-bg);
+    color: var(--bs-input-color);
+    border-color: var(--bs-input-border-color);
+}
+
+    .form-control::placeholder {
+        color: var(--bs-input-placeholder-color);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--bs-input-focus-border-color);
+        box-shadow: 0 0 0 .15rem color-mix(in oklab, var(--bs-input-focus-border-color) 20%, transparent);
+    }
+
+/* Mud input internals */
+.mud-input-root .mud-input,
+.mud-input-root input,
+.mud-input-root textarea {
+    background-color: var(--bs-input-bg) !important;
+    color: var(--bs-input-color) !important;
+}
+
+.mud-input-root,
+.mud-select {
+    border-color: var(--bs-input-border-color) !important;
+}
+
+.mud-tabs-toolbar {
+    background: transparent;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.mud-tab.mud-selected {
+    background: color-mix(in oklab, #fff 6%, transparent);
+}
+
+/* Header / toolbar separators */
+.app-header,
+.app-toolbar {
+    background: transparent;
+}
+
+    .app-header .border-bottom {
+        border-color: var(--panel-border) !important;
+    }
+
+/* Drawer + overlay */
+.app-drawer {
+    background: var(--bs-card-bg);
+    border-left: 1px solid var(--panel-border);
+}
+
+.app-overlay {
+    background: rgba(0,0,0,.5);
+}
+
+/* Remove decorative light gradients if any */
+.chart-block::before,
+.chart-block::after {
+    content: none !important;
+}
