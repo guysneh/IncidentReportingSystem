@@ -103,8 +103,32 @@
         </AuthGuard>
     }
 </main>
+    @if (IsDrawerOpen)
+    {
+        <div class="app-overlay" @onclick="CloseDrawer"></div>
+        <aside class="app-drawer app-drawer--shown" @onclick:stopPropagation="true">
+            <!-- drawer content (e.g., <NavMenu />) -->
+        </aside>
+    }
 </body>
 @code {
+
+    private bool IsDrawerOpen;
+
+    private async Task ToggleDrawer()
+    {
+        IsDrawerOpen = !IsDrawerOpen;
+        await JS.InvokeVoidAsync("document.body.classList.toggle", "app-drawer-open", IsDrawerOpen);
+        StateHasChanged();
+    }
+
+    private async Task CloseDrawer()
+    {
+        IsDrawerOpen = false;
+        await JS.InvokeVoidAsync("document.body.classList.remove", "app-drawer-open");
+        StateHasChanged();
+    }
+
     bool IsWelcome => Nav.Uri.EndsWith("/", StringComparison.OrdinalIgnoreCase) ||
                       Nav.Uri.EndsWith("/welcome", StringComparison.OrdinalIgnoreCase);
 
