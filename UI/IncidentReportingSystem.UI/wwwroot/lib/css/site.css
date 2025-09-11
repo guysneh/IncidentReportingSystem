@@ -1121,3 +1121,74 @@ body.app-drawer-open {
     touch-action: none;
 }
 
+/* login: show language/theme on top-right, incl. mobile */
+.auth-topbar {
+    position: fixed;
+    top: .75rem;
+    right: .75rem;
+    display: flex;
+    gap: .5rem;
+    z-index: 1100;
+}
+
+/* make chart-type tabs usable on small screens */
+.chart-tabs .mud-tabs-toolbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: .25rem;
+}
+
+.chart-tabs .mud-tab {
+    flex: 0 0 auto; /* prevent shrinking */
+}
+
+/* ensure canvases have height in all layouts */
+.chart-frame {
+    position: relative;
+    width: 100%;
+    height: var(--chart-h, 320px);
+}
+
+@media (max-width: 640px) {
+    .chart-frame {
+        height: var(--chart-h-sm, 220px);
+    }
+}
+
+/* optional: dual layout (bar+pie) */
+.dual-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 992px) {
+    .dual-wrap {
+        grid-template-columns: 1fr;
+    }
+}
+/* keep language/theme visible on mobile inside header */
+@media (max-width: 576px) {
+    .app-header .toolbar-right .hide-xs {
+        display: flex !important;
+    }
+}
+.chart-frame {
+    position: relative;
+    width: 100%;
+    height: var(--chart-h, 320px);
+}
+
+@media (max-width: 640px) {
+    .chart-frame {
+        height: var(--chart-h-sm, 220px);
+    }
+}
+.chart-tabs .mud-tabs-toolbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chart-tabs .mud-tab {
+    flex: 0 0 auto;
+}
