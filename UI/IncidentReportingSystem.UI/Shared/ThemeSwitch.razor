@@ -30,5 +30,6 @@
         _dark = !_dark;
         try { await JS.InvokeVoidAsync("irsTheme.set", _dark ? "dark" : "light"); }
         catch { }
+        try { await JS.InvokeVoidAsync("irsCharts.applyTheme"); } catch { }
     }
 }

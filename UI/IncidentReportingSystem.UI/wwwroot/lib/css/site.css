@@ -1192,3 +1192,76 @@ body.app-drawer-open {
 .chart-tabs .mud-tab {
     flex: 0 0 auto;
 }
+/* light (default) */
+:root {
+    --chart-fore: #1f2937;
+    --chart-grid: rgba(0,0,0,.08);
+    --chart-tooltip-bg: rgba(0,0,0,.82);
+    --chart-tooltip-fg: #ffffff;
+}
+
+    /* dark – covers common selectors */
+    :root.dark, html.dark, body.dark,
+    [data-theme="dark"], [data-bs-theme="dark"] {
+        --chart-fore: #e5e7eb;
+        --chart-grid: rgba(255,255,255,.18);
+        --chart-tooltip-bg: rgba(17,24,39,.92);
+        --chart-tooltip-fg: #e5e7eb;
+    }
+/* defaults (light) */
+:root {
+    --chart-fore: #1f2937;
+    --chart-grid: rgba(0,0,0,.08);
+    --chart-tip-bg: rgba(0,0,0,.82);
+    --chart-tip-fg: #ffffff;
+    --chart-canvas-bg: transparent; /* canvas background */
+    --chart-area-bg: transparent; /* plot area background */
+}
+
+    /* dark */
+    :root.dark, html.dark, body.dark,
+    [data-theme="dark"], [data-bs-theme="dark"] {
+        --chart-fore: #e5e7eb;
+        --chart-grid: rgba(255,255,255,.18);
+        --chart-tip-bg: rgba(17,24,39,.92);
+        --chart-tip-fg: #e5e7eb;
+        --chart-canvas-bg: transparent;
+        --chart-area-bg: transparent;
+    }
+
+/* make sure canvas never paints white by CSS */
+.chart-frame canvas {
+    background: transparent !important;
+}
+
+/* light defaults */
+:root {
+    --chart-fore: #1f2937;
+    --chart-grid: rgba(0,0,0,.08);
+    --chart-tip-bg: rgba(0,0,0,.82);
+    --chart-tip-fg: #fff;
+    --chart-canvas-bg: transparent;
+    --chart-area-bg: transparent;
+}
+
+    /* dark theme */
+    :root.dark, html.dark, body.dark, [data-theme="dark"], [data-bs-theme="dark"] {
+        --chart-fore: #e5e7eb;
+        --chart-grid: rgba(255,255,255,.18);
+        --chart-tip-bg: #0b0f17;
+        --chart-tip-fg: #e5e7eb;
+        --chart-canvas-bg: #000000; /* <- black canvas */
+        --chart-area-bg: #000000; /* <- black plot area */
+    }
+
+/* make sure canvases actually use it */
+.chart-frame,
+.mud-chart {
+    background: var(--chart-area-bg) !important;
+}
+
+    .chart-frame canvas,
+    .mud-chart canvas {
+        background: var(--chart-canvas-bg) !important;
+    }
+
