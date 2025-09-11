@@ -1592,3 +1592,180 @@ body.dark {
         height: 30px;
     }
 }
+/* Dark segmented background for the chart mode selector */
+.chart-tabs .mud-tabs-toolbar,
+.chart-tabs .mud-tabs-scroll-wrapper,
+.chart-tabs .mud-tabs-toolbar-inner,
+.chart-tabs .mud-tabs-toolbar-content {
+    background-color: var(--seg-bg) !important;
+    border-radius: 9999px !important;
+}
+
+/* Keep some padding and height */
+.chart-tabs .mud-tabs-toolbar {
+    padding: 6px !important;
+    min-height: 44px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* Mobile tweak */
+@media (max-width: 640px) {
+    .chart-tabs .mud-tabs-toolbar {
+        padding: 4px !important;
+        min-height: 40px;
+    }
+}
+/* Dark pill background for the chart mode selector */
+.chart-tabs {
+    background-color: var(--seg-bg) !important; /* dark background */
+    border-radius: 9999px !important;
+    padding: 6px !important; /* inner spacing */
+    display: inline-flex; /* keep pill shape */
+    box-shadow: inset 0 0 0 1px var(--seg-border, rgba(255,255,255,.06));
+}
+
+    /* Neutralize any white backgrounds inside Mud Tabs */
+    .chart-tabs .mud-tabs-toolbar,
+    .chart-tabs .mud-tabs-scroll-wrapper,
+    .chart-tabs .mud-tabs-toolbar-inner,
+    .chart-tabs .mud-tabs-toolbar-content,
+    .chart-tabs .mud-tabs-scroll-content {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* Height/spacing tweaks */
+    .chart-tabs .mud-tabs-toolbar {
+        min-height: 44px;
+    }
+
+@media (max-width: 640px) {
+    .chart-tabs {
+        padding: 4px !important;
+    }
+
+        .chart-tabs .mud-tabs-toolbar {
+            min-height: 40px;
+        }
+}
+
+/* Active chip + icons colors (already had, keep for completeness) */
+.chart-tabs .mud-tab {
+    color: var(--seg-fore) !important;
+}
+
+    .chart-tabs .mud-tab.mud-tab-active {
+        background: var(--seg-chip) !important;
+        color: var(--seg-accent) !important;
+        border-radius: 9999px !important;
+    }
+/* Dark pill container behind the tabs */
+.chart-tabs-wrap {
+    background: var(--seg-bg) !important;
+    border-radius: 9999px !important;
+    padding: 6px !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Neutralize internal white backgrounds of MudTabs */
+.chart-tabs,
+.chart-tabs .mud-tabs-toolbar,
+.chart-tabs .mud-tabs-toolbar-inner,
+.chart-tabs .mud-tabs-scroll-wrapper,
+.chart-tabs .mud-tabs-scroll-content {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+    /* Hide default slider/indicator line */
+    .chart-tabs .mud-tabs-slider {
+        background: transparent !important;
+        height: 0 !important;
+    }
+
+    /* Pills + colors */
+    .chart-tabs .mud-tab {
+        color: var(--seg-fore) !important;
+        border-radius: 9999px !important;
+    }
+
+        .chart-tabs .mud-tab.mud-tab-active {
+            background: var(--seg-chip) !important;
+            color: var(--seg-accent) !important;
+        }
+
+/* Compact on small screens */
+@media (max-width:640px) {
+    .chart-tabs-wrap {
+        padding: 4px !important;
+    }
+}
+
+:root[data-theme="dark"] {
+    --seg-bg: #1f232b; /* track */
+    --seg-chip: #2a2f38; /* active pill */
+    --seg-fore: #cfd6e4; /* icons/text */
+    --seg-accent: #94a3ff; /* active icon */
+}
+/* track colors for the tabs switcher */
+:root[data-theme="light"] {
+    --seg-track-bg: #ffffff;
+}
+
+:root[data-theme="dark"] {
+    --seg-track-bg: #171a1f; /* dark track */
+}
+
+/* wrapper behind the tabs */
+.chart-tabs-wrap {
+    background: var(--seg-track-bg) !important;
+    border-radius: 9999px !important;
+    padding: 6px !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+    /* force Mud tabs internals to be transparent inside this wrapper */
+    .chart-tabs-wrap,
+    .chart-tabs-wrap * {
+        /* override MudBlazor palette just for this subtree */
+        --mud-palette-surface: transparent !important;
+        --mud-palette-background: transparent !important;
+    }
+
+        .chart-tabs-wrap .mud-tabs,
+        .chart-tabs-wrap .mud-tabs-toolbar,
+        .chart-tabs-wrap .mud-tabs-toolbar-inner,
+        .chart-tabs-wrap .mud-tabs-scroll-wrapper,
+        .chart-tabs-wrap .mud-tabs-scroll-content,
+        .chart-tabs-wrap .mud-paper,
+        .chart-tabs-wrap .mud-paper-root {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: 0 !important;
+        }
+
+        /* hide default slider/indicator */
+        .chart-tabs-wrap .mud-tabs-slider {
+            background: transparent !important;
+            height: 0 !important;
+        }
+
+/* pills */
+.chart-tabs .mud-tab {
+    color: var(--seg-fore) !important;
+    border-radius: 9999px !important;
+}
+
+    .chart-tabs .mud-tab.mud-tab-active {
+        background: var(--seg-chip) !important;
+        color: var(--seg-accent) !important;
+    }
+
+@media (max-width:640px) {
+    .chart-tabs-wrap {
+        padding: 4px !important;
+    }
+}
+
