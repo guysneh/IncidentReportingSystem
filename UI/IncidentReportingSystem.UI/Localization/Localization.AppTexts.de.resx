@@ -420,4 +420,28 @@
   <data name="Common.Next" xml:space="preserve">
     <value>Weiter</value>
   </data>
+  <data name="IncidentDetails.Tab.Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="IncidentDetails.Tab.Comments" xml:space="preserve">
+    <value>Kommentare</value>
+  </data>
+  <data name="IncidentDetails.Tab.Attachments" xml:space="preserve">
+    <value>Anhänge</value>
+  </data>
+  <data name="IncidentDetails.Tab.History" xml:space="preserve">
+    <value>Verlauf</value>
+  </data>
+  <data name="IncidentDetails.Section.Overview" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="IncidentDetails.Field.Description" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="IncidentDetails.NoDescription" xml:space="preserve">
+    <value>Keine Beschreibung.</value>
+  </data>
+  <data name="Incidents.BackToList" xml:space="preserve">
+    <value>Zurück zur Liste</value>
+  </data>
 </root>

@@ -420,4 +420,28 @@
   <data name="Common.Next" xml:space="preserve">
     <value>הבא</value>
   </data>
+  <data name="IncidentDetails.Tab.Details" xml:space="preserve">
+    <value>פרטים</value>
+  </data>
+  <data name="IncidentDetails.Tab.Comments" xml:space="preserve">
+    <value>הערות</value>
+  </data>
+  <data name="IncidentDetails.Tab.Attachments" xml:space="preserve">
+    <value>קבצים מצורפים</value>
+  </data>
+  <data name="IncidentDetails.Tab.History" xml:space="preserve">
+    <value>היסטוריה</value>
+  </data>
+  <data name="IncidentDetails.Section.Overview" xml:space="preserve">
+    <value>סקירה</value>
+  </data>
+  <data name="IncidentDetails.Field.Description" xml:space="preserve">
+    <value>תיאור</value>
+  </data>
+  <data name="IncidentDetails.NoDescription" xml:space="preserve">
+    <value>אין תיאור לפריט זה.</value>
+  </data>
+  <data name="Incidents.BackToList" xml:space="preserve">
+    <value>חזרה לרשימה</value>
+  </data>
 </root>

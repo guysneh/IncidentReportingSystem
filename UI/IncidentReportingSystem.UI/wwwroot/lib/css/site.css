@@ -1769,3 +1769,30 @@ body.dark {
     }
 }
 
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    border: 1px solid rgba(0,0,0,.08);
+    background: #f8f9fa;
+    color: #222;
+}
+
+.status-open {
+    background: #eefaf1;
+    color: #0f6848;
+    border-color: #c7ecd5;
+}
+
+.status-closed {
+    background: #fff0f0;
+    color: #b00020;
+    border-color: #f1c0c0;
+}
+
+.text-prewrap {
+    white-space: pre-wrap;
+}

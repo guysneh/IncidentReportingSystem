@@ -6,6 +6,7 @@
 @using IncidentReportingSystem.UI.Core.Http
 @inject IApiClient Api
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject NavigationManager Nav
 
 <div class="container py-3">
     <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
@@ -92,7 +93,7 @@
                             </td>
                             <td>@it.Severity</td>
                             <td>@it.Category</td>
-                            <td class="text-muted small">@it.Id</td>
+                            <td class="text-muted small"><a href="@DetailsHref(it.Id)">@it.Id</a></td>
                         </tr>
                     }
                 </tbody>
@@ -371,6 +372,12 @@
             "closed" => "bg-success",  // green
             _ => "bg-secondary" // grey for anything else
         };
+    }
+
+    private string DetailsHref(object id)
+    {
+        var ret = Uri.EscapeDataString(Nav.Uri);
+        return $"/incidents/{id}?returnUrl={ret}";
     }
 
 }

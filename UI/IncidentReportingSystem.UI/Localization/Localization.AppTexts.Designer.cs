@@ -646,6 +646,78 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Description.
+        /// </summary>
+        internal static string IncidentDetails_Field_Description {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Field.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No description provided..
+        /// </summary>
+        internal static string IncidentDetails_NoDescription {
+            get {
+                return ResourceManager.GetString("IncidentDetails.NoDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Overview.
+        /// </summary>
+        internal static string IncidentDetails_Section_Overview {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Section.Overview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Atachments.
+        /// </summary>
+        internal static string IncidentDetails_Tab_Attachments {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Tab.Attachments", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Comments.
+        /// </summary>
+        internal static string IncidentDetails_Tab_Comments {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Tab.Comments", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Details.
+        /// </summary>
+        internal static string IncidentDetails_Tab_Details {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Tab.Details", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to History.
+        /// </summary>
+        internal static string IncidentDetails_Tab_History {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Tab.History", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Back to list.
+        /// </summary>
+        internal static string Incidents_BackToList {
+            get {
+                return ResourceManager.GetString("Incidents.BackToList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Category.
         /// </summary>
         internal static string Incidents_Col_Category {

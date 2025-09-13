@@ -1,0 +1,200 @@
+﻿@page "/incidents/{id}"
+@rendermode RenderMode.InteractiveServer
+
+@using System.Text.Json.Serialization
+@using IncidentReportingSystem.UI.Core.Http
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+
+<AuthGuard>
+    @if (_loading)
+    {
+        <div class="container py-5 text-center">
+            <div class="spinner-border" role="status" aria-label="@T["Dashboard.Loading"]"></div>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div class="container py-4">
+            <div class="alert alert-danger">
+                <strong>@T["Incidents.Error.Title"]</strong>
+                <div class="small mt-2">@_error</div>
+                <button class="btn btn-outline-secondary mt-3" @onclick="GoBack">@T["Common.Reload"]</button>
+            </div>
+        </div>
+    }
+    else if (_incident is null)
+    {
+        <div class="container py-4">
+            <div class="alert alert-warning">
+                @T["Incidents.Empty"]
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="container py-3">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">
+                    ← @T["Incidents.BackToList"]
+                </button>
+            </div>
+
+            <div class="card p-3">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <h2 class="h4 mb-1">@_incident.Title</h2>
+                        <div class="text-muted small">
+                            <span class="me-3">ID: @_incident.Id</span>
+                            <span class="me-3">@T["Incidents.Col.Date"]: @_incident.CreatedAtUtc.ToLocalTime().ToString("g")</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="@StatusClass(_incident.Status)">@_incident.Status</span>
+                        <span class="badge bg-secondary-subtle text-secondary border">@_incident.Severity</span>
+                        <span class="badge bg-light text-dark border">@_incident.Category</span>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="@TabBtn("details")" @onclick='() => SetTab("details")'>@T["IncidentDetails.Tab.Details"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("comments")" @onclick='() => SetTab("comments")'>@T["IncidentDetails.Tab.Comments"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("attachments")" @onclick='() => SetTab("attachments")'>@T["IncidentDetails.Tab.Attachments"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("history")" @onclick='() => SetTab("history")'>@T["IncidentDetails.Tab.History"]</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3 border border-top-0 rounded-bottom">
+
+                    @if (_activeTab == "details")
+                    {
+                        <div>
+                            <h3 class="h6 text-uppercase text-muted mb-3">@T["IncidentDetails.Section.Overview"]</h3>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Title"]</div>
+                                    <div>@_incident.Title</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Status"]</div>
+                                    <div><span class="@StatusClass(_incident.Status)">@_incident.Status</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Severity"]</div>
+                                    <div>@_incident.Severity</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Category"]</div>
+                                    <div>@_incident.Category</div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-label">@T["IncidentDetails.Field.Description"]</div>
+                                    <div class="text-prewrap">@(_incident.Description ?? T["IncidentDetails.NoDescription"])</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (_activeTab == "comments")
+                    {
+                        <div class="text-muted">
+                            @T["IncidentDetails.Comments.NotWired"]
+                        </div>
+                    }
+                    else if (_activeTab == "attachments")
+                    {
+                        <div class="text-muted">
+                            @T["IncidentDetails.Attachments.NotWired"]
+                        </div>
+                    }
+                    else if (_activeTab == "history")
+                    {
+                        <div class="text-muted">
+                            @T["IncidentDetails.History.NotWired"]
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</AuthGuard>
+
+@code {
+    [Parameter] public string? id { get; set; }
+
+    private const string DetailsEndpoint = "IncidentReports/{0}"; // TODO: adjust to your API path if different
+    private bool _loading = true;
+    private string? _error;
+    private string _activeTab = "details";
+    private IncidentDetailsDto? _incident;
+    private string? _returnUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
+        if (query.TryGetValue("returnUrl", out var rv)) _returnUrl = rv!;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        _incident = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException("Missing id");
+
+            var path = string.Format(DetailsEndpoint, id);
+            _incident = await Api.GetJsonAsync<IncidentDetailsDto>(path, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string TabBtn(string name) => $"nav-link {(_activeTab == name ? "active" : "")}";
+    private void SetTab(string name) => _activeTab = name;
+
+    private string StatusClass(string? status)
+        => (status?.Equals("open", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-open"
+         : (status?.Equals("closed", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-closed"
+         : "status-pill";
+
+    private void GoBack()
+    {
+        if (!string.IsNullOrWhiteSpace(_returnUrl))
+            Nav.NavigateTo(_returnUrl, forceLoad: true);
+        else
+            Nav.NavigateTo("/incidents", forceLoad: true);
+    }
+
+    // minimal DTO (extend once you send the contract)
+    public sealed class IncidentDetailsDto
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = default!;
+        [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("status")] public string Status { get; set; } = "open";
+        [JsonPropertyName("severity")] public string Severity { get; set; } = "";
+        [JsonPropertyName("category")] public string Category { get; set; } = "";
+        [JsonPropertyName("createdAtUtc")] public DateTime CreatedAtUtc { get; set; }
+        [JsonPropertyName("description")] public string? Description { get; set; }
+    }
+}
