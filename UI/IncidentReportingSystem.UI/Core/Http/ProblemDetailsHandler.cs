@@ -1,6 +1,8 @@
-﻿using System.Net;
+﻿using Microsoft.AspNetCore.Authentication.OAuth;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using IncidentReportingSystem.UI.Core.Auth;
 
 namespace IncidentReportingSystem.UI.Core.Http
 {
@@ -11,12 +13,26 @@ namespace IncidentReportingSystem.UI.Core.Http
     /// </summary>
     public sealed class ProblemDetailsHandler : DelegatingHandler
     {
+        private readonly AuthEvents _authEvents;
+        private readonly ILogger<ProblemDetailsHandler> _logger;
+
+        public ProblemDetailsHandler(AuthEvents authEvents, ILogger<ProblemDetailsHandler> logger)
+        {
+            _authEvents = authEvents;
+            _logger = logger;
+        }
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode) return response;
-
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _logger.LogWarning("HTTP 401 from {Url}", request.RequestUri);
+                _authEvents.TripUnauthorized("api");
+                throw new UnauthorizedAccessException("HTTP 401");
+            }
             string payload = string.Empty;
             try { payload = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false); }
             catch { /* ignore */ }

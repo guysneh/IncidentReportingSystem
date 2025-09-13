@@ -7,9 +7,6 @@ using IncidentReportingSystem.UI.Core.Statistics;
 
 namespace IncidentReportingSystem.UI.Core.Dashboard;
 
-/// Service שמביא סטטיסטיקות וציר־זמן.
-/// ציר־זמן: קודם מה-API הייעודי /stats/incidents/series, ואם אין — פולבאק מהרשימה.
-/// Overview: תמיד מה-List כדי שטווח התאריכים יחול גם על Status/Severity/Category.
 public sealed class ApiDashboardService : IDashboardService
 {
     private readonly IApiClient _api;
@@ -17,7 +14,6 @@ public sealed class ApiDashboardService : IDashboardService
 
     public ApiDashboardService(IApiClient api) => _api = api;
 
-    // ---------------- Overview (מוחל טווח תאריכים) ----------------
     public async Task<DashboardOverviewDto> GetOverviewAsync(DashboardQuery q, CancellationToken ct)
     {
         var total = 0;
@@ -47,7 +43,7 @@ public sealed class ApiDashboardService : IDashboardService
     // ---------------- Trend ----------------
     public async Task<IReadOnlyList<TrendPoint>> GetTrendAsync(DashboardQuery q, CancellationToken ct)
     {
-        // 1) נסה את ה-API הייעודי
+        // 1) נסה את ה-API 
         try
         {
             var url = $"{TrendPath}{BuildSeriesQuery(q)}";
@@ -55,16 +51,15 @@ public sealed class ApiDashboardService : IDashboardService
             var fromServer = ParseSeries(json);
             if (fromServer.Count > 0)
             {
-                // fill gaps לפי הטווח והרזולוציה
                 var buckets = fromServer.ToDictionary(
                     p => q.Resolution == TimeResolution.Weekly ? WeekStart(p.Date) : p.Date,
                     p => p.Count);
                 return FillGaps(buckets, q);
             }
         }
+        catch (UnauthorizedAccessException) { throw; }
         catch { /* fallback */ }
 
-        // 2) פולבאק מהרשימה
         var bucketsLocal = new Dictionary<DateOnly, int>();
         await foreach (var el in EnumerateIncidentsAsync(q, ct))
         {
@@ -110,7 +105,6 @@ public sealed class ApiDashboardService : IDashboardService
         return list.OrderBy(p => p.Date).ToList();
     }
 
-    // ---------------- Enumeration of incidents (GET, וריאציות עימוד/טווח) ----------------
     private async IAsyncEnumerable<JsonElement> EnumerateIncidentsAsync(DashboardQuery q, [EnumeratorCancellation] CancellationToken ct)
     {
         var endpoints = new[] { "IncidentReports", "Incidents", "Reports" };
@@ -131,7 +125,7 @@ public sealed class ApiDashboardService : IDashboardService
             ("pageIndex",  "pageSize",  0, false),
             ("offset",     "limit",     0, true ),
             ("skip",       "take",      0, true ),
-            ("",           "",          0, false), // ללא עימוד
+            ("",           "",          0, false), 
         };
 
         const int pageSize = 1000;
@@ -168,16 +162,17 @@ public sealed class ApiDashboardService : IDashboardService
 
                         JsonElement json;
                         try { json = await _api.GetJsonAsync<JsonElement>(url, ct); }
+                        catch (UnauthorizedAccessException) { throw; }
                         catch { break; }
 
                         int count = 0;
                         foreach (var item in ExtractArray(json)) { any = true; count++; yield return item; }
 
-                        if (string.IsNullOrEmpty(pageKey)) break;     // אין עימוד
-                        if (count < pageSize) break;                  // סוף עימוד
+                        if (string.IsNullOrEmpty(pageKey)) break;     
+                        if (count < pageSize) break;                  
                     }
 
-                    if (any) yield break; // וריאציה שעבדה – לא ממשיכים
+                    if (any) yield break; 
                 }
     }
 

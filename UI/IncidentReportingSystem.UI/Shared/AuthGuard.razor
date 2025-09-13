@@ -1,12 +1,11 @@
-﻿@using IncidentReportingSystem.UI.Core.Auth
-@inject AuthState AuthState
+﻿@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
 @inject NavigationManager Nav
-@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@implements IDisposable
 
 @if (!_hydrated)
 {
     <div class="container py-5 text-center">
-        <div class="spinner-border" role="status" aria-label="@T["Aria.Loading"]"></div>
+        <div class="spinner-border" role="status"></div>
     </div>
 }
 else if (_authorized)
@@ -26,8 +25,14 @@ else if (_authorized)
         UpdateFlags();
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
+        await AuthState.WaitForHydrationAsync(TimeSpan.FromSeconds(5));
+        UpdateFlags();
+        StateHasChanged();
+
         if (_hydrated && !_authorized)
             Nav.NavigateTo("/", forceLoad: true);
     }
@@ -43,6 +48,7 @@ else if (_authorized)
     {
         _hydrated = AuthState.IsHydrated;
         _authorized = !string.IsNullOrWhiteSpace(AuthState.AccessToken);
+        Console.WriteLine($"[GUARD] hydrated={_hydrated}, authorized={_authorized}, tokenLen={(AuthState.AccessToken?.Length ?? 0)}");
     }
 
     public void Dispose() => AuthState.Changed -= OnAuthChanged;

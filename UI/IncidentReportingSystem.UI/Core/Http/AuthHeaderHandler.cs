@@ -1,26 +1,36 @@
-﻿using IncidentReportingSystem.UI.Core.Auth;
-using Microsoft.Extensions.Logging;
+﻿using System.Net;
 using System.Net.Http.Headers;
 
-public sealed class AuthHeaderHandler : DelegatingHandler
+namespace IncidentReportingSystem.UI.Core.Http
 {
-    private readonly AuthState _state;
-    private readonly ILogger<AuthHeaderHandler> _log;
-    public AuthHeaderHandler(AuthState state, ILogger<AuthHeaderHandler> log)
-    { _state = state; _log = log; }
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    internal sealed class AuthHeaderHandler : DelegatingHandler
     {
-        if (!string.IsNullOrWhiteSpace(_state.AccessToken))
+        private readonly Auth.AuthState _state;
+        private readonly Auth.AuthEvents _events;
+
+        public AuthHeaderHandler(Auth.AuthState state, Auth.AuthEvents events)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _state.AccessToken);
-            _log.LogDebug("AuthHeaderHandler: attached bearer (len={Len}) to {Method} {Path}",
-                _state.AccessToken.Length, request.Method, request.RequestUri?.ToString());
+            _state = state;
+            _events = events;
         }
-        else
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            _log.LogDebug("AuthHeaderHandler: no token for {Method} {Path}", request.Method, request.RequestUri);
+            if (_events.IsUnauthorizedTripped)
+                throw new HttpRequestException("Unauthorized (short-circuited)");
+
+            var token = _state.AccessToken;
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var resp = await base.SendAsync(request, ct);
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _events.TripUnauthorized(request.RequestUri?.ToString());
+            }
+
+            return resp;
         }
-        return await base.SendAsync(request, ct);
     }
 }

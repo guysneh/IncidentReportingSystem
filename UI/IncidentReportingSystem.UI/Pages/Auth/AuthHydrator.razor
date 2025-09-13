@@ -1,15 +1,73 @@
-﻿@* Pages/Auth/AuthHydrator.razor *@
-@inject IJSRuntime JS
+﻿@inject IJSRuntime JS
 @inject IncidentReportingSystem.UI.Core.Auth.AuthState Auth
+@inject IncidentReportingSystem.UI.Core.Auth.AuthEvents Events
+@inject ILogger<AuthHydrator> Logger
+@inject NavigationManager Nav
+@implements IDisposable
 
 @code {
+    private bool _subscribed;
+    private bool _redirecting;
+
     private sealed record Payload(string? token, DateTimeOffset? expUtc);
+
+    protected override void OnInitialized()
+    {
+        if (!_subscribed)
+        {
+            Events.Unauthorized += HandleUnauthorized;
+            _subscribed = true;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        await TryHydrateFromJsAsync();
+    }
+
+    private async Task TryHydrateFromJsAsync()
+    {
         Payload? p = null;
-        try { p = await JS.InvokeAsync<Payload>("irsAuth.get"); } catch { }
+
+        for (var i = 0; i < 10; i++) 
+        {
+            try { p = await JS.InvokeAsync<Payload>("irsAuth.get"); } catch { }
+            if (p is not null) break;
+            await Task.Delay(100);
+        }
+
         Console.WriteLine($"[HYDRATE] tokenLen={(p?.token?.Length ?? 0)}, exp={p?.expUtc:O}");
-        await Auth.HydrateAsync(p?.token, p?.expUtc); // marks IsHydrated=true always
+        await Auth.HydrateAsync(p?.token, p?.expUtc);
+
+        if (!string.IsNullOrWhiteSpace(Auth.AccessToken))
+        {
+            Events.Reset();
+        }
+    }
+
+    private async void HandleUnauthorized(string? source)
+    {
+        if (_redirecting) return;
+        _redirecting = true;
+
+        try
+        {
+            Logger.LogWarning("[UNAUTH] source={Source} – clearing and redirecting", source ?? "unknown");
+            await Auth.ClearAsync();
+            try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch { /* ignore */ }
+
+            var ret = Uri.EscapeDataString(Nav.Uri);
+            Nav.NavigateTo($"/login?returnUrl={ret}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "HandleUnauthorized failed");
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed) Events.Unauthorized -= HandleUnauthorized;
     }
 }

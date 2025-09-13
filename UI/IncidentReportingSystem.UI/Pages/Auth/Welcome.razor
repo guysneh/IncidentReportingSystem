@@ -10,6 +10,7 @@
 @inject AuthState State
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject IJSRuntime JS
 
 <div class="container hero-bg py-5">
     <div class="row justify-content-center">
@@ -181,28 +182,36 @@
     {
         if (busyLogin) return;
         errorKey = null;
-
-        if (!_loginCtx.Validate()) return;
-
         busyLogin = true;
+
         try
         {
-            var ok = await Auth.SignInAsync(login.Email, login.Password);
-            if (ok)
-            {
-                Nav.NavigateTo("/dashboard", forceLoad: true);
-                return;
-            }
-            else
+            var dto = await Auth.SignInRawAsync(login.Email, login.Password);
+            if (dto is null || string.IsNullOrWhiteSpace(dto.AccessToken))
             {
                 errorKey = "Auth.SignIn.Failed";
+                return;
             }
+
+            await JS.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
+
+            await State.SetAsync(dto.AccessToken);
+
+            var returnUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers
+                .ParseQuery(new Uri(Nav.Uri).Query)
+                .TryGetValue("returnUrl", out var rv) ? (string)rv! : null;
+
+            Nav.NavigateTo(returnUrl ?? "/dashboard", forceLoad: true);
         }
         catch
         {
             errorKey = "Auth.SignIn.Failed";
         }
-        finally { busyLogin = false; StateHasChanged(); }
+        finally
+        {
+            busyLogin = false;
+            StateHasChanged();
+        }
     }
 
 

@@ -41,6 +41,7 @@ builder.Services.AddScoped<IAppTexts, AppTexts>();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services.AddSingleton<IncidentReportingSystem.UI.Core.Auth.AuthEvents>();
 
 // Problems
 builder.Services.AddTransient<ProblemDetailsHandler>();
