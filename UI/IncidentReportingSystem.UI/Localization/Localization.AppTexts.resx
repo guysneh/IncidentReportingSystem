@@ -369,4 +369,55 @@
   <data name="Period.WeekLabel" xml:space="preserve">
     <value>Week {0}</value>
   </data>
+  <data name="Incidents.Title" xml:space="preserve">
+    <value>Incidents</value>
+  </data>
+  <data name="Nav.Incidents" xml:space="preserve">
+    <value>Incidents</value>
+  </data>
+  <data name="Incidents.Subtitle" xml:space="preserve">
+    <value>Browse and manage incident reports</value>
+  </data>
+  <data name="Incidents.Search.Placeholder" xml:space="preserve">
+    <value>Search by ID, title, or text…</value>
+  </data>
+  <data name="Incidents.Empty" xml:space="preserve">
+    <value>No incidents found</value>
+  </data>
+  <data name="Incidents.Error.Title" xml:space="preserve">
+    <value>Couldn't load incidents</value>
+  </data>
+  <data name="Incidents.Col.Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Incidents.Col.Title" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Incidents.Col.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Incidents.Col.Severity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Incidents.Col.Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Incidents.Col.Id" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="Action.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Common.Page" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="Common.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Common.Prev" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Common.Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
 </root>

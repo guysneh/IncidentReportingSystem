@@ -44,9 +44,24 @@
                     <span>@T["Nav.MyProfile"]</span>
                 </a>
             </div>
+
+            <div class="menu-section mt-3">
+                <h6 class="menu-title mb-2">@T["Incidents.Title"]</h6>
+                <a class="@ItemClass("/incidents")"
+                   href="/incidents"
+                   @onclick="HideMenuOnClick">
+                    <!-- warning/incident icon -->
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path d="M1 21h22L12 2 1 21zm11-4h-2v2h2v-2zm0-7h-2v6h2V10z" />
+                    </svg>
+                    <span>@T["Nav.Incidents"]</span>
+                </a>
+            </div>
+
         </nav>
     </div>
 </div>
+
 
 @code {
     private string ItemClass(string href)

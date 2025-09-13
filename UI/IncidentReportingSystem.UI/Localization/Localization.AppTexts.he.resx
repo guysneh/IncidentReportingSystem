@@ -369,4 +369,55 @@
   <data name="Period.WeekLabel" xml:space="preserve">
     <value>שבוע {0}</value>
   </data>
+  <data name="Incidents.Title" xml:space="preserve">
+    <value>תקלות</value>
+  </data>
+  <data name="Nav.Incidents" xml:space="preserve">
+    <value>תקלות</value>
+  </data>
+  <data name="Incidents.Subtitle" xml:space="preserve">
+    <value>צפייה וניהול דיווחי תקלות</value>
+  </data>
+  <data name="Incidents.Search.Placeholder" xml:space="preserve">
+    <value>חיפוש לפי מזהה, כותרת או טקסט…</value>
+  </data>
+  <data name="Incidents.Empty" xml:space="preserve">
+    <value>לא נמצאו תקלות</value>
+  </data>
+  <data name="Incidents.Error.Title" xml:space="preserve">
+    <value>שגיאה בטעינת התקלות</value>
+  </data>
+  <data name="Incidents.Col.Date" xml:space="preserve">
+    <value>תאריך</value>
+  </data>
+  <data name="Incidents.Col.Title" xml:space="preserve">
+    <value>כותרת</value>
+  </data>
+  <data name="Incidents.Col.Status" xml:space="preserve">
+    <value>סטטוס</value>
+  </data>
+  <data name="Incidents.Col.Severity" xml:space="preserve">
+    <value>חומרה</value>
+  </data>
+  <data name="Incidents.Col.Category" xml:space="preserve">
+    <value>קטגוריה</value>
+  </data>
+  <data name="Incidents.Col.Id" xml:space="preserve">
+    <value>מזהה</value>
+  </data>
+  <data name="Action.Refresh" xml:space="preserve">
+    <value>רענון</value>
+  </data>
+  <data name="Common.Page" xml:space="preserve">
+    <value>עמוד</value>
+  </data>
+  <data name="Common.Total" xml:space="preserve">
+    <value>סה"כ</value>
+  </data>
+  <data name="Common.Prev" xml:space="preserve">
+    <value>חזרה</value>
+  </data>
+  <data name="Common.Next" xml:space="preserve">
+    <value>הבא</value>
+  </data>
 </root>

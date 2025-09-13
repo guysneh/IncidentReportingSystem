@@ -169,6 +169,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Refresh.
+        /// </summary>
+        internal static string Action_Refresh {
+            get {
+                return ResourceManager.GetString("Action.Refresh", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Register.
         /// </summary>
         internal static string Action_Register {
@@ -295,11 +304,47 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Next.
+        /// </summary>
+        internal static string Common_Next {
+            get {
+                return ResourceManager.GetString("Common.Next", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Page.
+        /// </summary>
+        internal static string Common_Page {
+            get {
+                return ResourceManager.GetString("Common.Page", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Previous.
+        /// </summary>
+        internal static string Common_Prev {
+            get {
+                return ResourceManager.GetString("Common.Prev", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Reload.
         /// </summary>
         internal static string Common_Reload {
             get {
                 return ResourceManager.GetString("Common.Reload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Total.
+        /// </summary>
+        internal static string Common_Total {
+            get {
+                return ResourceManager.GetString("Common.Total", resourceCulture);
             }
         }
         
@@ -601,6 +646,105 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Category.
+        /// </summary>
+        internal static string Incidents_Col_Category {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Category", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Date.
+        /// </summary>
+        internal static string Incidents_Col_Date {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Date", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ID.
+        /// </summary>
+        internal static string Incidents_Col_Id {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Severity.
+        /// </summary>
+        internal static string Incidents_Col_Severity {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Severity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        internal static string Incidents_Col_Status {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Status", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Title.
+        /// </summary>
+        internal static string Incidents_Col_Title {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No incidents found.
+        /// </summary>
+        internal static string Incidents_Empty {
+            get {
+                return ResourceManager.GetString("Incidents.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Couldn&apos;t load incidents.
+        /// </summary>
+        internal static string Incidents_Error_Title {
+            get {
+                return ResourceManager.GetString("Incidents.Error.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Search by ID, title, or text….
+        /// </summary>
+        internal static string Incidents_Search_Placeholder {
+            get {
+                return ResourceManager.GetString("Incidents.Search.Placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Browse and manage incident reports.
+        /// </summary>
+        internal static string Incidents_Subtitle {
+            get {
+                return ResourceManager.GetString("Incidents.Subtitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents.
+        /// </summary>
+        internal static string Incidents_Title {
+            get {
+                return ResourceManager.GetString("Incidents.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to By continuing you agree to the Terms..
         /// </summary>
         internal static string Legal_Continue {
@@ -633,6 +777,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Nav_Home {
             get {
                 return ResourceManager.GetString("Nav.Home", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incidents.
+        /// </summary>
+        internal static string Nav_Incidents {
+            get {
+                return ResourceManager.GetString("Nav.Incidents", resourceCulture);
             }
         }
         
