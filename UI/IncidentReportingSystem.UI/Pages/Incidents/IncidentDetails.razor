@@ -3,7 +3,10 @@
 
 @using System.Text.Json.Serialization
 @using IncidentReportingSystem.UI.Core.Http
+@using IncidentReportingSystem.UI.Core.Incidents
+@using IncidentReportingSystem.UI.Shared
 @inject IApiClient Api
+@inject IIncidentService IncSvc
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 
@@ -14,31 +17,27 @@
             <div class="spinner-border" role="status" aria-label="@T["Dashboard.Loading"]"></div>
         </div>
     }
-    else if (_error != null)
+    else if (_error is not null)
     {
         <div class="container py-4">
             <div class="alert alert-danger">
                 <strong>@T["Incidents.Error.Title"]</strong>
                 <div class="small mt-2">@_error</div>
-                <button class="btn btn-outline-secondary mt-3" @onclick="GoBack">@T["Common.Reload"]</button>
+                <button class="btn btn-outline-secondary mt-3" @onclick="Reload">@T["Common.Reload"]</button>
             </div>
         </div>
     }
     else if (_incident is null)
     {
         <div class="container py-4">
-            <div class="alert alert-warning">
-                @T["Incidents.Empty"]
-            </div>
+            <div class="alert alert-warning">@T["Incidents.Empty"]</div>
         </div>
     }
     else
     {
         <div class="container py-3">
             <div class="d-flex align-items-center gap-2 mb-3">
-                <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">
-                    ← @T["Incidents.BackToList"]
-                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">← @T["Incidents.BackToList"]</button>
             </div>
 
             <div class="card p-3">
@@ -76,7 +75,6 @@
                 </ul>
 
                 <div class="tab-content p-3 border border-top-0 rounded-bottom">
-
                     @if (_activeTab == "details")
                     {
                         <div>
@@ -107,21 +105,105 @@
                     }
                     else if (_activeTab == "comments")
                     {
-                        <div class="text-muted">
-                            @T["IncidentDetails.Comments.NotWired"]
-                        </div>
+                        @if (_commentsLoading)
+                        {
+                            <div class="py-3 text-center">
+                                <div class="spinner-border" role="status"></div>
+                            </div>
+                        }
+                        else if ((_comments?.Items?.Count ?? 0) == 0)
+                        {
+                            <div class="text-muted">@T["IncidentDetails.Comments.Empty"]</div>
+                        }
+                        else
+                        {
+                            <div class="list-group">
+                                @foreach (var c in _comments!.Items)
+                                {
+                                    <div class="list-group-item">
+                                        <div class="small text-muted">
+                                            @c.CreatedAtUtc.ToLocalTime().ToString("g")
+                                            @if (!string.IsNullOrWhiteSpace(c.UserId)) { <span> • @c.UserId</span> }
+                                        </div>
+                                        <div class="mt-1">@c.Text</div>
+                                    </div>
+                                }
+                            </div>
+                        }
                     }
                     else if (_activeTab == "attachments")
                     {
-                        <div class="text-muted">
-                            @T["IncidentDetails.Attachments.NotWired"]
-                        </div>
+                        @if (_attachmentsLoading)
+                        {
+                            <div class="py-3 text-center">
+                                <div class="spinner-border" role="status"></div>
+                            </div>
+                        }
+                        else if ((_attachments?.Items?.Count ?? 0) == 0)
+                        {
+                            <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
+                        }
+                        else
+                        {
+                            <div class="row g-3">
+                                @foreach (var a in _attachments!.Items)
+                                {
+                                    var url = _urlCache.TryGetValue(a.Id, out var u) ? u : null;
+
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <div class="card h-100">
+                                            <div class="ratio ratio-4x3 d-flex align-items-center justify-content-center bg-light">
+                                                @if (IsImage(a) && url is not null)
+                                                {
+                                                    <a href="@url" target="_blank" rel="noopener">
+                                                        <img src="@url" class="img-fluid object-fit-cover" alt="@a.FileName" />
+                                                    </a>
+                                                }
+                                                else if (IsPdf(a))
+                                                {
+                                                    <div class="text-center text-muted">
+                                                        @* Simple PDF icon *@
+                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                                                            <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#f2f2f2" />
+                                                            <text x="7" y="17" font-size="8" fill="#c00">PDF</text>
+                                                        </svg>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-center text-muted">
+                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#f2f2f2" />
+                                                            <path d="M14 2v6h6" fill="#e0e0e0" />
+                                                        </svg>
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            <div class="p-2 small text-truncate" title="@a.FileName">@a.FileName</div>
+
+                                            <div class="p-2 pt-0 d-flex gap-2">
+                                                @if (url is not null)
+                                                {
+                                                    <a class="btn btn-sm btn-outline-primary" href="@url" target="_blank" rel="noopener">@T["Action.Open"]</a>
+                                                    <a class="btn btn-sm btn-outline-secondary" href="@url" download>@T["Action.Download"]</a>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                        <span class="spinner-border spinner-border-sm"></span>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
                     }
                     else if (_activeTab == "history")
                     {
-                        <div class="text-muted">
-                            @T["IncidentDetails.History.NotWired"]
-                        </div>
+                        <div class="text-muted">@T["IncidentDetails.History.NotWired"]</div>
                     }
                 </div>
             </div>
@@ -132,19 +214,22 @@
 @code {
     [Parameter] public string? id { get; set; }
 
-    private const string DetailsEndpoint = "IncidentReports/{0}"; // TODO: adjust to your API path if different
+    private const string DetailsEndpoint = "IncidentReports/{0}";
+
     private bool _loading = true;
     private string? _error;
     private string _activeTab = "details";
-    private IncidentDetailsDto? _incident;
-    private string? _returnUrl;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
-        if (query.TryGetValue("returnUrl", out var rv)) _returnUrl = rv!;
-        await LoadAsync();
-    }
+    private IncidentDetailsDto? _incident;
+
+    private PagedResult<CommentDto>? _comments;
+    private PagedResult<AttachmentDto>? _attachments;
+    private bool _commentsLoading;
+    private bool _attachmentsLoading;
+
+    private readonly Dictionary<string, string> _urlCache = new();
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
 
     private async Task LoadAsync()
     {
@@ -155,10 +240,32 @@
         try
         {
             if (string.IsNullOrWhiteSpace(id))
-                throw new InvalidOperationException("Missing id");
+                throw new InvalidOperationException("Missing id.");
 
+            // details
             var path = string.Format(DetailsEndpoint, id);
             _incident = await Api.GetJsonAsync<IncidentDetailsDto>(path, CancellationToken.None);
+
+            // comments + attachments
+            _commentsLoading = _attachmentsLoading = true;
+            var cTask = IncSvc.GetCommentsAsync(id!, 0, 100);
+            var aTask = IncSvc.GetIncidentAttachmentsAsync(id!, 0, 100);
+            await Task.WhenAll(cTask, aTask);
+            _comments = cTask.Result;
+            _attachments = aTask.Result;
+
+            // presign urls
+            if (_attachments?.Items is { Count: > 0 })
+            {
+                var tasks = _attachments.Items
+                    .Where(a => !_urlCache.ContainsKey(a.Id))
+                    .Select(async a =>
+                    {
+                        try { _urlCache[a.Id] = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id); }
+                        catch { /* ignore per-file failure */ }
+                    });
+                await Task.WhenAll(tasks);
+            }
         }
         catch (Exception ex)
         {
@@ -166,12 +273,22 @@
         }
         finally
         {
+            _commentsLoading = _attachmentsLoading = false;
             _loading = false;
+            StateHasChanged();
         }
     }
 
+    private void Reload() => _ = LoadAsync();
+
     private string TabBtn(string name) => $"nav-link {(_activeTab == name ? "active" : "")}";
     private void SetTab(string name) => _activeTab = name;
+
+    private static bool IsImage(AttachmentDto a)
+        => a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false;
+
+    private static bool IsPdf(AttachmentDto a)
+        => string.Equals(a.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase);
 
     private string StatusClass(string? status)
         => (status?.Equals("open", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-open"
@@ -180,21 +297,34 @@
 
     private void GoBack()
     {
-        if (!string.IsNullOrWhiteSpace(_returnUrl))
-            Nav.NavigateTo(_returnUrl, forceLoad: true);
-        else
-            Nav.NavigateTo("/incidents", forceLoad: true);
-    }
+        var ret = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query)
+                    .TryGetValue("returnUrl", out var rv) ? (string)rv! : null;
 
-    // minimal DTO (extend once you send the contract)
+        if (!string.IsNullOrWhiteSpace(ret)) Nav.NavigateTo(ret, true);
+        else Nav.NavigateTo("/incidents", true);
+    }
+    private sealed record AttachmentCardVm(
+       string Id, string FileName, string ContentType, long Size, bool HasThumbnail, bool CanDownload);
+
+    private static AttachmentCardVm MapAttachmentToCard(AttachmentDto a)
+        => new(a.Id, a.FileName, a.ContentType, a.Size, a.HasThumbnail, a.CanDownload);
+
+    private async Task OpenAttachment(string id)
+    {
+        var url = await IncSvc.GetAttachmentDownloadUrlAsync(id);
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+    private Task DownloadAttachment(string id) => OpenAttachment(id);
+
+    // Details DTO (server contract)
     public sealed class IncidentDetailsDto
     {
-        [JsonPropertyName("id")] public string Id { get; set; } = default!;
-        [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
-        [JsonPropertyName("status")] public string Status { get; set; } = "open";
-        [JsonPropertyName("severity")] public string Severity { get; set; } = "";
-        [JsonPropertyName("category")] public string Category { get; set; } = "";
+        [JsonPropertyName("id")]           public string Id { get; set; } = default!;
+        [JsonPropertyName("title")]        public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("status")]       public string Status { get; set; } = "open";
+        [JsonPropertyName("severity")]     public string Severity { get; set; } = "";
+        [JsonPropertyName("category")]     public string Category { get; set; } = "";
         [JsonPropertyName("createdAtUtc")] public DateTime CreatedAtUtc { get; set; }
-        [JsonPropertyName("description")] public string? Description { get; set; }
+        [JsonPropertyName("description")]  public string? Description { get; set; }
     }
 }

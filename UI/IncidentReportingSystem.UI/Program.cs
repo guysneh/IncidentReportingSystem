@@ -2,6 +2,7 @@ using IncidentReportingSystem.UI;
 using IncidentReportingSystem.UI.Core.Auth;
 using IncidentReportingSystem.UI.Core.Dashboard;
 using IncidentReportingSystem.UI.Core.Http;
+using IncidentReportingSystem.UI.Core.Incidents;
 using IncidentReportingSystem.UI.Core.Options;
 using IncidentReportingSystem.UI.Localization;
 using Microsoft.AspNetCore.DataProtection;
@@ -82,6 +83,9 @@ builder.Services.AddMudServices();
 // Dashboard
 builder.Services.AddScoped<DashboardState>();
 builder.Services.AddScoped<IDashboardService, ApiDashboardService>();
+// after other services
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Incidents.IncidentsApi>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
 
 var app = builder.Build();
 

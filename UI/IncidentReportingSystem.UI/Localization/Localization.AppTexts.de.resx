@@ -444,4 +444,22 @@
   <data name="Incidents.BackToList" xml:space="preserve">
     <value>Zurück zur Liste</value>
   </data>
+  <data name="IncidentDetails.Comments.Title" xml:space="preserve">
+    <value>Kommentare</value>
+  </data>
+  <data name="IncidentDetails.Comments.Empty" xml:space="preserve">
+    <value>Noch keine Kommentare</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Title" xml:space="preserve">
+    <value>Anhänge</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Empty" xml:space="preserve">
+    <value>Keine Anhänge.</value>
+  </data>
+  <data name="IncidentDetails.OpenInNewTab" xml:space="preserve">
+    <value>In neuem Tab öffnen</value>
+  </data>
+  <data name="IncidentDetails.Download" xml:space="preserve">
+    <value>Herunterladen</value>
+  </data>
 </root>

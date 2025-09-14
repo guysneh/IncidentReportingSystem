@@ -646,6 +646,51 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No attachments..
+        /// </summary>
+        internal static string IncidentDetails_Attachments_Empty {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Attachments.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Attachments.
+        /// </summary>
+        internal static string IncidentDetails_Attachments_Title {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Attachments.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No comments yet..
+        /// </summary>
+        internal static string IncidentDetails_Comments_Empty {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Comments.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Comments.
+        /// </summary>
+        internal static string IncidentDetails_Comments_Title {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Comments.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Download.
+        /// </summary>
+        internal static string IncidentDetails_Download {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Download", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Description.
         /// </summary>
         internal static string IncidentDetails_Field_Description {
@@ -664,6 +709,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Open in new tab.
+        /// </summary>
+        internal static string IncidentDetails_OpenInNewTab {
+            get {
+                return ResourceManager.GetString("IncidentDetails.OpenInNewTab", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Overview.
         /// </summary>
         internal static string IncidentDetails_Section_Overview {
@@ -673,7 +727,7 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Atachments.
+        ///   Looks up a localized string similar to Attachments.
         /// </summary>
         internal static string IncidentDetails_Tab_Attachments {
             get {

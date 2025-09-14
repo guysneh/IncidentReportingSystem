@@ -31,34 +31,35 @@ public sealed class SecureApiClient : IApiClient
         return await resp.Content.ReadFromJsonAsync<T>(cancellationToken: ct);
     }
 
-    // ← נדרש ע"י IApiClient
     public async Task PostJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, path)
-        { Content = JsonContent.Create(body) };
+        using var req = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
         AttachBearer(req);
         using var resp = await _client.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
     }
 
-    // ← עוזר כשצריך תשובה טיפוסית מהשרת
     public async Task<TRes?> PostJsonAsync<TReq, TRes>(string path, TReq body, CancellationToken ct = default)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, path)
-        { Content = JsonContent.Create(body) };
+        using var req = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
         AttachBearer(req);
         using var resp = await _client.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadFromJsonAsync<TRes?>(cancellationToken: ct);
     }
 
-    public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct = default)
+    public async Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var method = new HttpMethod("PATCH");
+        using var req = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };
+        AttachBearer(req);
+        using var resp = await _client.SendAsync(req, ct);
+        resp.EnsureSuccessStatusCode();
     }
 
-    public Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
+    public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        AttachBearer(request);
+        return _client.SendAsync(request, ct);
     }
 }

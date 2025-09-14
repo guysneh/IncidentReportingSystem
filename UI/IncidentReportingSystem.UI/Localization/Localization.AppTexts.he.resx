@@ -444,4 +444,22 @@
   <data name="Incidents.BackToList" xml:space="preserve">
     <value>חזרה לרשימה</value>
   </data>
+  <data name="IncidentDetails.Comments.Title" xml:space="preserve">
+    <value>הערות</value>
+  </data>
+  <data name="IncidentDetails.Comments.Empty" xml:space="preserve">
+    <value>אין הערות.</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Title" xml:space="preserve">
+    <value>קבצים מצורפים</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Empty" xml:space="preserve">
+    <value>אין קבצים מצורפים.</value>
+  </data>
+  <data name="IncidentDetails.OpenInNewTab" xml:space="preserve">
+    <value>פתח בטאב חדש</value>
+  </data>
+  <data name="IncidentDetails.Download" xml:space="preserve">
+    <value>הורדה</value>
+  </data>
 </root>
