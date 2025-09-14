@@ -139,62 +139,45 @@
                                 <div class="spinner-border" role="status"></div>
                             </div>
                         }
-                        else if ((_attachments?.Items?.Count ?? 0) == 0)
+                        else if (_attachments.Count == 0)
                         {
                             <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
                         }
                         else
                         {
-                            <div class="row g-3">
-                                @foreach (var a in _attachments!.Items)
+                            <div class="attachments-grid">
+                                @foreach (var card in _attachments)
                                 {
-                                    var url = _urlCache.TryGetValue(a.Id, out var u) ? u : null;
+                                    <div class="attachment-card">
+                                        <div class="thumb-wrap">
+                                            @if (card.IsImage)
+                                            {
+                                                <a href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                    <img src="@card.ThumbUrl" alt="@card.FileName" loading="lazy" />
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="file-icon d-flex align-items-center justify-content-center"
+                                                   href="@card.DownloadHref" title="@card.FileName">
+                                                    <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="currentColor" opacity=".08" />
+                                                        <path d="M14 2v6h6" stroke="currentColor" fill="none" />
+                                                        <text x="6" y="18" font-size="8" font-family="sans-serif">PDF</text>
+                                                    </svg>
+                                                </a>
+                                            }
+                                        </div>
 
-                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                        <div class="card h-100">
-                                            <div class="ratio ratio-4x3 d-flex align-items-center justify-content-center bg-light">
-                                                @if (IsImage(a) && url is not null)
-                                                {
-                                                    <a href="@url" target="_blank" rel="noopener">
-                                                        <img src="@url" class="img-fluid object-fit-cover" alt="@a.FileName" />
-                                                    </a>
-                                                }
-                                                else if (IsPdf(a))
-                                                {
-                                                    <div class="text-center text-muted">
-                                                        @* Simple PDF icon *@
-                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
-                                                            <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#f2f2f2" />
-                                                            <text x="7" y="17" font-size="8" fill="#c00">PDF</text>
-                                                        </svg>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <div class="text-center text-muted">
-                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
-                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#f2f2f2" />
-                                                            <path d="M14 2v6h6" fill="#e0e0e0" />
-                                                        </svg>
-                                                    </div>
-                                                }
-                                            </div>
+                                        <div class="mt-2 small text-truncate" title="@card.FileName">@card.FileName</div>
 
-                                            <div class="p-2 small text-truncate" title="@a.FileName">@a.FileName</div>
-
-                                            <div class="p-2 pt-0 d-flex gap-2">
-                                                @if (url is not null)
-                                                {
-                                                    <a class="btn btn-sm btn-outline-primary" href="@url" target="_blank" rel="noopener">@T["Action.Open"]</a>
-                                                    <a class="btn btn-sm btn-outline-secondary" href="@url" download>@T["Action.Download"]</a>
-                                                }
-                                                else
-                                                {
-                                                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                                                        <span class="spinner-border spinner-border-sm"></span>
-                                                    </button>
-                                                }
-                                            </div>
+                                        <div class="actions">
+                                            <a class="btn btn-sm btn-primary" href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                @T["Attachments.Open"]
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="@card.DownloadHref">
+                                                @T["Attachments.Download"]
+                                            </a>
                                         </div>
                                     </div>
                                 }
@@ -223,7 +206,7 @@
     private IncidentDetailsDto? _incident;
 
     private PagedResult<CommentDto>? _comments;
-    private PagedResult<AttachmentDto>? _attachments;
+    private List<AttachmentCardVm> _attachments = new();
     private bool _commentsLoading;
     private bool _attachmentsLoading;
 
@@ -248,20 +231,21 @@
 
             // comments + attachments
             _commentsLoading = _attachmentsLoading = true;
+
             var cTask = IncSvc.GetCommentsAsync(id!, 0, 100);
-            var aTask = IncSvc.GetIncidentAttachmentsAsync(id!, 0, 100);
-            await Task.WhenAll(cTask, aTask);
+            await Task.WhenAll(cTask);        
             _comments = cTask.Result;
-            _attachments = aTask.Result;
+
+            await LoadAttachmentsAsync(id!);
 
             // presign urls
-            if (_attachments?.Items is { Count: > 0 })
+            if (_attachments is { Count: > 0 })
             {
-                var tasks = _attachments.Items
-                    .Where(a => !_urlCache.ContainsKey(a.Id))
+                var tasks = _attachments
+                    .Where(a => !_urlCache.ContainsKey(a.Id.ToString()))
                     .Select(async a =>
                     {
-                        try { _urlCache[a.Id] = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id); }
+                        try { _urlCache[a.Id.ToString()] = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id.ToString()); }
                         catch { /* ignore per-file failure */ }
                     });
                 await Task.WhenAll(tasks);
@@ -303,11 +287,18 @@
         if (!string.IsNullOrWhiteSpace(ret)) Nav.NavigateTo(ret, true);
         else Nav.NavigateTo("/incidents", true);
     }
-    private sealed record AttachmentCardVm(
-       string Id, string FileName, string ContentType, long Size, bool HasThumbnail, bool CanDownload);
+    private sealed class AttachmentCardVm
+    {
+        public required Guid Id { get; init; }
+        public required string FileName { get; init; }
+        public required string ContentType { get; init; }
+        public bool IsImage => ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true;
 
-    private static AttachmentCardVm MapAttachmentToCard(AttachmentDto a)
-        => new(a.Id, a.FileName, a.ContentType, a.Size, a.HasThumbnail, a.CanDownload);
+        // for now we use the same signed URL for thumb + view + download
+        public required string ViewUrl { get; init; }
+        public string ThumbUrl => ViewUrl;
+        public required string DownloadHref { get; init; }
+    }
 
     private async Task OpenAttachment(string id)
     {
@@ -326,5 +317,27 @@
         [JsonPropertyName("category")]     public string Category { get; set; } = "";
         [JsonPropertyName("createdAtUtc")] public DateTime CreatedAtUtc { get; set; }
         [JsonPropertyName("description")]  public string? Description { get; set; }
+    }
+
+    private async Task LoadAttachmentsAsync(string incidentId, CancellationToken ct = default)
+    {
+        var page = await IncSvc.GetIncidentAttachmentsAsync(incidentId, ct:ct);
+
+        var cards = new List<AttachmentCardVm>(page.Items.Count);
+        foreach (var a in page.Items)
+        {
+            var url = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id.ToString(), 15, ct);
+
+            cards.Add(new AttachmentCardVm
+            {
+                Id = Guid.Parse(a.Id),
+                FileName = a.FileName,
+                ContentType = a.ContentType,
+                ViewUrl = url,
+                DownloadHref = url
+            });
+        }
+
+        _attachments = cards;
     }
 }

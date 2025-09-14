@@ -321,9 +321,6 @@
   <data name="Dashboard.Empty" xml:space="preserve">
     <value>No data available</value>
   </data>
-  <data name="Auth.Register.Success" xml:space="preserve">
-    <value>Registration successful</value>
-  </data>
   <data name="Auth.Login.Success" xml:space="preserve">
     <value>Login successful</value>
   </data>
@@ -467,5 +464,14 @@
   </data>
   <data name="Action.Open" xml:space="preserve">
     <value>Open</value>
+  </data>
+  <data name="Attachments.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Auth.Register.Success" xml:space="preserve">
+    <value>Registration successful</value>
+  </data>
+  <data name="Attachments.Download" xml:space="preserve">
+    <value>Download</value>
   </data>
 </root>

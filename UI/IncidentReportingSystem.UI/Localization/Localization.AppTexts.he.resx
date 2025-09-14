@@ -321,9 +321,6 @@
   <data name="Dashboard.Empty" xml:space="preserve">
     <value>אין נתונים זמינים</value>
   </data>
-  <data name="Auth.Register.Success" xml:space="preserve">
-    <value>ההרשמה הצליחה</value>
-  </data>
   <data name="Auth.Login.Success" xml:space="preserve">
     <value>ההתחברות הצליחה</value>
   </data>
@@ -467,5 +464,14 @@
   </data>
   <data name="Action.Open" xml:space="preserve">
     <value>פתיחה</value>
+  </data>
+  <data name="Attachments.Open" xml:space="preserve">
+    <value>פתיחה</value>
+  </data>
+  <data name="Auth.Register.Success" xml:space="preserve">
+    <value>ההרשמה הצליחה</value>
+  </data>
+  <data name="Attachments.Download" xml:space="preserve">
+    <value>הורדה</value>
   </data>
 </root>

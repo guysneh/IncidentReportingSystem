@@ -241,6 +241,24 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Download.
+        /// </summary>
+        internal static string Attachments_Download {
+            get {
+                return ResourceManager.GetString("Attachments.Download", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        internal static string Attachments_Open {
+            get {
+                return ResourceManager.GetString("Attachments.Open", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Login successful.
         /// </summary>
         internal static string Auth_Login_Success {
