@@ -151,6 +151,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Download.
+        /// </summary>
+        internal static string Action_Download {
+            get {
+                return ResourceManager.GetString("Action.Download", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Go to sign in.
         /// </summary>
         internal static string Action_GoSignIn {
@@ -165,6 +174,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Action_Logout {
             get {
                 return ResourceManager.GetString("Action.Logout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        internal static string Action_Open {
+            get {
+                return ResourceManager.GetString("Action.Open", resourceCulture);
             }
         }
         

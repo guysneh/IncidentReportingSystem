@@ -462,4 +462,10 @@
   <data name="IncidentDetails.Download" xml:space="preserve">
     <value>הורדה</value>
   </data>
+  <data name="Action.Download" xml:space="preserve">
+    <value>הורדה</value>
+  </data>
+  <data name="Action.Open" xml:space="preserve">
+    <value>פתיחה</value>
+  </data>
 </root>
