@@ -1,4 +1,6 @@
 ﻿using IncidentReportingSystem.API.Extensions;
+using IncidentReportingSystem.Infrastructure.Identity;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,7 @@ builder.Services
 
 // Telemetry (OpenTelemetry + Azure Monitor) 
 builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
+builder.Services.AddSingleton<IncidentReportingSystem.Infrastructure.Identity.IUserDirectory, NullUserDirectory>();
 
 // 3) Build
 var app = builder.Build();

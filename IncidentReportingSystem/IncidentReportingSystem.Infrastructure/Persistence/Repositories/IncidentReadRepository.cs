@@ -16,7 +16,6 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
         public async Task<IReadOnlyList<IncidentSeriesPoint>> GetIncidentSeriesAsync(
     DateTime from, DateTime to, TimeGranularity granularity, CancellationToken ct)
         {
-            // סינון בצד השרת + המרה ל-Value (כי ReportedAt הוא nullable)
             var times = await _db.IncidentReports
                 .AsNoTracking()
                 .Where(i => i.ReportedAt != null && i.ReportedAt >= from && i.ReportedAt < to)
@@ -26,7 +25,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
             if (granularity == TimeGranularity.Day)
             {
                 return times
-                    .GroupBy(d => d.Date) // Date זמין על DateTime (לא על nullable)
+                    .GroupBy(d => d.Date) 
                     .OrderBy(g => g.Key)
                     .Select(g => new IncidentSeriesPoint(g.Key.ToString("yyyy-MM-dd"), g.Count()))
                     .ToList();

@@ -474,4 +474,49 @@
   <data name="Attachments.Download" xml:space="preserve">
     <value>Herunterladen</value>
   </data>
+  <data name="IncidentCreate.Title" xml:space="preserve">
+    <value>Neuen Vorfall melden</value>
+  </data>
+  <data name="IncidentCreate.Subtitle" xml:space="preserve">
+    <value>Füllen Sie die folgenden Angaben aus, um einen neuen Vorfall zu erstellen.</value>
+  </data>
+  <data name="IncidentCreate.Back" xml:space="preserve">
+    <value>Zurück zu Vorfällen</value>
+  </data>
+  <data name="Field.Title" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="Field.Description" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="Field.Location" xml:space="preserve">
+    <value>Standort</value>
+  </data>
+  <data name="Field.SystemAffected" xml:space="preserve">
+    <value>Betroffenes System</value>
+  </data>
+  <data name="Field.Category" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="Field.Severity" xml:space="preserve">
+    <value>Schwergrad</value>
+  </data>
+  <data name="Field.ReportedAt" xml:space="preserve">
+    <value>Gemeldet am</value>
+  </data>
+  <data name="Action.CreateIncident" xml:space="preserve">
+    <value>Vorfall erstellen</value>
+  </data>
+  <data name="Action.Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Nav.ReportIncident" xml:space="preserve">
+    <value>Vorfall melden</value>
+  </data>
+  <data name="Incidents.Col.Reporter" xml:space="preserve">
+    <value>Breichter</value>
+  </data>
+  <data name="IncidentDetails.Field.Reporter" xml:space="preserve">
+    <value>Berichter</value>
+  </data>
 </root>

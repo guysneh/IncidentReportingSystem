@@ -4,9 +4,8 @@ using IncidentReportingSystem.API.Contracts.Paging;
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
-using IncidentReportingSystem.Application.Features.Comments.Dtos;
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
-using IncidentReportingSystem.Application.Abstractions.Persistence; // <-- add
+using IncidentReportingSystem.Application.Abstractions.Persistence; 
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

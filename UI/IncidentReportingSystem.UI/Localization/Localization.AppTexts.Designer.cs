@@ -151,6 +151,24 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        internal static string Action_Cancel {
+            get {
+                return ResourceManager.GetString("Action.Cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Create incident.
+        /// </summary>
+        internal static string Action_CreateIncident {
+            get {
+                return ResourceManager.GetString("Action.CreateIncident", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Download.
         /// </summary>
         internal static string Action_Download {
@@ -556,6 +574,24 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Category.
+        /// </summary>
+        internal static string Field_Category {
+            get {
+                return ResourceManager.GetString("Field.Category", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Description.
+        /// </summary>
+        internal static string Field_Description {
+            get {
+                return ResourceManager.GetString("Field.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Email.
         /// </summary>
         internal static string Field_Email {
@@ -579,6 +615,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Field_LastName {
             get {
                 return ResourceManager.GetString("Field.LastName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Location.
+        /// </summary>
+        internal static string Field_Location {
+            get {
+                return ResourceManager.GetString("Field.Location", resourceCulture);
             }
         }
         
@@ -628,6 +673,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Reported at.
+        /// </summary>
+        internal static string Field_ReportedAt {
+            get {
+                return ResourceManager.GetString("Field.ReportedAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Role.
         /// </summary>
         internal static string Field_Role {
@@ -642,6 +696,33 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Field_Roles {
             get {
                 return ResourceManager.GetString("Field.Roles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Severity.
+        /// </summary>
+        internal static string Field_Severity {
+            get {
+                return ResourceManager.GetString("Field.Severity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to System affected.
+        /// </summary>
+        internal static string Field_SystemAffected {
+            get {
+                return ResourceManager.GetString("Field.SystemAffected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Title.
+        /// </summary>
+        internal static string Field_Title {
+            get {
+                return ResourceManager.GetString("Field.Title", resourceCulture);
             }
         }
         
@@ -678,6 +759,33 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Filters_Reset {
             get {
                 return ResourceManager.GetString("Filters.Reset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Back to incidents.
+        /// </summary>
+        internal static string IncidentCreate_Back {
+            get {
+                return ResourceManager.GetString("IncidentCreate.Back", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Fill in the details below to create a new incident..
+        /// </summary>
+        internal static string IncidentCreate_Subtitle {
+            get {
+                return ResourceManager.GetString("IncidentCreate.Subtitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Report a new incident.
+        /// </summary>
+        internal static string IncidentCreate_Title {
+            get {
+                return ResourceManager.GetString("IncidentCreate.Title", resourceCulture);
             }
         }
         
@@ -732,6 +840,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string IncidentDetails_Field_Description {
             get {
                 return ResourceManager.GetString("IncidentDetails.Field.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reporter.
+        /// </summary>
+        internal static string IncidentDetails_Field_Reporter {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Field.Reporter", resourceCulture);
             }
         }
         
@@ -831,6 +948,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Incidents_Col_Id {
             get {
                 return ResourceManager.GetString("Incidents.Col.Id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reporter.
+        /// </summary>
+        internal static string Incidents_Col_Reporter {
+            get {
+                return ResourceManager.GetString("Incidents.Col.Reporter", resourceCulture);
             }
         }
         
@@ -966,6 +1092,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Nav_MyProfile {
             get {
                 return ResourceManager.GetString("Nav.MyProfile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Report incident.
+        /// </summary>
+        internal static string Nav_ReportIncident {
+            get {
+                return ResourceManager.GetString("Nav.ReportIncident", resourceCulture);
             }
         }
         

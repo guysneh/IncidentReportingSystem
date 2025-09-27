@@ -26,40 +26,42 @@ public sealed class SecureApiClient : IApiClient
         using var req = new HttpRequestMessage(HttpMethod.Get, path);
         AttachBearer(req);
         using var resp = await _client.SendAsync(req, ct);
+        if (!resp.IsSuccessStatusCode)
+            throw await ApiErrorException.FromResponseAsync(resp, ct);
+
         if (resp.StatusCode == System.Net.HttpStatusCode.NoContent) return default;
-        resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadFromJsonAsync<T>(cancellationToken: ct);
     }
 
     public async Task PostJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        using var req = new HttpRequestMessage(HttpMethod.Post, path)
+        { Content = JsonContent.Create(body) };
         AttachBearer(req);
         using var resp = await _client.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+            throw await ApiErrorException.FromResponseAsync(resp, ct);
     }
 
     public async Task<TRes?> PostJsonAsync<TReq, TRes>(string path, TReq body, CancellationToken ct = default)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        using var req = new HttpRequestMessage(HttpMethod.Post, path)
+        { Content = JsonContent.Create(body) };
         AttachBearer(req);
         using var resp = await _client.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+            throw await ApiErrorException.FromResponseAsync(resp, ct);
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.NoContent) return default;
         return await resp.Content.ReadFromJsonAsync<TRes?>(cancellationToken: ct);
     }
 
-    public async Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
-    {
-        var method = new HttpMethod("PATCH");
-        using var req = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };
-        AttachBearer(req);
-        using var resp = await _client.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
-    }
-
-    public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct = default)
+    public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct = default)
     {
         AttachBearer(request);
-        return _client.SendAsync(request, ct);
+        return await _client.SendAsync(request, ct);
     }
+
+    public Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
+        => throw new NotImplementedException();
 }

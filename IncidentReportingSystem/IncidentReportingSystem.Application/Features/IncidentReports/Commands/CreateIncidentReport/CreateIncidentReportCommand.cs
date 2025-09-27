@@ -23,12 +23,6 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
         public string Location { get; set; }
 
         /// <summary>
-        /// Unique identifier of the reporter.
-        /// </summary>
-        [Required]
-        public Guid ReporterId { get; set; }
-
-        /// <summary>
         /// Category of the incident (e.g., Electrical, Software, Mechanical).
         /// </summary>
         [Required]
@@ -56,7 +50,6 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
         /// </summary>
         /// <param name="description">Incident description.</param>
         /// <param name="location">Incident location.</param>
-        /// <param name="reporterId">Reporter ID.</param>
         /// <param name="category">Incident category.</param>
         /// <param name="systemAffected">System affected by the incident.</param>
         /// <param name="severity">Incident severity.</param>
@@ -64,7 +57,6 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
         public CreateIncidentReportCommand(
             string description,
             string location,
-            Guid reporterId,
             IncidentCategory category,
             string systemAffected,
             IncidentSeverity severity,
@@ -72,7 +64,6 @@ namespace IncidentReportingSystem.Application.Features.IncidentReports.Commands.
         {
             Description = description;
             Location = location;
-            ReporterId = reporterId;
             Category = category;
             SystemAffected = systemAffected;
             Severity = severity;

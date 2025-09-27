@@ -5,7 +5,6 @@ using IncidentReportingSystem.Application.Features.IncidentReports.Commands.Bulk
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
-using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Application.Persistence;
@@ -60,13 +59,13 @@ namespace IncidentReportingSystem.API.Controllers
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The incident report as DTO if found.</returns>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
-        [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<IncidentReportDto>> GetById(Guid id, CancellationToken ct)
         {
-            var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken).ConfigureAwait(false);
-            return Ok(result.ToDto());
+            var dto = await _mediator.Send(new GetIncidentReportByIdQuery(id), ct);
+            return Ok(dto); 
         }
 
         /// <summary>

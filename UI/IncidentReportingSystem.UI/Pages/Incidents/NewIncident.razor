@@ -1,0 +1,195 @@
+﻿@page "/incidents/new"
+@rendermode RenderMode.InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using IncidentReportingSystem.UI.Core.Incidents
+@using IncidentReportingSystem.UI.Shared
+@inject IIncidentService IncSvc
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject IncidentReportingSystem.UI.Core.Users.IUserDirectory UserDirectory
+
+<AuthGuard>
+    <div class="container py-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">← @T["IncidentCreate.Back"]</button>
+        </div>
+
+        <div class="card p-3">
+            <h1 class="h4 mb-1">@T["IncidentCreate.Title"]</h1>
+            <p class="text-muted mb-4">@T["IncidentCreate.Subtitle"]</p>
+
+            @if (!string.IsNullOrWhiteSpace(serverErrorTitle))
+            {
+                <div class="alert alert-danger">
+                    <strong>@serverErrorTitle</strong>
+                    @if (!string.IsNullOrWhiteSpace(serverErrorDetail))
+                    {
+                        <div class="small mt-1">@serverErrorDetail</div>
+                    }
+                    @if (serverErrors?.Count > 0)
+                    {
+                        <ul class="small mt-2 mb-0">
+                            @foreach (var kv in serverErrors)
+                            {
+                                <li><strong>@kv.Key</strong>: @string.Join(", ", kv.Value)</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+
+            <EditForm Model="vm" OnValidSubmit="@(async () => await OnSubmit())">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="f-severity">@T["Field.Severity"]</label>
+                        <InputSelect id="f-severity" class="form-select" @bind-Value="vm.Severity">
+                            @foreach (var opt in Severities)
+                            {
+                                <option value="@opt.Value">@opt.Label</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => vm.Severity" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="f-category">@T["Field.Category"]</label>
+                        <InputSelect id="f-category" class="form-select" @bind-Value="vm.Category">
+                            @foreach (var opt in Categories)
+                            {
+                                <option value="@opt.Value">@opt.Label</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => vm.Category" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="f-reported">@T["Field.ReportedAt"]</label>
+                        <InputDate TValue="DateTime" id="f-reported" class="form-control" @bind-Value="vm.ReportedAt" />
+                        <ValidationMessage For="() => vm.ReportedAt" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="f-location">@T["Field.Location"]</label>
+                        <InputText id="f-location" class="form-control" @bind-Value="vm.Location" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="f-system">@T["Field.SystemAffected"]</label>
+                        <InputText id="f-system" class="form-control" @bind-Value="vm.SystemAffected" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" for="f-desc">@T["Field.Description"]</label>
+                        <InputTextArea id="f-desc" class="form-control" rows="5" @bind-Value="vm.Description" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary" disabled="@busy">
+                        @if (busy) { <span class="spinner-border spinner-border-sm me-2" /> }
+                        @T["Action.CreateIncident"]
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">@T["Action.Cancel"]</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</AuthGuard>
+
+@code {
+    private bool busy;
+    private NewIncidentVm vm = new();
+
+    private string? serverErrorTitle;
+    private string? serverErrorDetail;
+    private Dictionary<string, string[]> serverErrors = new();
+
+    private async Task HandleValidSubmit() => await OnSubmit();
+
+    private readonly (string Value, string Label)[] Severities = new[]
+    {
+        ("Low", "Low"), ("Medium", "Medium"), ("High", "High")
+    };
+
+    private readonly (string Value, string Label)[] Categories = new[]
+    {
+        ("Infrastructure", "Infrastructure"),
+        ("Transportation", "Transportation"),
+        ("Security", "Security"),
+        ("PowerOutage", "PowerOutage"),
+        ("WaterSupply", "WaterSupply"),
+        ("ITSystems", "ITSystems")
+    };
+
+    private async Task OnSubmit()
+    {
+        if (busy) return;
+        busy = true;
+        serverErrorTitle = serverErrorDetail = null;
+        serverErrors.Clear();
+
+        try
+        {
+            var req = new CreateIncidentRequest
+            {              
+                Description = vm.Description,
+                Category = vm.Category,
+                Severity = vm.Severity,
+                ReportedAt = vm.ReportedAt,
+                Location = vm.Location,
+                SystemAffected = vm.SystemAffected
+            };
+
+            var incidentId = await IncSvc.CreateIncidentAsync(req);
+            if (!string.IsNullOrWhiteSpace(incidentId))
+            {
+                Nav.NavigateTo($"/incidents/{incidentId}", forceLoad: true);
+                return;
+            }
+
+            serverErrorTitle = "Unexpected empty response.";
+        }
+        catch (IncidentReportingSystem.UI.Core.Http.ApiErrorException ex)
+        {
+            serverErrorTitle = ex.Title ?? "Validation failed";
+            serverErrorDetail = ex.Detail;
+            serverErrors = new Dictionary<string, string[]>(ex.Errors, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            serverErrorTitle = "Error";
+            serverErrorDetail = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack() => Nav.NavigateTo("/incidents", forceLoad: true);
+
+    public sealed class NewIncidentVm
+    {
+        [Required]
+        public string Severity { get; set; } = "Medium";
+
+        [Required]
+        public string Category { get; set; } = "Security";
+
+        [Required]
+        public DateTime ReportedAt { get; set; } = DateTime.Now;
+
+        [Required]
+        public Guid ReporterId { get; set; }
+
+        public string Location { get; set; } = "";
+        public string SystemAffected { get; set; } = "";
+        public string? Description { get; set; }
+    }
+}

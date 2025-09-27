@@ -1,7 +1,6 @@
 ﻿using IncidentReportingSystem.Application.Abstractions.Persistence;
-using IncidentReportingSystem.Application.Common.Models;              
-using IncidentReportingSystem.Application.Features.Comments.Dtos;    
-using IncidentReportingSystem.Application.Features.Comments.Mappers;  
+using IncidentReportingSystem.Application.Common.Models;
+using IncidentReportingSystem.Application.Features.Comments.Mappers;
 using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.Comments.Queries.ListComment

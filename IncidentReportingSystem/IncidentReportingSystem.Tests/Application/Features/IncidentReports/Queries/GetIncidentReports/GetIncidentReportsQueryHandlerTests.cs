@@ -2,7 +2,6 @@
 using IncidentReportingSystem.Application.Abstractions.Persistence;
 using IncidentReportingSystem.Application.Common.Models;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
-using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Domain.Enums;

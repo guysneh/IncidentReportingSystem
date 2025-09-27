@@ -18,9 +18,6 @@ public class CreateIncidentReportCommandValidator : AbstractValidator<CreateInci
             .NotEmpty().WithMessage("Location is required.")
             .MaximumLength(255);
 
-        RuleFor(x => x.ReporterId)
-            .NotEmpty().WithMessage("ReporterId is required.");
-
         RuleFor(x => x.SystemAffected)
             .MaximumLength(255);
     }

@@ -1,5 +1,4 @@
-﻿using IncidentReportingSystem.Application.Common.Models;        
-using IncidentReportingSystem.Application.Features.Comments.Dtos; 
+﻿using IncidentReportingSystem.Application.Common.Models;         
 using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.Comments.Queries.ListComment

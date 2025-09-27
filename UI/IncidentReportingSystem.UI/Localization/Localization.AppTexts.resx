@@ -474,4 +474,49 @@
   <data name="Attachments.Download" xml:space="preserve">
     <value>Download</value>
   </data>
+  <data name="IncidentCreate.Title" xml:space="preserve">
+    <value>Report a new incident</value>
+  </data>
+  <data name="IncidentCreate.Subtitle" xml:space="preserve">
+    <value>Fill in the details below to create a new incident.</value>
+  </data>
+  <data name="IncidentCreate.Back" xml:space="preserve">
+    <value>Back to incidents</value>
+  </data>
+  <data name="Field.Title" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Field.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Field.Location" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="Field.SystemAffected" xml:space="preserve">
+    <value>System affected</value>
+  </data>
+  <data name="Field.Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Field.Severity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Field.ReportedAt" xml:space="preserve">
+    <value>Reported at</value>
+  </data>
+  <data name="Action.CreateIncident" xml:space="preserve">
+    <value>Create incident</value>
+  </data>
+  <data name="Action.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Nav.ReportIncident" xml:space="preserve">
+    <value>Report incident</value>
+  </data>
+  <data name="Incidents.Col.Reporter" xml:space="preserve">
+    <value>Reporter</value>
+  </data>
+  <data name="IncidentDetails.Field.Reporter" xml:space="preserve">
+    <value>Reporter</value>
+  </data>
 </root>

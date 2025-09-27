@@ -2,13 +2,18 @@
 @rendermode RenderMode.InteractiveServer
 
 @using System.Text.Json.Serialization
+@using IncidentReportingSystem.UI.Shared
+@using Microsoft.AspNetCore.Components.Web
 @using IncidentReportingSystem.UI.Core.Http
 @using IncidentReportingSystem.UI.Core.Incidents
-@using IncidentReportingSystem.UI.Shared
+@using IncidentReportingSystem.UI.Core.Users
 @inject IApiClient Api
 @inject IIncidentService IncSvc
+@inject IUserDirectory UserDir
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject IncidentReportingSystem.UI.Core.Users.IUserDirectory UserDirectory
+
 
 <AuthGuard>
     @if (_loading)
@@ -47,6 +52,13 @@
                         <div class="text-muted small">
                             <span class="me-3">ID: @_incident.Id</span>
                             <span class="me-3">@T["Incidents.Col.Date"]: @_incident.CreatedAtUtc.ToLocalTime().ToString("g")</span>
+                            @if (!string.IsNullOrWhiteSpace(_incident.ReporterId))
+                            {
+                                <span class="me-3">
+                                    @T["IncidentDetails.Field.Reporter"]:
+                                    @(_incident.ReporterDisplayName ?? _incident.ReporterId)
+                                </span>
+                            }
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -75,6 +87,7 @@
                 </ul>
 
                 <div class="tab-content p-3 border border-top-0 rounded-bottom">
+
                     @if (_activeTab == "details")
                     {
                         <div>
@@ -95,6 +108,10 @@
                                 <div class="col-md-6">
                                     <div class="form-label">@T["Incidents.Col.Category"]</div>
                                     <div>@_incident.Category</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Reporter"]</div>
+                                    <div>@(_incident.ReporterDisplayName ?? ShortIdOrDash(_incident.ReporterId))</div>
                                 </div>
                                 <div class="col-12">
                                     <div class="form-label">@T["IncidentDetails.Field.Description"]</div>
@@ -123,7 +140,10 @@
                                     <div class="list-group-item">
                                         <div class="small text-muted">
                                             @c.CreatedAtUtc.ToLocalTime().ToString("g")
-                                            @if (!string.IsNullOrWhiteSpace(c.UserId)) { <span> • @c.UserId</span> }
+                                            @if (!string.IsNullOrWhiteSpace(c.UserId) || !string.IsNullOrWhiteSpace(c.UserDisplayName))
+                                            {
+                                                <span> • @(c.UserDisplayName ?? ShortIdOrDash(c.UserId))</span>
+                                            }
                                         </div>
                                         <div class="mt-1">@c.Text</div>
                                     </div>
@@ -139,7 +159,7 @@
                                 <div class="spinner-border" role="status"></div>
                             </div>
                         }
-                        else if (_attachments.Count == 0)
+                        else if ((_attachments?.Count ?? 0) == 0)
                         {
                             <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
                         }
@@ -194,6 +214,18 @@
     }
 </AuthGuard>
 
+<style>
+    .status-pill{display:inline-block;padding:.25rem .5rem;border-radius:999px;font-size:.75rem;border:1px solid rgba(0,0,0,.1);background:#f8f9fa;color:#444}
+    .status-open{background:#e6ffed;border-color:#b7f5c6;color:#0b6c2e}
+    .status-closed{background:#ffecec;border-color:#ffc2c2;color:#8a1f1f}
+
+    .attachments-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}
+    .attachment-card{display:flex;flex-direction:column}
+    .attachment-card .thumb-wrap{aspect-ratio:4/3;background:#f8f9fa;border:1px solid rgba(0,0,0,.08);border-radius:.5rem;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .attachment-card img{width:100%;height:100%;object-fit:cover;display:block}
+    .attachment-card .actions{display:flex;gap:.5rem;margin-top:.5rem}
+</style>
+
 @code {
     [Parameter] public string? id { get; set; }
 
@@ -210,7 +242,7 @@
     private bool _commentsLoading;
     private bool _attachmentsLoading;
 
-    private readonly Dictionary<string, string> _urlCache = new();
+    private readonly Dictionary<string, string> _urlCache = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -228,27 +260,85 @@
             // details
             var path = string.Format(DetailsEndpoint, id);
             _incident = await Api.GetJsonAsync<IncidentDetailsDto>(path, CancellationToken.None);
-
-            // comments + attachments
-            _commentsLoading = _attachmentsLoading = true;
-
-            var cTask = IncSvc.GetCommentsAsync(id!, 0, 100);
-            await Task.WhenAll(cTask);        
-            _comments = cTask.Result;
-
-            await LoadAttachmentsAsync(id!);
-
-            // presign urls
-            if (_attachments is { Count: > 0 })
+            if (!string.IsNullOrWhiteSpace(_incident.ReporterId) &&
+                string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
             {
-                var tasks = _attachments
-                    .Where(a => !_urlCache.ContainsKey(a.Id.ToString()))
-                    .Select(async a =>
+                var map = await UserDirectory.ResolveDisplayNamesAsync(new[] { _incident.ReporterId }, CancellationToken.None);
+                if (map.TryGetValue(_incident.ReporterId, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                    _incident.ReporterDisplayName = dn;
+            }
+
+            // comments + attachments in parallel
+            _commentsLoading = _attachmentsLoading = true;
+            var cTask = IncSvc.GetCommentsAsync(id!, 0, 100);
+            var aTask = IncSvc.GetIncidentAttachmentsAsync(id!, 0, 100);
+
+            await Task.WhenAll(cTask, aTask);
+
+            _comments = cTask.Result; // PagedResult<CommentDto>
+            var attachmentsPage = aTask.Result; // PagedResult<AttachmentDto>
+
+            // Map attachments → cards and presign URLs (reuse cache)
+            var cards = new List<AttachmentCardVm>(attachmentsPage.Items.Count);
+            foreach (var a in attachmentsPage.Items)
+            {
+                var key = a.Id.ToString();
+                if (!_urlCache.TryGetValue(key, out var url))
+                {
+                    try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
+                    catch { continue; } // skip failed file
+                }
+
+                cards.Add(new AttachmentCardVm
+                {
+                    Id = Guid.Parse(a.Id),
+                    FileName = a.FileName,
+                    ContentType = a.ContentType,
+                    ViewUrl = url,
+                    DownloadHref = url
+                });
+            }
+            _attachments = cards;
+
+            // -------- Resolve display names (reporter + commenters) --------
+            var idsToResolve = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!string.IsNullOrWhiteSpace(_incident?.ReporterId) && string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
+                idsToResolve.Add(_incident!.ReporterId!);
+
+            if (_comments?.Items is { Count: > 0 })
+            {
+                foreach (var c in _comments.Items)
+                {
+                    if (!string.IsNullOrWhiteSpace(c.UserId) && string.IsNullOrWhiteSpace(c.UserDisplayName))
+                        idsToResolve.Add(c.UserId);
+                }
+            }
+
+            if (idsToResolve.Count > 0)
+            {
+                var map = await UserDir.ResolveDisplayNamesAsync(idsToResolve);
+
+                // enrich incident
+                if (_incident is not null && string.IsNullOrWhiteSpace(_incident.ReporterDisplayName)
+                    && _incident.ReporterId is { } rid && map.TryGetValue(rid, out var rname))
+                {
+                    _incident.ReporterDisplayName = rname;
+                }
+
+                // enrich comments (recreate page to avoid mutating lists in-place)
+                if (_comments?.Items is { Count: > 0 })
+                {
+                    var newItems = _comments.Items.Select(c =>
                     {
-                        try { _urlCache[a.Id.ToString()] = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id.ToString()); }
-                        catch { /* ignore per-file failure */ }
-                    });
-                await Task.WhenAll(tasks);
+                        var dn = c.UserDisplayName;
+                        if (string.IsNullOrWhiteSpace(dn) && !string.IsNullOrWhiteSpace(c.UserId) && map.TryGetValue(c.UserId, out var name))
+                            dn = name;
+                        return c with { UserDisplayName = dn };
+                    }).ToList();
+
+                    _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, newItems);
+                }
             }
         }
         catch (Exception ex)
@@ -268,25 +358,29 @@
     private string TabBtn(string name) => $"nav-link {(_activeTab == name ? "active" : "")}";
     private void SetTab(string name) => _activeTab = name;
 
-    private static bool IsImage(AttachmentDto a)
-        => a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false;
-
-    private static bool IsPdf(AttachmentDto a)
-        => string.Equals(a.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase);
-
-    private string StatusClass(string? status)
+    private static string StatusClass(string? status)
         => (status?.Equals("open", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-open"
          : (status?.Equals("closed", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-closed"
          : "status-pill";
 
     private void GoBack()
     {
-        var ret = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query)
-                    .TryGetValue("returnUrl", out var rv) ? (string)rv! : null;
+        var ret = Microsoft.AspNetCore.WebUtilities.QueryHelpers
+            .ParseQuery(new Uri(Nav.Uri).Query)
+            .TryGetValue("returnUrl", out var rv) ? (string)rv! : null;
 
         if (!string.IsNullOrWhiteSpace(ret)) Nav.NavigateTo(ret, true);
         else Nav.NavigateTo("/incidents", true);
     }
+
+    private static string ShortIdOrDash(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return "—";
+        var s = id.Trim();
+        return s.Length > 8 ? s[..8] + "…" : s;
+    }
+
+    // UI VM for attachments
     private sealed class AttachmentCardVm
     {
         public required Guid Id { get; init; }
@@ -294,50 +388,24 @@
         public required string ContentType { get; init; }
         public bool IsImage => ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true;
 
-        // for now we use the same signed URL for thumb + view + download
         public required string ViewUrl { get; init; }
         public string ThumbUrl => ViewUrl;
         public required string DownloadHref { get; init; }
     }
 
-    private async Task OpenAttachment(string id)
-    {
-        var url = await IncSvc.GetAttachmentDownloadUrlAsync(id);
-        Nav.NavigateTo(url, forceLoad: true);
-    }
-    private Task DownloadAttachment(string id) => OpenAttachment(id);
+    // -------- Server contracts (DTOs used by this page) --------
 
-    // Details DTO (server contract)
     public sealed class IncidentDetailsDto
     {
-        [JsonPropertyName("id")]           public string Id { get; set; } = default!;
-        [JsonPropertyName("title")]        public string Title { get; set; } = string.Empty;
-        [JsonPropertyName("status")]       public string Status { get; set; } = "open";
-        [JsonPropertyName("severity")]     public string Severity { get; set; } = "";
-        [JsonPropertyName("category")]     public string Category { get; set; } = "";
-        [JsonPropertyName("createdAtUtc")] public DateTime CreatedAtUtc { get; set; }
-        [JsonPropertyName("description")]  public string? Description { get; set; }
+        [JsonPropertyName("id")] public string Id { get; set; } = default!;
+        [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("status")] public string Status { get; set; } = "open";
+        [JsonPropertyName("severity")] public string Severity { get; set; } = "";
+        [JsonPropertyName("category")] public string Category { get; set; } = "";
+        [JsonPropertyName("createdAt")] public DateTime CreatedAtUtc { get; set; }
+        [JsonPropertyName("description")] public string? Description { get; set; }
+        [JsonPropertyName("reporterId")] public string? ReporterId { get; set; }
+        [JsonPropertyName("reporterDisplayName")] public string? ReporterDisplayName { get; set; }
     }
 
-    private async Task LoadAttachmentsAsync(string incidentId, CancellationToken ct = default)
-    {
-        var page = await IncSvc.GetIncidentAttachmentsAsync(incidentId, ct:ct);
-
-        var cards = new List<AttachmentCardVm>(page.Items.Count);
-        foreach (var a in page.Items)
-        {
-            var url = await IncSvc.GetAttachmentDownloadUrlAsync(a.Id.ToString(), 15, ct);
-
-            cards.Add(new AttachmentCardVm
-            {
-                Id = Guid.Parse(a.Id),
-                FileName = a.FileName,
-                ContentType = a.ContentType,
-                ViewUrl = url,
-                DownloadHref = url
-            });
-        }
-
-        _attachments = cards;
-    }
 }

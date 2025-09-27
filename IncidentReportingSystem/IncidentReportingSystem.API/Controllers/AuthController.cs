@@ -28,6 +28,7 @@ namespace IncidentReportingSystem.API.Controllers
         private readonly ISender _sender;
         private readonly ICurrentUserService _currentUser;
         private readonly ILogger<AuthController> _logger;
+        public sealed record ResolveRequest(string[] Ids);
 
         public AuthController(ISender sender, ICurrentUserService currentUser, ILogger<AuthController> logger)
         {
@@ -39,6 +40,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <summary>Registers a new user with roles. Anonymous for demo.</summary>
         [HttpPost("register")]
         [AllowAnonymous]
+        [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken ct)
@@ -81,6 +83,19 @@ namespace IncidentReportingSystem.API.Controllers
             }
         }
 
+        [HttpPost("resolve-display-names")]
+        public ActionResult<Dictionary<string, string>> Resolve([FromBody] ResolveRequest body)
+        {
+            var res = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (body?.Ids != null)
+            {
+                foreach (var id in body.Ids.Where(s => !string.IsNullOrWhiteSpace(s)))
+                {
+                    res[id] = id;
+                }
+            }
+            return Ok(res);
+        }
 
         /// <summary>Authenticate with email + password and receive a JWT.</summary>
         [HttpPost("login")]

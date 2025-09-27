@@ -21,7 +21,6 @@ public class CreateIncidentReportCommandTests
         var command = new CreateIncidentReportCommand(
             description,
             location,
-            reporterId,
             category,
             systemAffected,
             severity,
@@ -31,7 +30,6 @@ public class CreateIncidentReportCommandTests
         // Assert
         command.Description.Should().Be(description);
         command.Location.Should().Be(location);
-        command.ReporterId.Should().Be(reporterId);
         command.Category.Should().Be(category);
         command.SystemAffected.Should().Be(systemAffected);
         command.Severity.Should().Be(severity);

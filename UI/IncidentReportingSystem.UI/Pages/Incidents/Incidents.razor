@@ -4,11 +4,24 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using IncidentReportingSystem.UI.Core.Http
+@using IncidentReportingSystem.UI.Core.Users
 @inject IApiClient Api
+@inject IUserDirectory UserDir
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @inject NavigationManager Nav
 
 <div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="h5 mb-0">@T["Incidents.Title"]</h1>
+
+        <a class="btn btn-primary btn-sm" href="/incidents/new">
+            <svg viewBox="0 0 24 24" width="16" height="16" class="me-1" aria-hidden="true">
+                <path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z" fill="currentColor"></path>
+            </svg>
+            @T["Action.CreateIncident"]
+        </a>
+    </div>
+
     <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
         <div>
             <h1 class="h4 mb-1">@T["Incidents.Title"]</h1>
@@ -67,7 +80,6 @@
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>
-                        @* Clickable headers to sort (client-side) *@
                         <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Date)))">
                             @T["Incidents.Col.Date"] @HeaderGlyph(nameof(IncidentRow.Date))
                         </th>
@@ -79,6 +91,9 @@
                         </th>
                         <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Category)))">
                             @T["Incidents.Col.Category"] @HeaderGlyph(nameof(IncidentRow.Category))
+                        </th>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Reporter)))">
+                            @T["Incidents.Col.Reporter"] @HeaderGlyph(nameof(IncidentRow.Reporter))
                         </th>
                         <th class="text-muted">@T["Incidents.Col.Id"]</th>
                     </tr>
@@ -93,6 +108,7 @@
                             </td>
                             <td>@it.Severity</td>
                             <td>@it.Category</td>
+                            <td>@it.Reporter</td>
                             <td class="text-muted small"><a href="@DetailsHref(it.Id)">@it.Id</a></td>
                         </tr>
                     }
@@ -129,7 +145,9 @@
         string Title,
         string Status,
         string Severity,
-        string Category
+        string Category,
+        string Reporter,     // display name or short id / "—"
+        string? ReporterId   // raw id for resolving, optional
     );
 
     // ---- State ----
@@ -173,7 +191,7 @@
     private void SortBy(string field)
     {
         if (_sortBy == field) _sortDesc = !_sortDesc;
-        else { _sortBy = field; _sortDesc = field == nameof(IncidentRow.Date) || field == nameof(IncidentRow.Severity); }
+        else { _sortBy = field; _sortDesc = field is nameof(IncidentRow.Date) or nameof(IncidentRow.Severity); }
         ApplyClientSort();
         StateHasChanged();
     }
@@ -186,6 +204,7 @@
             nameof(IncidentRow.Status) => (a, b) => string.Compare(a.Status, b.Status, StringComparison.OrdinalIgnoreCase),
             nameof(IncidentRow.Severity) => (a, b) => string.Compare(a.Severity, b.Severity, StringComparison.OrdinalIgnoreCase),
             nameof(IncidentRow.Category) => (a, b) => string.Compare(a.Category, b.Category, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Reporter) => (a, b) => string.Compare(a.Reporter, b.Reporter, StringComparison.OrdinalIgnoreCase),
             nameof(IncidentRow.Date) => (a, b) => Nullable.Compare(a.Date, b.Date),
             _ => (a, b) => 0
         };
@@ -204,22 +223,10 @@
 
         try
         {
-            // Build the most likely endpoint & query as seen in logs/backlog.
-            // We DO NOT guess fields; we parse generically below.
-            // Endpoint priority mirrors other services: "IncidentReports".
-            var qs = new List<string>
-            {
-                $"page={_page}",
-                $"pageSize={_pageSize}"
-            };
+            var qs = new List<string> { $"page={_page}", $"pageSize={_pageSize}" };
             if (!string.IsNullOrWhiteSpace(_search))
-            {
-                // Pass a conservative "search" parameter; server may ignore.
                 qs.Add($"search={Uri.EscapeDataString(_search)}");
-            }
 
-            // Optional server-side sort hint (safe no-op if unsupported)
-            // Using a neutral "order" pattern: field asc|desc
             var order = _sortDesc ? "desc" : "asc";
             var orderField = _sortBy switch
             {
@@ -228,6 +235,7 @@
                 nameof(IncidentRow.Status) => "status",
                 nameof(IncidentRow.Severity) => "severity",
                 nameof(IncidentRow.Category) => "category",
+                nameof(IncidentRow.Reporter) => "reporter",
                 _ => "date"
             };
             qs.Add($"order={orderField}%20{order}");
@@ -237,12 +245,49 @@
 
             ParsePaged(json, out var rows, out var total, out var hasMore);
 
+            // post-load name resolution for rows that have ReporterId but no name
+            var missingIds = rows
+                .Where(r => string.IsNullOrWhiteSpace(r.Reporter) && !string.IsNullOrWhiteSpace(r.ReporterId))
+                .Select(r => r.ReporterId!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+
+            if (missingIds.Length > 0)
+            {
+                var map = await UserDir.ResolveDisplayNamesAsync(missingIds, CancellationToken.None);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var r = rows[i];
+
+                    if (!string.IsNullOrWhiteSpace(r.Reporter))
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(r.ReporterId))
+                    {
+                        rows[i] = r with { Reporter = ShortIdOrDash(null) };
+                        continue;
+                    }
+
+                    if (map.TryGetValue(r.ReporterId, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                        rows[i] = r with { Reporter = dn };
+                    else
+                        rows[i] = r with { Reporter = ShortIdOrDash(r.ReporterId) };
+                }
+            }
+
+            else
+            {
+                // ensure we have at least short id instead of blank
+                rows = rows.Select(r => r with { Reporter = string.IsNullOrWhiteSpace(r.Reporter) ? ShortIdOrDash(r.ReporterId) : r.Reporter }).ToList();
+            }
+
             _items.Clear();
             _items.AddRange(rows);
             _total = total;
             _hasMore = hasMore;
 
-            // Client-side sort to guarantee UX even if server ignores "order".
             ApplyClientSort();
         }
         catch (Exception ex)
@@ -258,10 +303,7 @@
         }
     }
 
-    // Supports multiple server shapes:
-    //  - Array             → items only
-    //  - { items,total }   → standard PagedResult
-    //  - { data,count }    → alternate PagedResult
+    // Supports multiple server shapes
     private void ParsePaged(JsonElement json, out List<IncidentRow> rows, out int? total, out bool hasMore)
     {
         rows = new();
@@ -269,7 +311,6 @@
         hasMore = false;
 
         JsonElement itemsEl;
-        int? count = null;
 
         if (json.ValueKind == JsonValueKind.Array)
         {
@@ -278,13 +319,11 @@
         else if (json.ValueKind == JsonValueKind.Object &&
                  (json.TryGetProperty("items", out itemsEl) || json.TryGetProperty("data", out itemsEl)))
         {
-            // total / count
             if (json.TryGetProperty("total", out var tot) && tot.TryGetInt32(out var t)) total = t;
             else if (json.TryGetProperty("count", out var cnt) && cnt.TryGetInt32(out var c)) total = c;
         }
         else
         {
-            // Unknown shape
             itemsEl = default;
         }
 
@@ -295,7 +334,6 @@
                     rows.Add(MapRow(el));
         }
 
-        // If server didn't provide total, infer hasMore by page-size
         hasMore = total is not null
             ? (_page * _pageSize) < total.Value
             : rows.Count >= _pageSize;
@@ -303,26 +341,25 @@
 
     private static IncidentRow MapRow(JsonElement el)
     {
-        // Id
         var id = GetString(el, new[] { "id", "incidentId", "reportId" }) ?? "—";
-
-        // Title / Summary
         var title = GetString(el, new[] { "title", "summary", "name", "subject" }) ?? "—";
-
-        // Status
         var status = GetString(el, new[] { "status", "state" }) ?? "Unknown";
-
-        // Severity
         var severity = GetString(el, new[] { "severity", "level", "priority" }) ?? "—";
-
-        // Category / Type
         var category = GetString(el, new[] { "category", "type", "incidentType", "classification" }) ?? "—";
+
+        // Reporter name / id (prefer display name if present)
+        var reporterDisplay = GetString(el, new[] { "reporterDisplayName", "reporterName", "reporter" });
+        var reporterId = GetString(el, new[] { "reporterId", "userId" });
+
+        string reporter = !string.IsNullOrWhiteSpace(reporterDisplay)
+            ? reporterDisplay!
+            : ShortIdOrDash(reporterId);
 
         // Date
         DateOnly? date = null;
         if (TryGetDate(el, out var dd)) date = dd;
 
-        return new IncidentRow(id, date, title, status, severity, category);
+        return new IncidentRow(id, date, title, status, severity, category, reporter, reporterId);
     }
 
     private static string? GetString(JsonElement el, IEnumerable<string> keys)
@@ -336,8 +373,7 @@
     private static bool TryGetDate(JsonElement el, out DateOnly d)
     {
         d = default;
-        // Common date keys (aligned with dashboard service)
-        var keys = new[] { "date", "occurredAt", "createdAt", "timestamp", "eventDate" };
+        var keys = new[] { "date", "occurredAt", "createdAt", "createdAtUtc", "timestamp", "eventDate" };
         foreach (var k in keys)
         {
             if (!el.TryGetProperty(k, out var v)) continue;
@@ -368,9 +404,9 @@
         var s = status.Trim().ToLowerInvariant();
         return s switch
         {
-            "open" => "bg-danger",   // red
-            "closed" => "bg-success",  // green
-            _ => "bg-secondary" // grey for anything else
+            "open" => "bg-danger",
+            "closed" => "bg-success",
+            _ => "bg-secondary"
         };
     }
 
@@ -380,4 +416,10 @@
         return $"/incidents/{id}?returnUrl={ret}";
     }
 
+    private static string ShortIdOrDash(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return "—";
+        var s = id.Trim();
+        return s.Length > 8 ? s[..8] + "…" : s;
+    }
 }

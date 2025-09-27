@@ -1,14 +1,11 @@
-﻿namespace IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
-
-/// <summary>
-/// Data Transfer Object for returning incident reports via API.
-/// </summary>
+﻿// IncidentReportingSystem.Application/Features/IncidentReports/Dtos/IncidentReportDto.cs
 public class IncidentReportDto
 {
     public Guid Id { get; set; }
     public string Description { get; set; } = default!;
     public string Location { get; set; } = default!;
     public Guid ReporterId { get; set; }
+    public string? ReporterDisplayName { get; set; }  // ← חדש
     public string Category { get; set; } = default!;
     public string SystemAffected { get; set; } = default!;
     public string Severity { get; set; } = default!;

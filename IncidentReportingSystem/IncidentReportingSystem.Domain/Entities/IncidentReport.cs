@@ -27,6 +27,8 @@ namespace IncidentReportingSystem.Domain.Entities
         /// </summary>
         public Guid ReporterId { get; private set; }
 
+        public string ReporterDisplayName { get; private set; } = string.Empty;
+
         /// <summary>
         /// Gets the category of the incident.
         /// </summary>
@@ -79,6 +81,7 @@ namespace IncidentReportingSystem.Domain.Entities
             Description = description;
             Location = location;
             ReporterId = reporterId;
+            ReporterDisplayName = string.Empty;
             Category = category;
             SystemAffected = systemAffected;
             Severity = severity;
@@ -103,5 +106,6 @@ namespace IncidentReportingSystem.Domain.Entities
         }
 
         public void SetModifiedAt(DateTime? modifiedAt) { ModifiedAt = modifiedAt; }
+        public void SetReporterDisplayName(string value) => ReporterDisplayName = value ?? string.Empty;
     }
 }

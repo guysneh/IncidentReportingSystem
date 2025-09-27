@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using IncidentReportingSystem.Domain.Entities;
-using IncidentReportingSystem.Application.Features.Comments.Dtos;
 using IncidentReportingSystem.Application.Abstractions.Persistence;
 
 namespace IncidentReportingSystem.Application.Features.Comments.Commands.Create;

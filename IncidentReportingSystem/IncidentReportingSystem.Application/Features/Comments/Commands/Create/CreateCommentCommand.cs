@@ -1,5 +1,4 @@
-﻿using IncidentReportingSystem.Application.Features.Comments.Dtos;
-using MediatR;
+﻿using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.Comments.Commands.Create;
 

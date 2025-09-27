@@ -3,8 +3,6 @@ using MediatR;
 
 namespace IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById
 {
-    /// <summary>
-    /// Query for retrieving a specific incident report by its unique identifier.
-    /// </summary>
-    public record GetIncidentReportByIdQuery(Guid Id) : IRequest<IncidentReport>;
+    /// <summary>Query for retrieving a specific incident report by its unique identifier.</summary>
+    public sealed record GetIncidentReportByIdQuery(Guid Id) : IRequest<IncidentReport>;
 }

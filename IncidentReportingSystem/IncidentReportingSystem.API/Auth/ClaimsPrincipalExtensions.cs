@@ -10,16 +10,9 @@ public static class ClaimsPrincipalExtensions
     /// </summary>
     public static Guid RequireUserId(this ClaimsPrincipal user)
     {
-        var value =
-            user.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
-            user.FindFirst("sub")?.Value ??            // JWT subject
-            user.FindFirst("userId")?.Value ??
-            user.FindFirst("uid")?.Value;
-
-        if (Guid.TryParse(value, out var id))
-            return id;
-
-        throw new InvalidOperationException("User id claim is missing or invalid.");
+        var s = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+        if (Guid.TryParse(s, out var id)) return id;
+        throw new UnauthorizedAccessException("Missing or invalid user id claim.");
     }
 
     /// <summary>
