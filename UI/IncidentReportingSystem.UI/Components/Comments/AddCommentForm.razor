@@ -1,0 +1,81 @@
+﻿@namespace IncidentReportingSystem.UI.Components.Comments
+@using System.ComponentModel.DataAnnotations
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+
+<EditForm EditContext="_ctx" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label class="form-label" for="commentText">@T["Comments.Form.Label"]</label>
+        <textarea id="commentText"
+                  class="form-control"
+                  aria-label="@T["Comments.Form.AriaLabel"]"
+                  @bind="_model.Text"
+                  @bind:event="oninput"
+                  rows="4"
+                  placeholder="@T["Comments.Form.Placeholder"]"
+                  disabled="@_busy">
+        </textarea>
+        <div class="form-text">
+            @string.Format(T["Comments.Form.Counter"], _model.Text.Length, MaxLength)
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" disabled="@(!_ctx.Validate() || _busy)">
+            @(_busy? T["Common.Posting"] : T["Comments.Form.Submit"])
+        </button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="Cancel" disabled="@_busy">
+            @T["Common.Cancel"]
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public EventCallback<string> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public int MaxLength { get; set; } = 2000;
+
+    private FormModel _model = new();
+    private EditContext _ctx = default!;
+    private bool _busy;
+
+    protected override void OnInitialized()
+    {
+        _model.Max = MaxLength;
+        _ctx = new EditContext(_model);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_busy) return;
+        _busy = true; StateHasChanged();
+        try
+        {
+            if (OnSubmit.HasDelegate)
+                await OnSubmit.InvokeAsync(_model.Text);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        if (OnCancel.HasDelegate)
+            await OnCancel.InvokeAsync();
+    }
+
+    private sealed class FormModel
+    {
+        [Required(ErrorMessage = "Comments.Validation.Required")]
+        [MinLength(1, ErrorMessage = "Comments.Validation.MinLength")]
+        [MaxLength(20000, ErrorMessage = "Comments.Validation.MaxLength")]
+        public string Text { get; set; } = string.Empty;
+
+        [Range(1, 10000)]
+        public int Max { get; set; } = 2000;
+    }
+}

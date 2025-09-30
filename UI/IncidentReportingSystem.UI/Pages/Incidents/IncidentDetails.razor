@@ -7,6 +7,7 @@
 @using IncidentReportingSystem.UI.Core.Http
 @using IncidentReportingSystem.UI.Core.Incidents
 @using IncidentReportingSystem.UI.Core.Users
+@using IncidentReportingSystem.UI.Components.Comments
 @inject IApiClient Api
 @inject IIncidentService IncSvc
 @inject IUserDirectory UserDir
@@ -122,6 +123,23 @@
                     }
                     else if (_activeTab == "comments")
                     {
+                        @* ====== Add Comment: Button → Toggle Form ====== *@
+                        <div class="mb-3">
+                            @if (_showAddComment)
+                            {
+                                <AddCommentForm
+                                    OnSubmit="OnAddCommentSubmit"
+                                    OnCancel="OnAddCommentCancel"
+                                    MaxLength="2000" />
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-primary" @onclick="() => _showAddComment = true">
+                                    @T["IncidentDetails.Comments.AddButton"]
+                                </button>
+                            }
+                        </div>
+
                         @if (_commentsLoading)
                         {
                             <div class="py-3 text-center">
@@ -242,6 +260,8 @@
     private bool _commentsLoading;
     private bool _attachmentsLoading;
 
+    private bool _showAddComment; // << control Add Comment form visibility
+
     private readonly Dictionary<string, string> _urlCache = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
@@ -301,45 +321,7 @@
             _attachments = cards;
 
             // -------- Resolve display names (reporter + commenters) --------
-            var idsToResolve = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            if (!string.IsNullOrWhiteSpace(_incident?.ReporterId) && string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
-                idsToResolve.Add(_incident!.ReporterId!);
-
-            if (_comments?.Items is { Count: > 0 })
-            {
-                foreach (var c in _comments.Items)
-                {
-                    if (!string.IsNullOrWhiteSpace(c.UserId) && string.IsNullOrWhiteSpace(c.UserDisplayName))
-                        idsToResolve.Add(c.UserId);
-                }
-            }
-
-            if (idsToResolve.Count > 0)
-            {
-                var map = await UserDir.ResolveDisplayNamesAsync(idsToResolve);
-
-                // enrich incident
-                if (_incident is not null && string.IsNullOrWhiteSpace(_incident.ReporterDisplayName)
-                    && _incident.ReporterId is { } rid && map.TryGetValue(rid, out var rname))
-                {
-                    _incident.ReporterDisplayName = rname;
-                }
-
-                // enrich comments (recreate page to avoid mutating lists in-place)
-                if (_comments?.Items is { Count: > 0 })
-                {
-                    var newItems = _comments.Items.Select(c =>
-                    {
-                        var dn = c.UserDisplayName;
-                        if (string.IsNullOrWhiteSpace(dn) && !string.IsNullOrWhiteSpace(c.UserId) && map.TryGetValue(c.UserId, out var name))
-                            dn = name;
-                        return c with { UserDisplayName = dn };
-                    }).ToList();
-
-                    _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, newItems);
-                }
-            }
+            await ResolveCommenterNamesAsync();
         }
         catch (Exception ex)
         {
@@ -379,6 +361,245 @@
         var s = id.Trim();
         return s.Length > 8 ? s[..8] + "…" : s;
     }
+
+    // === Add Comment: handlers ===
+    private async Task OnAddCommentSubmit(string text)
+    {
+        if (_incident is null || string.IsNullOrWhiteSpace(text)) return;
+
+        try
+        {
+            await IncSvc.AddCommentAsync(_incident.Id, text, CancellationToken.None);
+            await ReloadComments();     // refresh just the comments
+            _showAddComment = false;    // close form
+        }
+        catch
+        {
+            // ה-ProblemDetailsHandler שלך כבר מציג הודעות. אפשר להוסיף Toast ייעודי אם תרצה.
+        }
+        StateHasChanged();
+    }
+
+    private void OnAddCommentCancel()
+    {
+        _showAddComment = false;
+    }
+
+    private async Task ReloadComments()
+    {
+        if (_incident is null) return;
+        _commentsLoading = true;
+        try
+        {
+            _comments = await IncSvc.GetCommentsAsync(_incident.Id, 0, 100, CancellationToken.None);
+            await ResolveCommenterNamesAsync(); // ← חשוב גם אחרי POST
+        }
+        finally { _commentsLoading = false; }
+    }
+
+
+
+    private async Task ResolveCommenterNamesAsync()
+    {
+        // נרמול מזהים (Trim + Case-insensitive)
+        static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Reporter (לכותרת למעלה)
+        var rid = Norm(_incident?.ReporterId);
+        if (!string.IsNullOrWhiteSpace(rid) && string.IsNullOrWhiteSpace(_incident?.ReporterDisplayName))
+            ids.Add(rid!);
+
+        // Commenters
+        if (_comments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _comments.Items)
+            {
+                var uid = Norm(c.UserId);
+                if (!string.IsNullOrWhiteSpace(uid) && string.IsNullOrWhiteSpace(c.UserDisplayName))
+                    ids.Add(uid!);
+            }
+        }
+
+        if (ids.Count == 0) return;
+
+        // בקשה אחת ל-Directory
+        IDictionary<string, string> rawMap;
+        try
+        {
+            rawMap = await UserDirectory.ResolveDisplayNamesAsync(ids, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[NAMES] Resolve failed: {ex.Message}");
+            return;
+        }
+
+        // נרמול המפה החוזרת
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in rawMap)
+        {
+            var k = Norm(kv.Key);
+            var v = Norm(kv.Value);
+            if (!string.IsNullOrWhiteSpace(k) && !string.IsNullOrWhiteSpace(v))
+                map[k!] = v!;
+        }
+
+        // לוג קטן כדי לראות כמות מזהים שנפתרו
+        Console.WriteLine($"[NAMES] asked={ids.Count}, resolved={map.Count}");
+
+        // עדכון ה-Reporter (אם היה חסר)
+        if (_incident is not null &&
+            string.IsNullOrWhiteSpace(_incident.ReporterDisplayName) &&
+            rid is not null &&
+            map.TryGetValue(rid, out var rname) &&
+            !string.IsNullOrWhiteSpace(rname))
+        {
+            _incident.ReporterDisplayName = rname;
+        }
+
+        // עדכון כותבי ההערות (immutable)
+        if (_comments?.Items is { Count: > 0 })
+        {
+            var updated = _comments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserDisplayName)) return c;
+
+                var uid = Norm(c.UserId);
+                if (string.IsNullOrWhiteSpace(uid)) return c;
+
+                // 1) מהמפה של ה-Directory
+                if (map.TryGetValue(uid!, out var name) && !string.IsNullOrWhiteSpace(name))
+                    return c with { UserDisplayName = name };
+
+                // 2) fallback: אם זה נראה כמו אימייל — השתמש בו כשם
+                if (uid!.Contains("@", StringComparison.Ordinal))
+                    return c with { UserDisplayName = uid };
+
+                // 3) אחרת, נשאיר null — ה-UI כבר מציג GUID fallback
+                return c;
+            }).ToList();
+
+            _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, updated);
+        }
+    }
+
+    // מנרמל מזהה משתמש לפורמט שמתאים יותר ל-Directory
+    private static string? NormalizeUserIdForDirectory(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var s = raw.Trim();
+
+        // אם יש מפריד זהויות (auth0|, azuread| וכו') – קח את הצד הימני
+        var pipeIdx = s.LastIndexOf('|');
+        if (pipeIdx >= 0 && pipeIdx < s.Length - 1)
+            s = s[(pipeIdx + 1)..].Trim();
+
+        // סילוק prefixים נפוצים
+        if (s.StartsWith("oid:", StringComparison.OrdinalIgnoreCase)) s = s[4..].Trim();
+        if (s.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) s = s[5..].Trim();
+
+        // אם זה אימייל – נעדיף lower (Directoryים רבים מאחסנים UPN ב-lower)
+        if (s.Contains('@')) s = s.ToLowerInvariant();
+
+        return string.IsNullOrWhiteSpace(s) ? null : s;
+    }
+
+    private async Task ResolveAllDisplayNamesAsync()
+    {
+        // אוספים את כל המזהים המקוריים שצריך לפתור (Reporter + Commenters)
+        var originals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(_incident?.ReporterId) &&
+            string.IsNullOrWhiteSpace(_incident?.ReporterDisplayName))
+        {
+            originals.Add(_incident!.ReporterId!);
+        }
+
+        if (_comments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _comments.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserId) && string.IsNullOrWhiteSpace(c.UserDisplayName))
+                    originals.Add(c.UserId!);
+            }
+        }
+
+        if (originals.Count == 0) return;
+
+        // נרמול + מיפוי חזרה: original → normalized
+        var origToNorm = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var normalizedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var id in originals)
+        {
+            var norm = NormalizeUserIdForDirectory(id);
+            if (norm is null) continue;
+            origToNorm[id] = norm;
+            normalizedSet.Add(norm);
+        }
+
+        if (normalizedSet.Count == 0) return;
+
+        // קריאה אחת ל-Directory עם מזהים מנורמלים
+        IDictionary<string, string> rawMap;
+        try
+        {
+            rawMap = await UserDirectory.ResolveDisplayNamesAsync(normalizedSet, CancellationToken.None);
+        }
+        catch
+        {
+            // אם ה-Directory נפל — לא נשבור UI
+            rawMap = new Dictionary<string, string>();
+        }
+
+        // נרמול מפת התשובה (Case-insensitive) – key/value Trim
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in rawMap)
+        {
+            var k = NormalizeUserIdForDirectory(kv.Key); // חשוב! כדי להתאים לאותו כלל
+            var v = kv.Value?.Trim();
+            if (!string.IsNullOrWhiteSpace(k) && !string.IsNullOrWhiteSpace(v))
+                map[k!] = v!;
+        }
+
+        // פונקציית עזר: מ-id "מקורי" → DisplayName (אם נמצא ב-map אחרי נרמול)
+        string? ResolveFromMap(string? originalId)
+        {
+            var norm = NormalizeUserIdForDirectory(originalId);
+            if (norm is null) return null;
+            return map.TryGetValue(norm, out var name) && !string.IsNullOrWhiteSpace(name) ? name : null;
+        }
+
+        // עדכון ה-Reporter בראש הדף
+        if (_incident is not null &&
+            string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
+        {
+            var dn = ResolveFromMap(_incident.ReporterId);
+            if (!string.IsNullOrWhiteSpace(dn))
+                _incident.ReporterDisplayName = dn;
+        }
+
+        // עדכון כותבי ההערות (immutable list)
+        if (_comments?.Items is { Count: > 0 })
+        {
+            var updated = _comments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserDisplayName)) return c;
+                var dn = ResolveFromMap(c.UserId);
+
+                // Fallback סביר: אם לא נמצא שם אבל ה-id נראה כמו אימייל, נציג אותו כשם תצוגה
+                if (string.IsNullOrWhiteSpace(dn) && !string.IsNullOrWhiteSpace(c.UserId) && c.UserId.Contains('@'))
+                    dn = c.UserId;
+
+                return string.IsNullOrWhiteSpace(dn) ? c : c with { UserDisplayName = dn };
+            }).ToList();
+
+            _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, updated);
+        }
+    }
+
 
     // UI VM for attachments
     private sealed class AttachmentCardVm
