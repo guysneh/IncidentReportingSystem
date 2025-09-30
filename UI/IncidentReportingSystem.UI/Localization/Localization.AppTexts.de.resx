@@ -519,4 +519,28 @@
   <data name="IncidentDetails.Field.Reporter" xml:space="preserve">
     <value>Berichter</value>
   </data>
+  <data name="Comments.Add" xml:space="preserve">
+  <value>Kommentar hinzufügen</value>
+  </data>
+  <data name="Comments.Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Comments.Placeholder" xml:space="preserve">
+    <value>Schreibe einen Kommentar…</value>
+  </data>
+  <data name="Comments.Submit" xml:space="preserve">
+    <value>Absenden</value>
+  </data>
+  <data name="Comments.Error.Empty" xml:space="preserve">
+    <value>Der Kommentar darf nicht leer sein.</value>
+  </data>
+  <data name="Comments.Error.Failed" xml:space="preserve">
+    <value>Kommentar konnte nicht gespeichert werden. Bitte erneut versuchen.</value>
+  </data>
+  <data name="Comments.Loading" xml:space="preserve">
+    <value>Kommentare werden geladen…</value>
+  </data>
+  <data name="Comments.Empty" xml:space="preserve">
+    <value>Noch keine Kommentare vorhanden.</value>
+  </data>
 </root>

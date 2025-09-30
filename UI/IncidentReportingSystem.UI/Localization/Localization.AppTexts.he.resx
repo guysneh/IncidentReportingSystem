@@ -519,4 +519,28 @@
   <data name="IncidentDetails.Field.Reporter" xml:space="preserve">
     <value>מדווח</value>
   </data>
+  <data name="Comments.Add" xml:space="preserve">
+  <value>הוסף הערה</value>
+  </data>
+  <data name="Comments.Cancel" xml:space="preserve">
+    <value>בטל</value>
+  </data>
+  <data name="Comments.Placeholder" xml:space="preserve">
+    <value>כתוב הערה…</value>
+  </data>
+  <data name="Comments.Submit" xml:space="preserve">
+    <value>שלח</value>
+  </data>
+  <data name="Comments.Error.Empty" xml:space="preserve">
+    <value>אי אפשר לשלוח הערה ריקה.</value>
+  </data>
+  <data name="Comments.Error.Failed" xml:space="preserve">
+    <value>שמירת ההערה נכשלה. נסה שוב.</value>
+  </data>
+  <data name="Comments.Loading" xml:space="preserve">
+    <value>טוען הערות…</value>
+  </data>
+  <data name="Comments.Empty" xml:space="preserve">
+    <value>אין עדיין הערות.</value>
+  </data>
 </root>
