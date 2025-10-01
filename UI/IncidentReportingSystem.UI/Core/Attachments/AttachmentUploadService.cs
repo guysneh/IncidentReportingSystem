@@ -61,26 +61,42 @@ public sealed class AttachmentUploadService : IAttachmentUploadService
         }
 
         var httpMethod = new HttpMethod(string.IsNullOrWhiteSpace(method) ? "PUT" : method);
-        using var req = new HttpRequestMessage(httpMethod, url) { Content = content };
 
-        // copy any headers required by storage/loopback
+        // Decide client: relative → API (loopback, needs auth); absolute → RAW (external presigned)
+        var isAbsolute = Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri);
+        var useApiClient = !isAbsolute || url.StartsWith("/", StringComparison.Ordinal);
+
+        using var req = new HttpRequestMessage(httpMethod, isAbsolute ? absoluteUri! : new Uri(url, UriKind.Relative))
+        {
+            Content = content
+        };
+
+        // Copy headers required by storage / loopback endpoint
         foreach (var h in headers)
         {
             if (!req.Headers.TryAddWithoutValidation(h.Key, h.Value))
                 req.Content.Headers.TryAddWithoutValidation(h.Key, h.Value);
         }
 
-        // Always go through the API client so auth handlers (Bearer) are applied for loopback uploads.
-        using var resp = await _api.SendAsync(req, ct);
+        HttpResponseMessage resp;
+        if (useApiClient)
+        {
+            // Loopback upload to your API (needs auth handlers)
+            resp = await _api.SendAsync(req, ct);
+        }
+        else
+        {
+            // External presigned URL (must be "clean", no auth handlers)
+            resp = await _raw.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+        }
 
         if (!resp.IsSuccessStatusCode)
         {
             var body = await resp.Content.ReadAsStringAsync(ct);
-            // Optional: log for diagnostics
-            // _log.LogWarning("Upload failed: {Status} {Reason}. Body: {Body}", (int)resp.StatusCode, resp.ReasonPhrase, body);
             throw new HttpRequestException($"Upload failed: {(int)resp.StatusCode} {resp.ReasonPhrase}. Body: {body}");
         }
     }
+
 
 
     public async Task CompleteAsync(Guid attachmentId, CancellationToken ct = default)
