@@ -520,7 +520,7 @@
     <value>Berichter</value>
   </data>
   <data name="Comments.Add" xml:space="preserve">
-  <value>Kommentar hinzufügen</value>
+    <value>Kommentar hinzufügen</value>
   </data>
   <data name="Comments.Cancel" xml:space="preserve">
     <value>Abbrechen</value>
@@ -542,5 +542,35 @@
   </data>
   <data name="Comments.Empty" xml:space="preserve">
     <value>Noch keine Kommentare vorhanden.</value>
+  </data>
+  <data name="IncidentDetails.Comments.AddButton" xml:space="preserve">
+    <value>Kommentar hinzufügen</value>
+  </data>
+  <data name="Comments.Form.Placeholder" xml:space="preserve">
+    <value>Ihr Kommentar hier schreiben</value>
+  </data>
+  <data name="Comments.Form.Submit" xml:space="preserve">
+    <value>Absenden</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Abrechen</value>
+  </data>
+  <data name="Comments.Form.Counter" xml:space="preserve">
+    <value>Zeichen: {0}/{1}</value>
+  </data>
+  <data name="Attachments.Add" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="Attachments.Cancel" xml:space="preserve">
+    <value>Abrechen</value>
+  </data>
+  <data name="Attachments.Hint.Allowed" xml:space="preserve">
+    <value>Erlaubte Dateitypen</value>
+  </data>
+  <data name="Attachments.Hint.MaxSize" xml:space="preserve">
+    <value>Maximale Größe: {0} MB</value>
+  </data>
+  <data name="Attachments.Hint.SelectFile" xml:space="preserve">
+    <value>Datei zum Hochladen auswählen</value>
   </data>
 </root>

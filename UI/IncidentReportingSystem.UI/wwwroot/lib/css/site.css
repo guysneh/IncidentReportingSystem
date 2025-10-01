@@ -1923,3 +1923,9 @@ body.dark {
         gap: .5rem;
         flex-wrap: wrap;
     }
+.upload-drop {
+    background: #f8f9fa;
+    border: 1px dashed rgba(0,0,0,.15);
+    border-radius: .5rem;
+    padding: 1rem;
+}

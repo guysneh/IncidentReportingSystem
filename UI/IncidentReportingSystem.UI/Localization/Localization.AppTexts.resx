@@ -520,7 +520,7 @@
     <value>Reporter</value>
   </data>
   <data name="Comments.Add" xml:space="preserve">
-  <value>Add comment</value>
+    <value>Add comment</value>
   </data>
   <data name="Comments.Cancel" xml:space="preserve">
     <value>Cancel</value>
@@ -542,5 +542,35 @@
   </data>
   <data name="Comments.Empty" xml:space="preserve">
     <value>No comments yet.</value>
+  </data>
+  <data name="IncidentDetails.Comments.AddButton" xml:space="preserve">
+    <value>Add a comment</value>
+  </data>
+  <data name="Comments.Form.Placeholder" xml:space="preserve">
+    <value>Write your comment here</value>
+  </data>
+  <data name="Comments.Form.Submit" xml:space="preserve">
+    <value>Submit</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Comments.Form.Counter" xml:space="preserve">
+    <value>Characters: {0}/{1}</value>
+  </data>
+  <data name="Attachments.Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Attachments.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Attachments.Hint.Allowed" xml:space="preserve">
+    <value>Allowed file types</value>
+  </data>
+  <data name="Attachments.Hint.MaxSize" xml:space="preserve">
+    <value>Max size {0} MB</value>
+  </data>
+  <data name="Attachments.Hint.SelectFile" xml:space="preserve">
+    <value>Select a file to upload</value>
   </data>
 </root>

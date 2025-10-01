@@ -259,11 +259,56 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Add.
+        /// </summary>
+        internal static string Attachments_Add {
+            get {
+                return ResourceManager.GetString("Attachments.Add", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        internal static string Attachments_Cancel {
+            get {
+                return ResourceManager.GetString("Attachments.Cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Download.
         /// </summary>
         internal static string Attachments_Download {
             get {
                 return ResourceManager.GetString("Attachments.Download", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Allowed file types.
+        /// </summary>
+        internal static string Attachments_Hint_Allowed {
+            get {
+                return ResourceManager.GetString("Attachments.Hint.Allowed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Max size {0} MB.
+        /// </summary>
+        internal static string Attachments_Hint_MaxSize {
+            get {
+                return ResourceManager.GetString("Attachments.Hint.MaxSize", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select a file to upload.
+        /// </summary>
+        internal static string Attachments_Hint_SelectFile {
+            get {
+                return ResourceManager.GetString("Attachments.Hint.SelectFile", resourceCulture);
             }
         }
         
@@ -354,6 +399,114 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Btn_SignIn {
             get {
                 return ResourceManager.GetString("Btn.SignIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Add comment.
+        /// </summary>
+        internal static string Comments_Add {
+            get {
+                return ResourceManager.GetString("Comments.Add", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        internal static string Comments_Cancel {
+            get {
+                return ResourceManager.GetString("Comments.Cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No comments yet..
+        /// </summary>
+        internal static string Comments_Empty {
+            get {
+                return ResourceManager.GetString("Comments.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Comment cannot be empty..
+        /// </summary>
+        internal static string Comments_Error_Empty {
+            get {
+                return ResourceManager.GetString("Comments.Error.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to add comment. Please try again..
+        /// </summary>
+        internal static string Comments_Error_Failed {
+            get {
+                return ResourceManager.GetString("Comments.Error.Failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Characters: {0}/{1}.
+        /// </summary>
+        internal static string Comments_Form_Counter {
+            get {
+                return ResourceManager.GetString("Comments.Form.Counter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Write your comment here.
+        /// </summary>
+        internal static string Comments_Form_Placeholder {
+            get {
+                return ResourceManager.GetString("Comments.Form.Placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Submit.
+        /// </summary>
+        internal static string Comments_Form_Submit {
+            get {
+                return ResourceManager.GetString("Comments.Form.Submit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Loading comments….
+        /// </summary>
+        internal static string Comments_Loading {
+            get {
+                return ResourceManager.GetString("Comments.Loading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Write a comment….
+        /// </summary>
+        internal static string Comments_Placeholder {
+            get {
+                return ResourceManager.GetString("Comments.Placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Submit.
+        /// </summary>
+        internal static string Comments_Submit {
+            get {
+                return ResourceManager.GetString("Comments.Submit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        internal static string Common_Cancel {
+            get {
+                return ResourceManager.GetString("Common.Cancel", resourceCulture);
             }
         }
         
@@ -804,6 +957,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string IncidentDetails_Attachments_Title {
             get {
                 return ResourceManager.GetString("IncidentDetails.Attachments.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Add a comment.
+        /// </summary>
+        internal static string IncidentDetails_Comments_AddButton {
+            get {
+                return ResourceManager.GetString("IncidentDetails.Comments.AddButton", resourceCulture);
             }
         }
         

@@ -8,12 +8,17 @@
 @using IncidentReportingSystem.UI.Core.Incidents
 @using IncidentReportingSystem.UI.Core.Users
 @using IncidentReportingSystem.UI.Components.Comments
+@using Microsoft.AspNetCore.Components.Forms
+
 @inject IApiClient Api
 @inject IIncidentService IncSvc
 @inject IUserDirectory UserDir
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @inject IncidentReportingSystem.UI.Core.Users.IUserDirectory UserDirectory
+@inject IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService Uploads
+@inject Microsoft.Extensions.Logging.ILogger<IncidentReportingSystem.UI.Pages.Incidents.IncidentDetails> Log
+
 
 
 <AuthGuard>
@@ -171,55 +176,93 @@
                     }
                     else if (_activeTab == "attachments")
                     {
-                        @if (_attachmentsLoading)
+                        if (_attachmentsLoading)
                         {
                             <div class="py-3 text-center">
                                 <div class="spinner-border" role="status"></div>
                             </div>
                         }
-                        else if ((_attachments?.Count ?? 0) == 0)
-                        {
-                            <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
-                        }
                         else
                         {
-                            <div class="attachments-grid">
-                                @foreach (var card in _attachments)
+                            <!-- Add button is always visible -->
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <button class="btn btn-sm btn-primary" @onclick="ToggleUploadAsync">
+                                    @(!_showUpload ? T["Attachments.Add"] : T["Attachments.Cancel"])
+                                </button>
+                                @if (_uploading)
                                 {
-                                    <div class="attachment-card">
-                                        <div class="thumb-wrap">
-                                            @if (card.IsImage)
-                                            {
-                                                <a href="@card.ViewUrl" target="_blank" rel="noopener">
-                                                    <img src="@card.ThumbUrl" alt="@card.FileName" loading="lazy" />
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <a class="file-icon d-flex align-items-center justify-content-center"
-                                                   href="@card.DownloadHref" title="@card.FileName">
-                                                    <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="currentColor" opacity=".08" />
-                                                        <path d="M14 2v6h6" stroke="currentColor" fill="none" />
-                                                        <text x="6" y="18" font-size="8" font-family="sans-serif">PDF</text>
-                                                    </svg>
-                                                </a>
-                                            }
-                                        </div>
-
-                                        <div class="mt-2 small text-truncate" title="@card.FileName">@card.FileName</div>
-
-                                        <div class="actions">
-                                            <a class="btn btn-sm btn-primary" href="@card.ViewUrl" target="_blank" rel="noopener">
-                                                @T["Attachments.Open"]
-                                            </a>
-                                            <a class="btn btn-sm btn-outline-secondary" href="@card.DownloadHref">
-                                                @T["Attachments.Download"]
-                                            </a>
-                                        </div>
-                                    </div>
+                                    <span class="text-muted small">@T["Attachments.Uploading"]…</span>
                                 }
                             </div>
+
+                            @if (_showUpload)
+                            {
+                                <div class="border rounded p-3 mb-3">
+                                    <div class="mb-2 small text-muted">
+                                        @T["Attachments.Hint.Allowed"]
+                                        @if (_allowedTypes?.Count > 0)
+                                        {
+                                            <span>: @string.Join(", ", _allowedTypes)</span>
+                                        }
+                                        <span class="ms-2">• @T["Attachments.Hint.MaxSize", (_maxSizeBytes / (1024 * 1024)).ToString()]</span>
+                                    </div>
+
+                                    <InputFile OnChange="OnFileSelected" accept="image/*,application/pdf" />
+
+                                    @if (!string.IsNullOrWhiteSpace(_uploadError))
+                                    {
+                                        <div class="alert alert-danger mt-2 mb-0">
+                                            @_uploadError
+                                        </div>
+                                    }
+                                    <div class="form-text mt-2">@T["Attachments.Hint.SelectFile"]</div>
+                                </div>
+                            }
+
+                            @if ((_attachments?.Count ?? 0) == 0)
+                            {
+                                <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
+                            }
+                            else
+                            {
+                                <div class="attachments-grid">
+                                    @foreach (var card in _attachments)
+                                    {
+                                        <div class="attachment-card">
+                                            <div class="thumb-wrap">
+                                                @if (card.IsImage)
+                                                {
+                                                    <a href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                        <img src="@card.ThumbUrl" alt="@card.FileName" loading="lazy" />
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="file-icon d-flex align-items-center justify-content-center"
+                                                       href="@card.DownloadHref" title="@card.FileName">
+                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="currentColor" opacity=".08" />
+                                                            <path d="M14 2v6h6" stroke="currentColor" fill="none" />
+                                                            <text x="6" y="18" font-size="8" font-family="sans-serif">PDF</text>
+                                                        </svg>
+                                                    </a>
+                                                }
+                                            </div>
+
+                                            <div class="mt-2 small text-truncate" title="@card.FileName">@card.FileName</div>
+
+                                            <div class="actions">
+                                                <a class="btn btn-sm btn-primary" href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                    @T["Attachments.Open"]
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-secondary" href="@card.DownloadHref">
+                                                    @T["Attachments.Download"]
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
                         }
                     }
                     else if (_activeTab == "history")
@@ -628,5 +671,130 @@
         [JsonPropertyName("reporterId")] public string? ReporterId { get; set; }
         [JsonPropertyName("reporterDisplayName")] public string? ReporterDisplayName { get; set; }
     }
+
+    // Upload state
+    private bool _showUpload;
+    private bool _uploading;
+    private string? _uploadError;
+    private long _maxSizeBytes = 10 * 1024 * 1024; // default until constraints fetched
+    private HashSet<string> _allowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/gif", "application/pdf" };
+
+    private async Task ToggleUploadAsync()
+    {
+        _uploadError = null;
+        _showUpload = !_showUpload;
+        if (_showUpload)
+        {
+            try
+            {
+                var c = await Uploads.GetConstraintsAsync();
+                _maxSizeBytes = c.MaxSizeBytes > 0 ? c.MaxSizeBytes : _maxSizeBytes;
+                _allowedTypes = new HashSet<string>(c.AllowedContentTypes ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning(ex, "Failed to load attachment constraints.");
+                // keep defaults
+            }
+        }
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        if (_incident is null) return;
+
+        _uploadError = null;
+        var file = e.File;
+        if (file is null) return;
+
+        // Validate content type
+        if (_allowedTypes.Count > 0 && !_allowedTypes.Contains(file.ContentType))
+        {
+            _uploadError = T["Attachments.Error.NotAllowedType"];
+            StateHasChanged();
+            return;
+        }
+
+        // Validate size
+        if (file.Size > _maxSizeBytes)
+        {
+            _uploadError = T["Attachments.Error.TooLarge", (_maxSizeBytes / (1024 * 1024)).ToString()];
+            StateHasChanged();
+            return;
+        }
+
+        _uploading = true;
+        StateHasChanged();
+
+        Guid? attachmentId = null;
+        try
+        {
+            // 1) start
+            var start = await Uploads.StartIncidentUploadAsync(_incident.Id, file.Name, file.ContentType);
+
+            attachmentId = start.AttachmentId;
+
+            // 2) upload to storage
+            await Uploads.UploadToUrlAsync(start.Method, start.UploadUrl, start.Headers, file, _maxSizeBytes);
+
+            // 3) complete
+            await Uploads.CompleteAsync(start.AttachmentId);
+
+            // 4) refresh list
+            await ReloadAttachments();
+
+            // close UI
+            _showUpload = false;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Attachment upload failed.");
+            _uploadError = T["Attachments.Error.UploadFailed"];
+            // try abort only if we actually started
+            if (attachmentId is Guid id)
+            {
+                try { await Uploads.AbortAsync(id); } catch { /* swallow */ }
+            }
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ReloadAttachments()
+    {
+        if (_incident is null) return;
+        _attachmentsLoading = true;
+        try
+        {
+            var attachmentsPage = await IncSvc.GetIncidentAttachmentsAsync(_incident.Id, 0, 100, CancellationToken.None);
+            var cards = new List<AttachmentCardVm>(attachmentsPage.Items.Count);
+            foreach (var a in attachmentsPage.Items)
+            {
+                var key = a.Id.ToString();
+                if (!_urlCache.TryGetValue(key, out var url))
+                {
+                    try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
+                    catch { continue; }
+                }
+                cards.Add(new AttachmentCardVm
+                {
+                    Id = Guid.Parse(a.Id),
+                    FileName = a.FileName,
+                    ContentType = a.ContentType,
+                    ViewUrl = url,
+                    DownloadHref = url
+                });
+            }
+            _attachments = cards;
+        }
+        finally
+        {
+            _attachmentsLoading = false;
+        }
+    }
+
 
 }

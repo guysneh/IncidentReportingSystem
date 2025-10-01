@@ -520,7 +520,7 @@
     <value>מדווח</value>
   </data>
   <data name="Comments.Add" xml:space="preserve">
-  <value>הוסף הערה</value>
+    <value>הוסף הערה</value>
   </data>
   <data name="Comments.Cancel" xml:space="preserve">
     <value>בטל</value>
@@ -542,5 +542,35 @@
   </data>
   <data name="Comments.Empty" xml:space="preserve">
     <value>אין עדיין הערות.</value>
+  </data>
+  <data name="IncidentDetails.Comments.AddButton" xml:space="preserve">
+    <value>הוסף הערה</value>
+  </data>
+  <data name="Comments.Form.Placeholder" xml:space="preserve">
+    <value>כתוב את ההערה כאן</value>
+  </data>
+  <data name="Comments.Form.Submit" xml:space="preserve">
+    <value>שליחה</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>ביטול</value>
+  </data>
+  <data name="Comments.Form.Counter" xml:space="preserve">
+    <value>תווים: {0}/{1}</value>
+  </data>
+  <data name="Attachments.Add" xml:space="preserve">
+    <value>הוספה</value>
+  </data>
+  <data name="Attachments.Cancel" xml:space="preserve">
+    <value>ביטול</value>
+  </data>
+  <data name="Attachments.Hint.Allowed" xml:space="preserve">
+    <value>סוגי קבצים מותרים</value>
+  </data>
+  <data name="Attachments.Hint.MaxSize" xml:space="preserve">
+    <value>גודל מקסימלי: ‏{ 0}MB</value>
+  </data>
+  <data name="Attachments.Hint.SelectFile" xml:space="preserve">
+    <value>בחר קובץ להעלאה</value>
   </data>
 </root>
