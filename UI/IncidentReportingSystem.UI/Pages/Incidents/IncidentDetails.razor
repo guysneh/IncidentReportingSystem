@@ -687,7 +687,7 @@
         {
             try
             {
-                var c = await Uploads.GetConstraintsAsync();
+                var c = await Uploads.GetConstraintsAsync(CancellationToken.None);
                 _maxSizeBytes = c.MaxSizeBytes > 0 ? c.MaxSizeBytes : _maxSizeBytes;
                 _allowedTypes = new HashSet<string>(c.AllowedContentTypes ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             }
@@ -730,15 +730,15 @@
         try
         {
             // 1) start
-            var start = await Uploads.StartIncidentUploadAsync(_incident.Id, file.Name, file.ContentType);
+            var start = await Uploads.StartIncidentUploadAsync(Guid.Parse(_incident.Id), file.Name, file.ContentType, file.Size, CancellationToken.None);
 
             attachmentId = start.AttachmentId;
 
             // 2) upload to storage
-            await Uploads.UploadToUrlAsync(start.Method, start.UploadUrl, start.Headers, file, _maxSizeBytes);
+            await Uploads.UploadToUrlAsync(start.Method, start.UploadUrl, start.Headers, file, _maxSizeBytes,CancellationToken.None);
 
             // 3) complete
-            await Uploads.CompleteAsync(start.AttachmentId);
+            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
 
             // 4) refresh list
             await ReloadAttachments();
@@ -753,7 +753,7 @@
             // try abort only if we actually started
             if (attachmentId is Guid id)
             {
-                try { await Uploads.AbortAsync(id); } catch { /* swallow */ }
+                try { await Uploads.AbortAsync(id, CancellationToken.None); } catch { /* swallow */ }
             }
         }
         finally
