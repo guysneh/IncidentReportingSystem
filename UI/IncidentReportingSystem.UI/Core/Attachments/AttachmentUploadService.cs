@@ -1,115 +1,115 @@
-﻿using IncidentReportingSystem.UI.Core.Http;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.Forms;
 
-namespace IncidentReportingSystem.UI.Core.Attachments;
-
-public interface IAttachmentUploadService
+namespace IncidentReportingSystem.UI.Core.Attachments
 {
-    Task<AttachmentConstraintsVm> GetConstraintsAsync(CancellationToken ct = default);
-    Task<StartUploadResponseVm> StartIncidentUploadAsync(string incidentId, string fileName, string contentType, CancellationToken ct = default);
-    Task UploadToUrlAsync(string method, string url, IDictionary<string, string> headers, IBrowserFile file, long maxAllowed, CancellationToken ct = default);
-    Task CompleteAsync(Guid attachmentId, CancellationToken ct = default);
-    Task AbortAsync(Guid attachmentId, CancellationToken ct = default);
-}
-
-public sealed class AttachmentUploadService : IAttachmentUploadService
-{
-    private readonly HttpClient _raw;
-    private readonly IApiClient _api;
-    private readonly NavigationManager _nav;
-    private readonly ILogger<AttachmentUploadService> _log;
-
-    public AttachmentUploadService(HttpClient raw, IApiClient api, NavigationManager nav, ILogger<AttachmentUploadService> log)
+    public class AttachmentUploadService : IAttachmentUploadService
     {
-        _raw = raw;
-        _api = api;
-        _nav = nav;
-        _log = log;
-    }
+        private readonly HttpClient _raw;          // קליינט "נקי" ללא Bearer/handlers
+        private readonly Uri? _apiBaseUri;         // אופציונלי – אם תקבל כתובות יחסיות
 
-    public Task<AttachmentConstraintsVm> GetConstraintsAsync(CancellationToken ct = default)
-        => _api.GetJsonAsync<AttachmentConstraintsVm>("attachments/constraints", ct);
-
-    public async Task<StartUploadResponseVm> StartIncidentUploadAsync(string incidentId, string fileName, string contentType, CancellationToken ct = default)
-    {
-        using var msg = new HttpRequestMessage(HttpMethod.Post, $"incidentreports/{incidentId}/attachments/start")
+        public AttachmentUploadService(HttpClient rawHttpClient, string? apiBaseUrl = null)
         {
-            Content = JsonContent.Create(new { fileName, contentType })
-        };
-        using var resp = await _api.SendAsync(msg, ct);
-        resp.EnsureSuccessStatusCode();
-        var dto = await resp.Content.ReadFromJsonAsync<StartUploadResponseVm>(cancellationToken: ct);
-        return dto ?? throw new InvalidOperationException("Empty response from attachments/start.");
-    }
-
-    public async Task UploadToUrlAsync(
-    string method,
-    string url,
-    IDictionary<string, string> headers,
-    IBrowserFile file,
-    long maxAllowed,
-    CancellationToken ct = default)
-    {
-        await using var stream = file.OpenReadStream(maxAllowed, ct);
-        using var content = new StreamContent(stream);
-        if (!string.IsNullOrWhiteSpace(file.ContentType))
-        {
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            _raw = rawHttpClient ?? throw new ArgumentNullException(nameof(rawHttpClient));
+            _apiBaseUri = string.IsNullOrWhiteSpace(apiBaseUrl) ? null : new Uri(apiBaseUrl!, UriKind.Absolute);
         }
 
-        var httpMethod = new HttpMethod(string.IsNullOrWhiteSpace(method) ? "PUT" : method);
-
-        // Decide client: relative → API (loopback, needs auth); absolute → RAW (external presigned)
-        var isAbsolute = Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri);
-        var useApiClient = !isAbsolute || url.StartsWith("/", StringComparison.Ordinal);
-
-        using var req = new HttpRequestMessage(httpMethod, isAbsolute ? absoluteUri! : new Uri(url, UriKind.Relative))
+        public async Task UploadToUrlAsync(
+            string method,
+            string url,
+            IDictionary<string, string> headers,
+            IBrowserFile file,
+            long fileSize,
+            CancellationToken ct)
         {
-            Content = content
-        };
+            if (string.IsNullOrWhiteSpace(method)) method = "PUT";
+            if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("url is required", nameof(url));
+            if (headers is null) throw new ArgumentNullException(nameof(headers));
+            if (file is null) throw new ArgumentNullException(nameof(file));
 
-        // Copy headers required by storage / loopback endpoint
-        foreach (var h in headers)
-        {
-            if (!req.Headers.TryAddWithoutValidation(h.Key, h.Value))
-                req.Content.Headers.TryAddWithoutValidation(h.Key, h.Value);
+            // 1) בונים URI (תומך גם בנתיב יחסי במקרה של loopback)
+            Uri requestUri;
+            if (Uri.TryCreate(url, UriKind.Absolute, out var abs))
+            {
+                requestUri = abs;
+            }
+            else
+            {
+                if (_apiBaseUri == null)
+                    throw new InvalidOperationException("Relative URL provided but ApiBaseUrl was not configured.");
+                requestUri = new Uri(_apiBaseUri, url);
+            }
+
+            using var req = new HttpRequestMessage(new HttpMethod(method), requestUri);
+
+            // 2) תוכן + Content-Length (חשוב ל-Azure Blob; טוב גם ל-S3)
+            // קלט מ-IBrowserFile:
+            var stream = file.OpenReadStream(fileSize, ct); // מגביל לפי גודל שהעברנו
+            HttpContent content;
+
+            if (stream.CanSeek)
+            {
+                if (stream.Position != 0) stream.Position = 0;
+                content = new StreamContent(stream);
+                content.Headers.ContentLength = fileSize; // לא לשגר chunked
+            }
+            else
+            {
+                // fallback נדיר; BrowserFile בד"כ Seekable, אבל נשאיר הגיון מגן
+                using var ms = new System.IO.MemoryStream();
+                await stream.CopyToAsync(ms, ct);
+                var bytes = ms.ToArray();
+                content = new ByteArrayContent(bytes);
+                content.Headers.ContentLength = bytes.LongLength;
+            }
+
+            // 3) Content-Type – נשלח רק אם קיים ב-headers החתומים/הנדרשים
+            if (headers.TryGetValue("Content-Type", out var ctHeader) && !string.IsNullOrWhiteSpace(ctHeader))
+                content.Headers.ContentType = new MediaTypeHeaderValue(ctHeader);
+
+            req.Content = content;
+
+            // 4) מעבירים רק את ה-Headers שהגיעו מהשרת (Presigned/SAS)
+            foreach (var kv in headers)
+            {
+                var name = kv.Key;
+                var value = kv.Value;
+
+                if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                    continue; // כבר הוגדר למעלה
+
+                if (IsContentHeader(name))
+                    req.Content.Headers.TryAddWithoutValidation(name, value);
+                else
+                    req.Headers.TryAddWithoutValidation(name, value);
+            }
+
+            // 5) טיפ ל-Azure Blob: אם כתובת blob וה-headers לא הכילו x-ms-blob-type
+            if (requestUri.Host.Contains("blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+            {
+                const string BlobType = "x-ms-blob-type";
+                if (!req.Headers.Contains(BlobType) && !req.Content.Headers.Contains(BlobType))
+                    req.Headers.TryAddWithoutValidation(BlobType, "BlockBlob");
+            }
+
+            // 6) לכבות Expect: 100-continue לפשט את הדרך
+            req.Headers.ExpectContinue = false;
+
+            // 7) שליחה
+            using var res = await _raw.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                var body = await res.Content.ReadAsStringAsync(ct);
+                throw new HttpRequestException($"Upload failed: {(int)res.StatusCode} {res.ReasonPhrase}. Body: {body}");
+            }
         }
 
-        HttpResponseMessage resp;
-        if (useApiClient)
-        {
-            // Loopback upload to your API (needs auth handlers)
-            resp = await _api.SendAsync(req, ct);
-        }
-        else
-        {
-            // External presigned URL (must be "clean", no auth handlers)
-            resp = await _raw.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-        }
-
-        if (!resp.IsSuccessStatusCode)
-        {
-            var body = await resp.Content.ReadAsStringAsync(ct);
-            throw new HttpRequestException($"Upload failed: {(int)resp.StatusCode} {resp.ReasonPhrase}. Body: {body}");
-        }
-    }
-
-
-
-    public async Task CompleteAsync(Guid attachmentId, CancellationToken ct = default)
-    {
-        using var msg = new HttpRequestMessage(HttpMethod.Post, $"attachments/{attachmentId}/complete");
-        using var resp = await _api.SendAsync(msg, ct);
-        resp.EnsureSuccessStatusCode();
-    }
-
-    public async Task AbortAsync(Guid attachmentId, CancellationToken ct = default)
-    {
-        using var msg = new HttpRequestMessage(HttpMethod.Post, $"attachments/{attachmentId}/abort");
-        using var resp = await _api.SendAsync(msg, ct);
-        resp.EnsureSuccessStatusCode();
+        private static bool IsContentHeader(string name) =>
+            name.StartsWith("Content-", StringComparison.OrdinalIgnoreCase);
     }
 }
