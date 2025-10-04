@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components.Forms;
 
 namespace IncidentReportingSystem.UI.Core.Attachments
 {
@@ -16,7 +12,6 @@ namespace IncidentReportingSystem.UI.Core.Attachments
             Guid incidentId,
             string fileName,
             string contentType,
-            long size,
             CancellationToken ct);
 
         // שלב 3: העלאה בפועל ל-URL חיצוני/לופבאק

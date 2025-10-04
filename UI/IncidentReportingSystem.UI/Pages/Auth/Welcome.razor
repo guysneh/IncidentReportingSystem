@@ -151,10 +151,9 @@
         State.Changed += OnAuthChanged;
         RedirectIfAuthenticated();
     }
-    private Task OnAuthChanged()
+    private void OnAuthChanged()
     {
-        RedirectIfAuthenticated();
-        return Task.CompletedTask;
+        _ = InvokeAsync(StateHasChanged);
     }
     private void RedirectIfAuthenticated()
     {
@@ -194,8 +193,6 @@
             }
 
             await JS.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
-
-            await State.SetAsync(dto.AccessToken);
 
             var returnUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers
                 .ParseQuery(new Uri(Nav.Uri).Query)

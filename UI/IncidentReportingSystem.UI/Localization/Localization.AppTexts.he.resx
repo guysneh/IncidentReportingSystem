@@ -573,4 +573,7 @@
   <data name="Attachments.Hint.SelectFile" xml:space="preserve">
     <value>בחר קובץ להעלאה</value>
   </data>
+  <data name="Attachments.Form.PickFile" xml:space="preserve">
+    <value>בחר קובץ</value>
+  </data>
 </root>

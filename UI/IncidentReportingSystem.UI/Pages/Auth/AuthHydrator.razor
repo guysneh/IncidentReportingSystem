@@ -1,5 +1,6 @@
 ﻿@inject IJSRuntime JS
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState Auth
+@inject AuthState State
+@inject IncidentReportingSystem.UI.Core.Auth.IAuthService AuthService
 @inject IncidentReportingSystem.UI.Core.Auth.AuthEvents Events
 @inject ILogger<AuthHydrator> Logger
 @inject NavigationManager Nav
@@ -23,27 +24,9 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        await TryHydrateFromJsAsync();
-    }
-
-    private async Task TryHydrateFromJsAsync()
-    {
-        Payload? p = null;
-
-        for (var i = 0; i < 10; i++) 
-        {
-            try { p = await JS.InvokeAsync<Payload>("irsAuth.get"); } catch { }
-            if (p is not null) break;
-            await Task.Delay(100);
-        }
-
-        Console.WriteLine($"[HYDRATE] tokenLen={(p?.token?.Length ?? 0)}, exp={p?.expUtc:O}");
-        await Auth.HydrateAsync(p?.token, p?.expUtc);
-
-        if (!string.IsNullOrWhiteSpace(Auth.AccessToken))
-        {
-            Events.Reset();
-        }
+        await State.EnsureHydratedAsync(JS);
+        Logger.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", State.Hydrated, State.Authorized);
+        StateHasChanged();
     }
 
     private async void HandleUnauthorized(string? source)
@@ -54,7 +37,7 @@
         try
         {
             Logger.LogWarning("[UNAUTH] source={Source} – clearing and redirecting", source ?? "unknown");
-            await Auth.ClearAsync();
+            await State.ClearAsync();
             try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch { /* ignore */ }
 
             var ret = Uri.EscapeDataString(Nav.Uri);

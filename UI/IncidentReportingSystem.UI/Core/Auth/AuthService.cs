@@ -1,8 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using IncidentReportingSystem.UI.Core.Auth;
-using IncidentReportingSystem.UI.Core.Http;
+﻿using IncidentReportingSystem.UI.Core.Http;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using static IncidentReportingSystem.UI.Core.Auth.AuthModels;
@@ -33,7 +29,6 @@ namespace IncidentReportingSystem.UI.Core.Auth
             _log = log;
             _nav = nav;
         }
-
         public async Task<bool> SignInAsync(string email, string password, CancellationToken ct = default)
         {
             try
@@ -43,10 +38,9 @@ namespace IncidentReportingSystem.UI.Core.Auth
                     return false;
 
                 await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
-
-                DateTime exp = dto.ExpiresAtUtc;
-                var expUtc = new DateTimeOffset(
-                    exp.Kind == DateTimeKind.Utc ? exp : DateTime.SpecifyKind(exp, DateTimeKind.Utc));
+                var expUtc = dto.ExpiresAtUtc.Kind == DateTimeKind.Utc
+                    ? new DateTimeOffset(dto.ExpiresAtUtc)
+                    : new DateTimeOffset(DateTime.SpecifyKind(dto.ExpiresAtUtc, DateTimeKind.Utc));
 
                 await _state.HydrateAsync(dto.AccessToken, expUtc);
                 return true;
@@ -58,16 +52,8 @@ namespace IncidentReportingSystem.UI.Core.Auth
             }
         }
 
-        public async Task<LoginResponse?> SignInRawAsync(
-            string email,
-            string password,
-            CancellationToken ct = default)
-        {
-            return await _publicApi.PostJsonAsync<object, LoginResponse>(
-                "auth/login",
-                new { email, password },
-                ct);
-        }
+        public Task<LoginResponse?> SignInRawAsync(string email, string password, CancellationToken ct = default)
+       => _publicApi.PostJsonAsync<object, LoginResponse>("auth/login", new { email, password }, ct);
 
         public async Task RegisterAsync(string email, string password, string role, string first, string last, CancellationToken ct = default)
         {
@@ -84,14 +70,11 @@ namespace IncidentReportingSystem.UI.Core.Auth
             if (!string.IsNullOrWhiteSpace(dto?.AccessToken))
             {
                 await _js.InvokeVoidAsync("irsAuth.set", dto!.AccessToken!, dto!.ExpiresAtUtc);
-
-                DateTime exp = dto!.ExpiresAtUtc;
-                var expUtc = new DateTimeOffset(
-                    exp.Kind == DateTimeKind.Utc ? exp : DateTime.SpecifyKind(exp, DateTimeKind.Utc));
-
-                await _state.HydrateAsync(dto!.AccessToken!, expUtc);
+                var expUtc = DateTime.SpecifyKind(dto.ExpiresAtUtc, DateTimeKind.Utc);
+                await _state.HydrateAsync(dto!.AccessToken!, new DateTimeOffset(expUtc));
             }
         }
+
 
         public Task<WhoAmI?> MeAsync(CancellationToken ct = default)
             => _secureApi.GetJsonAsync<WhoAmI?>("auth/me", ct);
@@ -104,8 +87,24 @@ namespace IncidentReportingSystem.UI.Core.Auth
 
         public async Task SignOutAsync(CancellationToken ct = default)
         {
+            await _js.InvokeVoidAsync("irsAuth.clear");
             await _state.ClearAsync();
             try { _nav.NavigateTo("/login", forceLoad: true); } catch { /* ignore */ }
+        }
+
+        public async Task RestoreFromJsAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                var token = await _js.InvokeAsync<string?>("irsAuth.getToken");
+                var expiresAtIso = await _js.InvokeAsync<string?>("irsAuth.getExpires");
+                if (!string.IsNullOrWhiteSpace(token) && DateTime.TryParse(expiresAtIso, out var exp))
+                {
+                    var expUtc = DateTime.SpecifyKind(exp, DateTimeKind.Utc);
+                    await _state.HydrateAsync(token, new DateTimeOffset(expUtc));
+                }
+            }
+            catch { /* no-op */ }
         }
     }
 }

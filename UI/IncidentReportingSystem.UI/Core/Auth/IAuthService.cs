@@ -15,4 +15,5 @@ public interface IAuthService
     Task ChangePasswordAsync(string current, string @new, CancellationToken ct = default);
     Task UpdateMeAsync(string first, string last, CancellationToken ct = default);
     Task<AuthModels.WhoAmI?> MeAsync(CancellationToken ct = default);
+    Task RestoreFromJsAsync(CancellationToken ct = default);
 }

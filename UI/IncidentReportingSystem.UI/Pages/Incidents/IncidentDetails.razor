@@ -18,7 +18,7 @@
 @inject IncidentReportingSystem.UI.Core.Users.IUserDirectory UserDirectory
 @inject IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService Uploads
 @inject Microsoft.Extensions.Logging.ILogger<IncidentReportingSystem.UI.Pages.Incidents.IncidentDetails> Log
-
+@inject IJSRuntime JS
 
 
 <AuthGuard>
@@ -207,7 +207,24 @@
                                         <span class="ms-2">• @T["Attachments.Hint.MaxSize", (_maxSizeBytes / (1024 * 1024)).ToString()]</span>
                                     </div>
 
-                                    <InputFile OnChange="OnFileSelected" accept="image/*,application/pdf" />
+                                    <input type="file"
+                                           accept="image/*,application/pdf"
+                                           style="display:none"
+                                           @ref="_fileInput"
+                                           @onchange="OnFileChosen" />
+
+                                    <button class="btn btn-sm btn-primary" @onclick="OpenPicker">
+                                        @T["Attachments.Form.PickFile"]
+                                    </button>
+
+                                    @if (_uploading)
+                                    {
+                                        <span class="text-muted small ms-2">מעלה…</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(_uploadError))
+                                    {
+                                        <div class="alert alert-danger mt-2 mb-0">@_uploadError</div>
+                                    }
 
                                     @if (!string.IsNullOrWhiteSpace(_uploadError))
                                     {
@@ -308,6 +325,11 @@
     private readonly Dictionary<string, string> _urlCache = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task OpenFilePicker()
+    {
+        await _jsModule.InvokeVoidAsync("clickInput", _fileInput);
+    }
 
     private async Task LoadAsync()
     {
@@ -699,69 +721,6 @@
         }
     }
 
-    private async Task OnFileSelected(InputFileChangeEventArgs e)
-    {
-        if (_incident is null) return;
-
-        _uploadError = null;
-        var file = e.File;
-        if (file is null) return;
-
-        // Validate content type
-        if (_allowedTypes.Count > 0 && !_allowedTypes.Contains(file.ContentType))
-        {
-            _uploadError = T["Attachments.Error.NotAllowedType"];
-            StateHasChanged();
-            return;
-        }
-
-        // Validate size
-        if (file.Size > _maxSizeBytes)
-        {
-            _uploadError = T["Attachments.Error.TooLarge", (_maxSizeBytes / (1024 * 1024)).ToString()];
-            StateHasChanged();
-            return;
-        }
-
-        _uploading = true;
-        StateHasChanged();
-
-        Guid? attachmentId = null;
-        try
-        {
-            // 1) start
-            var start = await Uploads.StartIncidentUploadAsync(Guid.Parse(_incident.Id), file.Name, file.ContentType, file.Size, CancellationToken.None);
-
-            attachmentId = start.AttachmentId;
-
-            // 2) upload to storage
-            await Uploads.UploadToUrlAsync(start.Method, start.UploadUrl, start.Headers, file, _maxSizeBytes,CancellationToken.None);
-
-            // 3) complete
-            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
-
-            // 4) refresh list
-            await ReloadAttachments();
-
-            // close UI
-            _showUpload = false;
-        }
-        catch (Exception ex)
-        {
-            Log.LogError(ex, "Attachment upload failed.");
-            _uploadError = T["Attachments.Error.UploadFailed"];
-            // try abort only if we actually started
-            if (attachmentId is Guid id)
-            {
-                try { await Uploads.AbortAsync(id, CancellationToken.None); } catch { /* swallow */ }
-            }
-        }
-        finally
-        {
-            _uploading = false;
-            StateHasChanged();
-        }
-    }
 
     private async Task ReloadAttachments()
     {
@@ -796,5 +755,159 @@
         }
     }
 
+    private ElementReference _fileInput;
+
+    private async Task OnFileSelected(ChangeEventArgs _)
+    {
+        if (_incident is null) return;
+
+        _uploadError = null;
+
+        // אפשר עדיין להשתמש ב-IBrowserFile לקבלת מטא-דאטה (גודל/סוג) לצורך ולידציות,
+        // אבל כדי להעלות מהדפדפן נשתמש ב-<input> דרך JS.
+        // אם אתה רוצה גם גישה ל-IBrowserFile: תוכל להחליף ל-<InputFile OnChange="OnFileSelectedInputFile">
+        // אבל כאן נשארים פשוטים עם <input>.
+
+        try
+        {
+            _uploading = true;
+            StateHasChanged();
+
+            // 1) קבלת SAS + כותרות מה-API שלך
+            var fileName = "selected-from-input"; // לא חובה ל-Start אם כבר מעבירים מטאדותה צד שרת
+            var contentType = "application/octet-stream"; // או שתקרא את זה מה-IBrowserFile אם שילבת InputFile
+            var start = await Uploads.StartIncidentUploadAsync(
+                Guid.Parse(_incident.Id), fileName, contentType, CancellationToken.None);
+
+            // 2) קריאה ל-JS להעלאה ישירה ל-SAS
+            await JS.InvokeVoidAsync("blobUpload.uploadFileToSas",
+                _fileInput, start.UploadUrl, start.Method, start.Headers);
+
+            // 3) השלמה ב-API
+            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
+
+            // 4) ריענון רשימת קבצים וסגירת ה-UI
+            await ReloadAttachments();
+            _showUpload = false;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Attachment upload (browser→SAS) failed.");
+            _uploadError = T["Attachments.Error.UploadFailed"];
+            // נסה לבטל רק אם התחלת
+            // (יש לך attachmentId מה-Start)
+            // try { await Uploads.AbortAsync(start.AttachmentId, CancellationToken.None); } catch {}
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IJSObjectReference? _jsModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // טוען את מודול ה-JS מה-wwwroot
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+        }
+    }
+
+    private async Task OpenPicker()
+    {
+        if (_jsModule is null)
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+
+        await _jsModule.InvokeVoidAsync("clickInput", _fileInput);
+    }
+
+
+    private async Task OnFileChosen(ChangeEventArgs _)
+    {
+        if (_incident is null) return;
+
+        _uploadError = null;
+        try
+        {
+            _uploading = true;
+            StateHasChanged();
+
+            if (_jsModule is null)
+                _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+
+            // 1) מביאים מטא-דאטה אמיתית מהדפדפן (בלי IBrowserFile ובלי להעביר אותו ל-JS)
+            var meta = await _jsModule.InvokeAsync<FileMeta?>("getSelectedFileMeta", _fileInput);
+            if (meta is null || meta.Value.Size <= 0)
+            {
+                _uploadError = "לא נבחר קובץ או שהקובץ ריק.";
+                return;
+            }
+
+            var fileName = meta.Value.Name ?? "upload.bin";
+            var contentType = string.IsNullOrWhiteSpace(meta.Value.Type) ? "application/octet-stream" : meta.Value.Type!;
+            var size = meta.Value.Size;
+
+            // 2) ולידציות בצד לקוח לפי הקונסטריינטים שקראת קודם (אם לא – אפשר להשאיר ברירת מחדל)
+            if (_allowedTypes.Count > 0 && !_allowedTypes.Contains(contentType))
+            {
+                _uploadError = T["Attachments.Error.NotAllowedType"];
+                return;
+            }
+            if (size > _maxSizeBytes)
+            {
+                _uploadError = T["Attachments.Error.TooLarge", (_maxSizeBytes / (1024 * 1024)).ToString()];
+                return;
+            }
+
+            // 3) start – שולחים בדיוק את מה שה-API צריך (שם, סוג, גודל > 0)
+            var start = await Uploads.StartIncidentUploadAsync(
+                Guid.Parse(_incident.Id), fileName, contentType, CancellationToken.None);
+
+            // לוודא שהכותרות הן string->string (לא IEnumerable וכו')
+            var headers = start.Headers?.ToDictionary(kv => kv.Key, kv => kv.Value)
+                          ?? new Dictionary<string, string>();
+
+            // 4) העלאה לדפדפן ← SAS
+            await _jsModule.InvokeVoidAsync("uploadFileToSas",
+                _fileInput,
+                start.UploadUrl,
+                string.IsNullOrWhiteSpace(start.Method) ? "PUT" : start.Method,
+                headers);
+
+            // 5) complete
+            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
+
+            // 6) רענון תצוגה, ניקוי input, סגירת UI
+            await ReloadAttachments();
+            _showUpload = false;
+
+            // אפס את הבחירה כדי לאפשר העלאת אותו קובץ שוב
+            await JS.InvokeVoidAsync("eval", "const i=document.querySelector('input[type=file][style*=\"display:none\"]'); if(i) i.value='';");
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Attachment upload (browser→SAS) failed.");
+            _uploadError = T["Attachments.Error.UploadFailed"];
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private struct FileMeta
+    {
+        public string? Name { get; set; }
+        public string? Type { get; set; }
+        public long Size { get; set; }
+    }
+
+}
+
+    private record FileMeta(string name, string type, long size);
 
 }

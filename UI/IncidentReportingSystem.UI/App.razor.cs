@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Logging;
 using IncidentReportingSystem.UI.Core.Auth;
+using Microsoft.JSInterop;
 
 public partial class App : ComponentBase, IDisposable
 {
@@ -16,11 +17,19 @@ public partial class App : ComponentBase, IDisposable
     [Inject] private IAuthService Auth { get; set; } = default!;
     [Inject] private ILogger<App> Logger { get; set; } = default!;
     [Inject] private AuthState State { get; set; } = default!;
-
+    [Inject] private IJSRuntime JS { get; set; } 
     protected override Task OnInitializedAsync()
     {
         _locationReg = Nav.RegisterLocationChangingHandler(OnLocationChangingAsync);
         return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await State.EnsureHydratedAsync(JS);
+        Logger.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", State.Hydrated, State.Authorized);
+        StateHasChanged();
     }
 
     private async ValueTask OnLocationChangingAsync(LocationChangingContext context)

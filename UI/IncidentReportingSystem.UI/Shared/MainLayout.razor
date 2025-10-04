@@ -1,11 +1,12 @@
 ﻿@using IncidentReportingSystem.UI.Pages.Auth
 @using MudBlazor
 @inherits LayoutComponentBase
-@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
+@inject AuthState AuthState
 @inject IncidentReportingSystem.UI.Core.Auth.IAuthService Auth
 @inject NavigationManager Nav
 @inject IncidentReportingSystem.UI.Localization.IAppTexts T
 @inject Microsoft.JSInterop.IJSRuntime JS
+@inject ILogger<AuthHydrator> Log
 
 <header>
     <DirHydrator />
@@ -145,6 +146,9 @@
         if (!firstRender) return;
         var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
         try { await JS.InvokeVoidAsync("irsRtl.applyByCulture", culture); } catch { }
+        await AuthState.EnsureHydratedAsync(JS);
+        Log.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", AuthState.Hydrated, AuthState.Authorized);
+        StateHasChanged();
     }
 
     protected override void OnInitialized()
@@ -159,10 +163,9 @@
         Nav.LocationChanged -= OnLocationChanged;
     }
 
-    private Task OnAuthChanged()
+    private void OnAuthChanged()
     {
-        StateHasChanged();
-        return Task.CompletedTask;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)

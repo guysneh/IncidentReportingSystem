@@ -6,9 +6,9 @@ namespace IncidentReportingSystem.UI.Core.Http;
 public sealed class SecureApiClient : IApiClient
 {
     private readonly HttpClient _client;
-    private readonly Auth.AuthState _auth;
+    private readonly AuthState _auth;
 
-    public SecureApiClient(IHttpClientFactory httpClientFactory, Auth.AuthState auth)
+    public SecureApiClient(IHttpClientFactory httpClientFactory, AuthState auth)
     {
         _client = httpClientFactory.CreateClient("Api");
         _auth = auth;

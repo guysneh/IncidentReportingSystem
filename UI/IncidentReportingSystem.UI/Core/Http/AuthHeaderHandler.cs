@@ -1,36 +1,23 @@
-﻿using System.Net;
+﻿using IncidentReportingSystem.UI.Core.Auth;
+using IncidentReportingSystem.UI.Core.Options;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 
-namespace IncidentReportingSystem.UI.Core.Http
+public sealed class AuthHeaderHandler : DelegatingHandler
 {
-    internal sealed class AuthHeaderHandler : DelegatingHandler
+    private readonly AuthState _state;
+
+    public AuthHeaderHandler(AuthState state)
     {
-        private readonly Auth.AuthState _state;
-        private readonly Auth.AuthEvents _events;
+        _state = state;
+    }
 
-        public AuthHeaderHandler(Auth.AuthState state, Auth.AuthEvents events)
-        {
-            _state = state;
-            _events = events;
-        }
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var token = _state.AccessToken;
+        if (!string.IsNullOrWhiteSpace(token))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-        {
-            if (_events.IsUnauthorizedTripped)
-                throw new HttpRequestException("Unauthorized (short-circuited)");
-
-            var token = _state.AccessToken;
-            if (!string.IsNullOrWhiteSpace(token))
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var resp = await base.SendAsync(request, ct);
-
-            if (resp.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                _events.TripUnauthorized(request.RequestUri?.ToString());
-            }
-
-            return resp;
-        }
+        return base.SendAsync(request, ct);
     }
 }

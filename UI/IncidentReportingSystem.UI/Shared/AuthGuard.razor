@@ -1,4 +1,4 @@
-﻿@inject IncidentReportingSystem.UI.Core.Auth.AuthState AuthState
+﻿@inject AuthState AuthState
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -29,7 +29,9 @@ else if (_authorized)
     {
         if (!firstRender) return;
 
-        await AuthState.WaitForHydrationAsync(TimeSpan.FromSeconds(5));
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try { await AuthState.WaitForHydrationAsync(cts.Token); }
+        catch (OperationCanceledException) { /* optional: המשך בלי לחסום */ }
         UpdateFlags();
         StateHasChanged();
 
@@ -37,11 +39,10 @@ else if (_authorized)
             Nav.NavigateTo("/", forceLoad: true);
     }
 
-    private Task OnAuthChanged()
+    private void OnAuthChanged()
     {
         UpdateFlags();
-        StateHasChanged();
-        return Task.CompletedTask;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void UpdateFlags()

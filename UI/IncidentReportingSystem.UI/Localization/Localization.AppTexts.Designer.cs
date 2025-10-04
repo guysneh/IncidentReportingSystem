@@ -286,6 +286,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Choose a file.
+        /// </summary>
+        internal static string Attachments_Form_PickFile {
+            get {
+                return ResourceManager.GetString("Attachments.Form.PickFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Allowed file types.
         /// </summary>
         internal static string Attachments_Hint_Allowed {
