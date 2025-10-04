@@ -22,7 +22,7 @@ public sealed class OpenAttachmentStreamQueryHandlerTests
             "file.png", "image/png", "incidents/x/y/file.png", Guid.NewGuid());
         a.MarkCompleted(12);
 
-        var repo = new Mock<IAttachmentRepository>(MockBehavior.Strict);
+        var repo = new Mock<IAttachmentsRepository>(MockBehavior.Strict);
         repo.Setup(r => r.GetReadOnlyAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(a);
 
@@ -59,7 +59,7 @@ public sealed class OpenAttachmentStreamQueryHandlerTests
             "file.pdf", "application/pdf", "comments/x/y/file.pdf", Guid.NewGuid());
         // Note: not calling MarkCompleted → Status = Pending
 
-        var repo = new Mock<IAttachmentRepository>();
+        var repo = new Mock<IAttachmentsRepository>();
         repo.Setup(r => r.GetReadOnlyAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(a);
 
@@ -82,7 +82,7 @@ public sealed class OpenAttachmentStreamQueryHandlerTests
             "x.jpg", "image/jpeg", "incidents/x/y/x.jpg", Guid.NewGuid());
         a.MarkCompleted(7);
 
-        var repo = new Mock<IAttachmentRepository>(MockBehavior.Strict);
+        var repo = new Mock<IAttachmentsRepository>(MockBehavior.Strict);
         repo.Setup(r => r.GetReadOnlyAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(a);
 

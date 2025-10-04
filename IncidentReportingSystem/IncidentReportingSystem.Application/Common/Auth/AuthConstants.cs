@@ -22,5 +22,6 @@ public static class PolicyNames
     public const string CanManageIncidents = nameof(CanManageIncidents);
     public const string CanCommentOnIncident = nameof(CanCommentOnIncident);
     public const string CanDeleteComment = nameof(CanDeleteComment);
+    public const string AttachmentOwnerOnly = nameof(AttachmentOwnerOnly);
 }
 

@@ -579,4 +579,10 @@
   <data name="Attachments.Uploading" xml:space="preserve">
     <value>Wird hochgeladen...</value>
   </data>
+  <data name="Attachments.UploadedBy" xml:space="preserve">
+    <value>Hochgeladen von</value>
+  </data>
+  <data name="Attachments.DeleteFile" xml:space="preserve">
+    <value>Datei löschen?</value>
+  </data>
 </root>

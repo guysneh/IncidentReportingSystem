@@ -11,7 +11,7 @@ namespace IncidentReportingSystem.Application.Abstractions.Persistence
     /// <summary>
     /// Abstraction for querying and mutating Attachment aggregates.
     /// </summary>
-    public interface IAttachmentRepository
+    public interface IAttachmentsRepository
     {
         /// <summary>Adds the given attachment entity to the persistence context.</summary>
         Task AddAsync(Attachment entity, CancellationToken cancellationToken);

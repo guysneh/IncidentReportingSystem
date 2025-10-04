@@ -30,5 +30,6 @@
         [property: JsonPropertyName("completedAt")] DateTime? CompletedAt,
         [property: JsonPropertyName("hasThumbnail")] bool HasThumbnail,
         [property: JsonPropertyName("canDelete")] bool CanDelete,
-        [property: JsonPropertyName("canDownload")] bool CanDownload);
+        [property: JsonPropertyName("canDownload")] bool CanDownload,
+        [property: JsonPropertyName("uploadedBy")] string UploadedBy);
 }

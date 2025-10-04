@@ -13,9 +13,9 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAt
     /// <summary>Handler that loads and maps attachment metadata.</summary>
     public sealed class GetAttachmentMetadataHandler : IRequestHandler<GetAttachmentMetadataQuery, AttachmentDto>
     {
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
 
-        public GetAttachmentMetadataHandler(IAttachmentRepository repo) => _repo = repo;
+        public GetAttachmentMetadataHandler(IAttachmentsRepository repo) => _repo = repo;
 
         public async Task<AttachmentDto> Handle(GetAttachmentMetadataQuery request, CancellationToken cancellationToken)
         {

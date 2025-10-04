@@ -13,10 +13,10 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.GetAt
     public sealed class GetAttachmentStatusQueryHandler
         : IRequestHandler<GetAttachmentStatusQuery, AttachmentStatusDto>
     {
-        private readonly IAttachmentRepository _repository;
+        private readonly IAttachmentsRepository _repository;
         private readonly IAttachmentStorage _storage;
 
-        public GetAttachmentStatusQueryHandler(IAttachmentRepository repository, IAttachmentStorage storage)
+        public GetAttachmentStatusQueryHandler(IAttachmentsRepository repository, IAttachmentStorage storage)
         {
             _repository = repository;
             _storage = storage;

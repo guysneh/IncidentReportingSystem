@@ -8,5 +8,6 @@
         Task<TRes?> PostJsonAsync<TReq, TRes>(string path, TReq body, CancellationToken ct = default);
         Task PostJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default);
         Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default);
+        Task DeleteAsync(string path, CancellationToken ct = default);
     }
 }

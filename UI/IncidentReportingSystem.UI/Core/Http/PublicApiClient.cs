@@ -38,5 +38,11 @@ namespace IncidentReportingSystem.UI.Core.Http
             using var resp = await _client.PatchAsJsonAsync(path, body, ct);
             resp.EnsureSuccessStatusCode();
         }
+
+        public async Task DeleteAsync(string path, CancellationToken ct = default)
+        {
+            using var resp = await _client.DeleteAsync(path, ct);
+            resp.EnsureSuccessStatusCode();
+        }
     }
 }

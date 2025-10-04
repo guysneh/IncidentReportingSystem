@@ -64,5 +64,8 @@ public class AttachmentUploadService : IAttachmentUploadService
 
     public Task AbortAsync(Guid attachmentId, CancellationToken ct)
         => _api.PostJsonAsync<object>($"attachments/{attachmentId}/abort", new { }, ct);
+
+    public Task DeleteAsync(Guid id, CancellationToken ct = default)
+        => _api.DeleteAsync($"attachments/{id}", ct);
 }
 

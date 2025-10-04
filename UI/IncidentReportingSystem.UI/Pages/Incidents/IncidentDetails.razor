@@ -276,6 +276,18 @@
                                                     @T["Attachments.Download"]
                                                 </a>
                                             </div>
+                                            <div class="small text-muted mt-1">
+                                                @T["Attachments.UploadedBy"] @((card.UploadedByDisplayName ?? ShortIdOrDash(card.UploadedBy)) ?? "—")
+                                                • @card.CreatedAtLocal
+                                            </div>
+
+                                            @if (card.CanDelete)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => OnDeleteAttachment(card.Id)">
+                                                    מחיקה
+                                                </button>
+                                            }
                                         </div>
                                     }
                                 </div>
@@ -677,6 +689,12 @@
         public required string ViewUrl { get; init; }
         public string ThumbUrl => ViewUrl;
         public required string DownloadHref { get; init; }
+
+        public string? UploadedBy { get; init; }
+        public string? UploadedByDisplayName { get; set; } // נמלא דרך Directory
+        public DateTime CreatedAt { get; init; }
+        public string CreatedAtLocal => CreatedAt.ToLocalTime().ToString("g");
+        public bool CanDelete { get; init; }
     }
 
     // -------- Server contracts (DTOs used by this page) --------
@@ -896,6 +914,20 @@
         {
             _uploading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task OnDeleteAttachment(Guid id)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", T["Attachments.DeleteFile"])) return;
+        try
+        {
+            await Uploads.DeleteAsync(id, CancellationToken.None);
+            await ReloadAttachments();
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Delete attachment failed.");
         }
     }
 

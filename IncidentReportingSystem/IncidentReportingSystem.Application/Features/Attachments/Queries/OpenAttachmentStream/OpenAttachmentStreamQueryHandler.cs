@@ -12,10 +12,10 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.OpenA
     public sealed class OpenAttachmentStreamQueryHandler
         : IRequestHandler<OpenAttachmentStreamQuery, OpenAttachmentStreamResponse>
     {
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
         private readonly IAttachmentStorage _storage;
 
-        public OpenAttachmentStreamQueryHandler(IAttachmentRepository repo, IAttachmentStorage storage)
+        public OpenAttachmentStreamQueryHandler(IAttachmentsRepository repo, IAttachmentStorage storage)
         {
             _repo = repo;
             _storage = storage;

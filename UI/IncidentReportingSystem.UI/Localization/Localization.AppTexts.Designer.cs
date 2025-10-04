@@ -277,6 +277,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Delete file?.
+        /// </summary>
+        internal static string Attachments_DeleteFile {
+            get {
+                return ResourceManager.GetString("Attachments.DeleteFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Download.
         /// </summary>
         internal static string Attachments_Download {
@@ -327,6 +336,15 @@ namespace IncidentReportingSystem.UI.Localization {
         internal static string Attachments_Open {
             get {
                 return ResourceManager.GetString("Attachments.Open", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Uploaded by.
+        /// </summary>
+        internal static string Attachments_UploadedBy {
+            get {
+                return ResourceManager.GetString("Attachments.UploadedBy", resourceCulture);
             }
         }
         

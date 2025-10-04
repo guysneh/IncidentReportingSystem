@@ -10,6 +10,7 @@ using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.AbortUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
+using IncidentReportingSystem.Application.Features.Attachments.Commands.DeleteAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using IncidentReportingSystem.Application.Features.Attachments.Queries;
@@ -424,5 +425,15 @@ namespace IncidentReportingSystem.API.Controllers
 
             return Ok(result);
         }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id, [FromServices] IAuthorizationService authz)
+        {
+            var auth = await authz.AuthorizeAsync(User, id, PolicyNames.AttachmentOwnerOnly);
+            if (!auth.Succeeded) return Forbid();
+
+            await _sender.Send(new DeleteAttachmentCommand(id));
+            return NoContent();
         }
+    }
 }

@@ -26,5 +26,6 @@ namespace IncidentReportingSystem.UI.Core.Attachments
         // שלב 4: השלמה/ביטול
         Task CompleteAsync(Guid attachmentId, CancellationToken ct);
         Task AbortAsync(Guid attachmentId, CancellationToken ct);
+        Task DeleteAsync(Guid attachmentId, CancellationToken ct = default);
     }
 }

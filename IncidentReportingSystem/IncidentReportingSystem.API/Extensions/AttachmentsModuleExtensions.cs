@@ -26,7 +26,7 @@ namespace IncidentReportingSystem.API.Extensions
         {
             services.Configure<AttachmentOptions>(configuration.GetSection("Attachments"));
             services.AddScoped<IAttachmentPolicy, AttachmentPolicy>();
-            services.AddScoped<IAttachmentRepository, AttachmentRepository>();
+            services.AddScoped<IAttachmentsRepository, AttachmentRepository>();
             services.AddScoped<IAttachmentParentReadService, AttachmentParentReadService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<ISignedUrlService, SignedUrlService>();

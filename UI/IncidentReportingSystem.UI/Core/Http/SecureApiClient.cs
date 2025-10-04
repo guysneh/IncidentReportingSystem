@@ -1,6 +1,7 @@
 ﻿using IncidentReportingSystem.UI.Core.Auth;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using static System.Net.WebRequestMethods;
 
 namespace IncidentReportingSystem.UI.Core.Http;
 
@@ -65,4 +66,11 @@ public sealed class SecureApiClient : IApiClient
 
     public Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
         => throw new NotImplementedException();
+
+    public async Task DeleteAsync(string path, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Delete, path);
+        var res = await _client.SendAsync(req, ct);
+        res.EnsureSuccessStatusCode();
+    }
 }
