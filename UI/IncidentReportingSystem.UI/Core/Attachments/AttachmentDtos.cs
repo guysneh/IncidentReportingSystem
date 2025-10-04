@@ -38,8 +38,5 @@ namespace IncidentReportingSystem.UI.Core.Attachments
 
         [JsonPropertyName("contentType")]
         public string ContentType { get; set; } = "application/octet-stream";
-
-        [JsonPropertyName("size")]
-        public long Size { get; set; }
     }
 }

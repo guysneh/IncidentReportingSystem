@@ -24,12 +24,12 @@
         [property: JsonPropertyName("parentId")] string? ParentId,
         [property: JsonPropertyName("fileName")] string FileName,
         [property: JsonPropertyName("contentType")] string ContentType,
-        [property: JsonPropertyName("size")] long Size,
+        [property: JsonPropertyName("size")] string Size,
         [property: JsonPropertyName("status")] string Status,
-        [property: JsonPropertyName("createdAt")] DateTime CreatedAt,
-        [property: JsonPropertyName("completedAt")] DateTime? CompletedAt,
+        [property: JsonPropertyName("createdAt")] DateTimeOffset CreatedAt,
+        [property: JsonPropertyName("completedAt")] DateTimeOffset? CompletedAt,
         [property: JsonPropertyName("hasThumbnail")] bool HasThumbnail,
         [property: JsonPropertyName("canDelete")] bool CanDelete,
         [property: JsonPropertyName("canDownload")] bool CanDownload,
-        [property: JsonPropertyName("uploadedBy")] string UploadedBy);
+        [property: JsonPropertyName("uploadedBy")] string? UploadedBy);
 }

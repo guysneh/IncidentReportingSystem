@@ -585,4 +585,7 @@
   <data name="Attachments.DeleteFile" xml:space="preserve">
     <value>Delete file?</value>
   </data>
+  <data name="Attachments.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
 </root>

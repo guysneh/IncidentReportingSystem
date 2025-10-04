@@ -277,6 +277,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Delete.
+        /// </summary>
+        internal static string Attachments_Delete {
+            get {
+                return ResourceManager.GetString("Attachments.Delete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete file?.
         /// </summary>
         internal static string Attachments_DeleteFile {

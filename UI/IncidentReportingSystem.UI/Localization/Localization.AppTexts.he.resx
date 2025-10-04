@@ -585,4 +585,7 @@
   <data name="Attachments.DeleteFile" xml:space="preserve">
     <value>למחוק את הקובץ?</value>
   </data>
+  <data name="Attachments.Delete" xml:space="preserve">
+    <value>מחיקה</value>
+  </data>
 </root>
