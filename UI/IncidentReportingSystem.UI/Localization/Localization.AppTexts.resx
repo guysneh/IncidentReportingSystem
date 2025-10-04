@@ -576,4 +576,7 @@
   <data name="Attachments.Form.PickFile" xml:space="preserve">
     <value>Choose a file</value>
   </data>
+  <data name="Attachments.Uploading" xml:space="preserve">
+    <value>Uplading...</value>
+  </data>
 </root>

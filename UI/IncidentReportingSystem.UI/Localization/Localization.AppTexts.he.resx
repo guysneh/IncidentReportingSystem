@@ -568,12 +568,15 @@
     <value>סוגי קבצים מותרים</value>
   </data>
   <data name="Attachments.Hint.MaxSize" xml:space="preserve">
-    <value>גודל מקסימלי: ‏{ 0}MB</value>
+    <value>{0} MB גודל מקסימלי</value>
   </data>
   <data name="Attachments.Hint.SelectFile" xml:space="preserve">
     <value>בחר קובץ להעלאה</value>
   </data>
   <data name="Attachments.Form.PickFile" xml:space="preserve">
     <value>בחר קובץ</value>
+  </data>
+  <data name="Attachments.Uploading" xml:space="preserve">
+    <value>מעלה קובץ...</value>
   </data>
 </root>

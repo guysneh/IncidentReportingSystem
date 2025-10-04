@@ -331,6 +331,15 @@ namespace IncidentReportingSystem.UI.Localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Uplading....
+        /// </summary>
+        internal static string Attachments_Uploading {
+            get {
+                return ResourceManager.GetString("Attachments.Uploading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Login successful.
         /// </summary>
         internal static string Auth_Login_Success {
