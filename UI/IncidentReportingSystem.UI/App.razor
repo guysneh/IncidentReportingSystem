@@ -6,6 +6,7 @@
 @inject Microsoft.Extensions.Logging.ILogger<App> Logger
 
  <CascadingAuthenticationState>
+    <AuthHydrator />
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)" />
@@ -16,5 +17,4 @@
         </LayoutView>
     </NotFound>
 </Router>
-<AuthHydrator />
 </CascadingAuthenticationState>

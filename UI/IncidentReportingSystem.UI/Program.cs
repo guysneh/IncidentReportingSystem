@@ -92,6 +92,9 @@ builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Users.IUserDirectory,
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService,
                            IncidentReportingSystem.UI.Core.Attachments.AttachmentUploadService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthSessionStore>();
+builder.Services.AddScoped<AuthState>();
 
 var app = builder.Build();
 

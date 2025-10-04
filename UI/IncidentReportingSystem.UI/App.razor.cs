@@ -28,7 +28,7 @@ public partial class App : ComponentBase, IDisposable
     {
         if (!firstRender) return;
         await State.EnsureHydratedAsync(JS);
-        Logger.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", State.Hydrated, State.Authorized);
+        Logger.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", State.IsHydrated, State.IsAuthorized);
         StateHasChanged();
     }
 

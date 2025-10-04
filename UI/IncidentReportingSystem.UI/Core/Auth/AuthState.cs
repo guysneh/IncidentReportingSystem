@@ -1,94 +1,77 @@
-﻿// AuthState.cs
+﻿using System.Text.Json;
 using Microsoft.JSInterop;
 
-public sealed class AuthState
+namespace IncidentReportingSystem.UI.Core.Auth
 {
-    private readonly ILogger<AuthState> _log;
-    private bool _hydrated;
-    private string? _token;
-    private DateTimeOffset _expiresAtUtc;
-
-    public event Action? Changed;               // תאימות לקוד קיים
-    public bool IsHydrated => _hydrated;        // alias
-    public bool Hydrated => _hydrated;
-    public bool Authorized => !string.IsNullOrWhiteSpace(_token) && DateTimeOffset.UtcNow < _expiresAtUtc;
-    public string? AccessToken => Authorized ? _token : null;
-    public DateTimeOffset? ExpiresAtUtc => _expiresAtUtc;
-
-    private TaskCompletionSource<bool> _hydrationTcs =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    public AuthState(ILogger<AuthState> log) => _log = log;
-
-    private void RaiseChanged() => Changed?.Invoke();
-
-    public async Task HydrateAsync(string token, DateTimeOffset expiresAtUtc)
+    // ה-blob החדש שנשמר ב-localStorage על-ידי auth.js
+    file sealed class AuthBlob
     {
-        _token = token;
-        _expiresAtUtc = expiresAtUtc;
-        _hydrated = true;
-        _hydrationTcs.TrySetResult(true);
-        _log.LogInformation("[AUTH] hydrated=true, exp={exp}", _expiresAtUtc);
-        RaiseChanged();
-        await Task.CompletedTask;
+        public string? t { get; set; } // access token
+        public long exp { get; set; }  // expiry in ms since epoch (UTC)
     }
 
-    // תאימות לאחסון סשן ישן: אם יש טוקן + תוקף => hydrate, אחרת clear
-    public async Task SetAsync(string? token, DateTimeOffset? expiresAtUtc)
+    public sealed class AuthState
     {
-        if (!string.IsNullOrWhiteSpace(token) && expiresAtUtc.HasValue)
-            await HydrateAsync(token!, expiresAtUtc.Value);
-        else
-            await ClearAsync();
-    }
+        private bool _isHydrated;
+        public bool IsHydrated => _isHydrated;
 
-    public async Task EnsureHydratedAsync(IJSRuntime js)
-    {
-        if (_hydrated) return;
-        try
+        public string? AccessToken { get; private set; }
+        public DateTimeOffset? ExpiresAtUtc { get; private set; }
+
+        public bool IsAuthorized =>
+            !string.IsNullOrWhiteSpace(AccessToken) &&
+            ExpiresAtUtc is DateTimeOffset exp &&
+            exp > DateTimeOffset.UtcNow;
+
+        // event אסינכרוני לשינויים (תואם לשימושים שלך ב-Welcome/AuthGuard/Me)
+        public event Func<Task>? Changed;
+
+        public async Task HydrateAsync(string token, DateTimeOffset expiresAtUtc)
         {
-            var dto = await js.InvokeAsync<AuthStorageDto?>("irsAuth.get");
-            if (dto is not null &&
-                !string.IsNullOrWhiteSpace(dto.Token) &&
-                dto.ExpiresAtUtc > DateTimeOffset.UtcNow)
+            AccessToken = token;
+            ExpiresAtUtc = expiresAtUtc;
+            _isHydrated = true;
+            if (Changed is not null) await Changed.Invoke();
+        }
+
+        public async Task EnsureHydratedAsync(IJSRuntime js)
+        {
+            if (_isHydrated) return;
+
+            string? raw = null;
+            try { raw = await js.InvokeAsync<string?>("irsAuth.getRaw"); }
+            catch { /* אם auth.js לא נטען עדיין – לא להפיל */ }
+
+            if (!string.IsNullOrWhiteSpace(raw))
             {
-                _token = dto.Token;
-                _expiresAtUtc = dto.ExpiresAtUtc;
+                try
+                {
+                    var blob = JsonSerializer.Deserialize<AuthBlob>(raw);
+                    if (!string.IsNullOrWhiteSpace(blob?.t) && blob!.exp > 0)
+                    {
+                        var exp = DateTimeOffset.FromUnixTimeMilliseconds(blob.exp);
+                        await HydrateAsync(blob.t!, exp);
+                        return;
+                    }
+                }
+                catch
+                {
+                    // JSON פגום? נמשיך ל"חסר טוקן"
+                }
             }
+
+            // אין טוקן – מסמנים hydrated כדי שה־UI לא יישאר תקוע
+            _isHydrated = true;
+            if (Changed is not null) await Changed.Invoke();
         }
-        catch (Exception ex)
+
+        public async Task ClearAsync(IJSRuntime js)
         {
-            _log.LogWarning(ex, "[AUTH] ensure hydration failed");
+            try { await js.InvokeVoidAsync("irsAuth.clear"); } catch { /* ignore */ }
+            AccessToken = null;
+            ExpiresAtUtc = null;
+            _isHydrated = true;
+            if (Changed is not null) await Changed.Invoke();
         }
-        finally
-        {
-            _hydrated = true;
-            _hydrationTcs.TrySetResult(true);
-            _log.LogInformation("[AUTH] ensure hydrated; token? {has}", !string.IsNullOrWhiteSpace(_token));
-            RaiseChanged();
-        }
-    }
-
-    public Task WaitForHydrationAsync(CancellationToken ct = default)
-    {
-        if (_hydrated) return Task.CompletedTask;
-        if (ct.CanBeCanceled) ct.Register(() => _hydrationTcs.TrySetCanceled(ct));
-        return _hydrationTcs.Task;
-    }
-
-    public async Task ClearAsync()
-    {
-        _token = null;
-        _expiresAtUtc = default;
-        _hydrated = true; // "טעון", ללא טוקן
-        _hydrationTcs.TrySetResult(true);
-        RaiseChanged();
-        await Task.CompletedTask;
-    }
-
-    public sealed class AuthStorageDto
-    {
-        public string? Token { get; set; }
-        public DateTimeOffset ExpiresAtUtc { get; set; } // לא nullable
     }
 }

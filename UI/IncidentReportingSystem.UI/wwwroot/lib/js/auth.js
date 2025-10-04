@@ -1,23 +1,35 @@
-﻿window.irsAuth = {
-    set: function (token, expiresAtUtc) {
-        try {
-            localStorage.setItem('irs.token', token);
-            localStorage.setItem('irs.expiresAtUtc', new Date(expiresAtUtc).toISOString());
-        } catch (e) { console.warn('irsAuth.set failed', e); }
-    },
-    get: function () {
-        try {
-            const token = localStorage.getItem('irs.token');
-            const expRaw = localStorage.getItem('irs.expiresAtUtc');
-            if (!token || !expRaw) return null;
-            const exp = new Date(expRaw);
-            return { token: token, expiresAtUtc: exp.toISOString() };
-        } catch (e) { console.warn('irsAuth.get failed', e); return null; }
-    },
-    clear: function () {
-        try {
-            localStorage.removeItem('irs.token');
-            localStorage.removeItem('irs.expiresAtUtc');
-        } catch (e) { console.warn('irsAuth.clear failed', e); }
+﻿(function () {
+    const KEY = 'irs.auth';
+
+    function toMs(d) {
+        if (!d) return 0;
+        if (typeof d === 'number') return d;
+        if (typeof d === 'string') {
+            const t = Date.parse(d);
+            return isNaN(t) ? 0 : t;
+        }
+        if (d instanceof Date) return d.getTime();
+        return 0;
     }
-};
+
+    window.irsAuth = {
+        /** שומר JSON כמו { t, exp } */
+        set: function (token, expiresAt) {
+            try {
+                const expMs = toMs(expiresAt);
+                const blob = { t: token || '', exp: expMs || 0 };
+                localStorage.setItem(KEY, JSON.stringify(blob));
+                console.log('[irsAuth.set]', blob);
+            } catch (e) { console.warn('irsAuth.set error', e); }
+        },
+        /** מחזיר את ה-string הגולמי (ל-C# יש deserialize משלו) */
+        getRaw: function () {
+            const raw = localStorage.getItem(KEY);
+            console.log('[irsAuth.getRaw]', raw);
+            return raw;
+        },
+        clear: function () {
+            try { localStorage.removeItem(KEY); console.log('[irsAuth.clear]'); } catch { }
+        }
+    };
+})();

@@ -136,7 +136,7 @@
     private async Task OnLogout()
     {
         try { await Auth.SignOutAsync(); } catch { }
-        await AuthState.ClearAsync();
+        await AuthState.ClearAsync(JS);
         try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch { }
         Nav.NavigateTo("/", forceLoad: true);
     }
@@ -147,7 +147,7 @@
         var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
         try { await JS.InvokeVoidAsync("irsRtl.applyByCulture", culture); } catch { }
         await AuthState.EnsureHydratedAsync(JS);
-        Log.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", AuthState.Hydrated, AuthState.Authorized);
+        Log.LogInformation("[HYDRATOR] hydrated={hydr}, authorized={auth}", AuthState.IsHydrated, AuthState.IsAuthorized);
         StateHasChanged();
     }
 
@@ -163,9 +163,10 @@
         Nav.LocationChanged -= OnLocationChanged;
     }
 
-    private void OnAuthChanged()
+    private Task OnAuthChanged()
     {
         _ = InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)

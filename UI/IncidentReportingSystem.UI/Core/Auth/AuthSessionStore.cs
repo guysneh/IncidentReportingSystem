@@ -1,7 +1,9 @@
-﻿using System.Text.Json;
+﻿using IncidentReportingSystem.UI.Core.Auth;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using IncidentReportingSystem.UI.Core.Auth;
+using Microsoft.JSInterop;
+using System.Text.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace IncidentReportingSystem.UI.Core.Auth;
 
@@ -20,11 +22,21 @@ public sealed class AuthSessionStore
     private const string CookieName = ".irs.auth";
     private readonly IHttpContextAccessor _http;
     private readonly IDataProtector _protector;
+    private readonly IJSRuntime _js;
+    private readonly AuthState _state;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private bool _loaded;
+    private sealed class AuthBlob { public string? t { get; set; } public long exp { get; set; } }
 
-    public AuthSessionStore(IHttpContextAccessor http, IDataProtectionProvider dp)
+
+    public bool IsLoaded => _loaded;
+
+    public AuthSessionStore(IHttpContextAccessor http, IDataProtectionProvider dp, IJSRuntime js, AuthState state)
     {
         _http = http;
         _protector = dp.CreateProtector("irs.auth.cookie.v1");
+        _js = js;
+        _state = state;
     }
 
     public void Save(AuthSnapshot snap)
@@ -46,38 +58,30 @@ public sealed class AuthSessionStore
             });
     }
 
-    public async Task<bool> TryLoadInto(AuthState state)
+    public async Task LoadAsync()
     {
-        var ctx = _http.HttpContext;
-        if (ctx is null) return false;
-
-        if (!ctx.Request.Cookies.TryGetValue(CookieName, out var blob) || string.IsNullOrWhiteSpace(blob))
-            return false;
-
+        if (_loaded) return;
+        await _gate.WaitAsync();
         try
         {
-            var json = _protector.Unprotect(blob);
-            var snap = JsonSerializer.Deserialize<AuthSnapshot>(json);
-            if (snap is null || snap.ExpiresAtUtc <= DateTime.UtcNow) return false;
+            if (_loaded) return;
 
-            var me = new AuthModels.WhoAmI(
-                snap.UserId ?? "",
-                snap.Email ?? "",
-                snap.Roles ?? Array.Empty<string>(),
-                snap.FirstName,
-                snap.LastName,
-                snap.DisplayName);
+            var raw = await _js.InvokeAsync<string?>("irsAuth.getRaw");
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                AuthBlob? blob = null;
+                try { blob = System.Text.Json.JsonSerializer.Deserialize<AuthBlob>(raw); } catch { /* ignore */ }
 
-            await state.SetAsync(snap.AccessToken, snap.ExpiresAtUtc);
-            
-            return true;
+                if (!string.IsNullOrWhiteSpace(blob?.t) && blob!.exp > 0)
+                {
+                    var exp = DateTimeOffset.FromUnixTimeMilliseconds(blob.exp);
+                    await _state.HydrateAsync(blob.t!, exp);
+                }
+            }
+
+            _loaded = true;
         }
-        catch
-        {
-            // Corrupt/old cookie – clear
-            Clear();
-            return false;
-        }
+        finally { _gate.Release(); }
     }
 
     public void Clear()

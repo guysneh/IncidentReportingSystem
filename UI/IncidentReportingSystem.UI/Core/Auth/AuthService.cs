@@ -37,12 +37,17 @@ namespace IncidentReportingSystem.UI.Core.Auth
                 if (dto is null || string.IsNullOrWhiteSpace(dto.AccessToken))
                     return false;
 
-                await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
+                // חשוב: לוודא שה־ExpiresAtUtc הוא UTC "אמיתי"
                 var expUtc = dto.ExpiresAtUtc.Kind == DateTimeKind.Utc
                     ? new DateTimeOffset(dto.ExpiresAtUtc)
                     : new DateTimeOffset(DateTime.SpecifyKind(dto.ExpiresAtUtc, DateTimeKind.Utc));
 
+                // 1) לשמור ב-localStorage
+                await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, dto.ExpiresAtUtc);
+
+                // 2) להרטיב את ה־State בזיכרון
                 await _state.HydrateAsync(dto.AccessToken, expUtc);
+
                 return true;
             }
             catch (Exception ex)
@@ -51,6 +56,7 @@ namespace IncidentReportingSystem.UI.Core.Auth
                 return false;
             }
         }
+
 
         public Task<LoginResponse?> SignInRawAsync(string email, string password, CancellationToken ct = default)
        => _publicApi.PostJsonAsync<object, LoginResponse>("auth/login", new { email, password }, ct);
@@ -69,9 +75,17 @@ namespace IncidentReportingSystem.UI.Core.Auth
             var dto = await _publicApi.PostJsonAsync<object, LoginResponse>("auth/register", payload, ct);
             if (!string.IsNullOrWhiteSpace(dto?.AccessToken))
             {
-                await _js.InvokeVoidAsync("irsAuth.set", dto!.AccessToken!, dto!.ExpiresAtUtc);
-                var expUtc = DateTime.SpecifyKind(dto.ExpiresAtUtc, DateTimeKind.Utc);
-                await _state.HydrateAsync(dto!.AccessToken!, new DateTimeOffset(expUtc));
+                var expUtc = dto.ExpiresAtUtc.Kind == DateTimeKind.Utc
+                     ? new DateTimeOffset(dto.ExpiresAtUtc)
+                     : new DateTimeOffset(DateTime.SpecifyKind(dto.ExpiresAtUtc, DateTimeKind.Utc));
+
+                var expMs = expUtc.ToUnixTimeMilliseconds();
+
+                // שמירה ל-localStorage (מספר בלבד)
+                await _js.InvokeVoidAsync("irsAuth.set", dto.AccessToken, expMs);
+
+                // הידרציה של ה-AuthState בזיכרון (כבר יש אצלך):
+                await _state.HydrateAsync(dto.AccessToken, expUtc);
             }
         }
 
@@ -88,7 +102,7 @@ namespace IncidentReportingSystem.UI.Core.Auth
         public async Task SignOutAsync(CancellationToken ct = default)
         {
             await _js.InvokeVoidAsync("irsAuth.clear");
-            await _state.ClearAsync();
+            await _state.ClearAsync(_js);
             try { _nav.NavigateTo("/login", forceLoad: true); } catch { /* ignore */ }
         }
 

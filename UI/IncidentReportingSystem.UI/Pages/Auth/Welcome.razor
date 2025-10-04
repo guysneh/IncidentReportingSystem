@@ -151,9 +151,10 @@
         State.Changed += OnAuthChanged;
         RedirectIfAuthenticated();
     }
-    private void OnAuthChanged()
+    private Task OnAuthChanged()
     {
         _ = InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
     private void RedirectIfAuthenticated()
     {
