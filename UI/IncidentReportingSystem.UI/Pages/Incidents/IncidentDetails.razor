@@ -236,14 +236,14 @@
                                 </div>
                             }
 
-                            @if ((_attachments?.Count ?? 0) == 0)
+                            @if ((_attachments?.Items.Count ?? 0) == 0)
                             {
                                 <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
                             }
                             else
                             {
                                 <div class="attachments-grid">
-                                    @foreach (var card in _attachments)
+                                    @foreach (var card in _cards)
                                     {
                                         <div class="attachment-card">
                                             <div class="thumb-wrap">
@@ -328,7 +328,8 @@
     private IncidentDetailsDto? _incident;
 
     private PagedResult<CommentDto>? _comments;
-    private List<AttachmentCardVm> _attachments = new();
+    private PagedResult<AttachmentDto> _attachments;
+    private List<AttachmentCardVm> _cards;
     private bool _commentsLoading;
     private bool _attachmentsLoading;
 
@@ -373,11 +374,11 @@
             await Task.WhenAll(cTask, aTask);
 
             _comments = cTask.Result; // PagedResult<CommentDto>
-            var attachmentsPage = aTask.Result; // PagedResult<AttachmentDto>
+            _attachments = aTask.Result;
 
             // Map attachments → cards and presign URLs (reuse cache)
-            var cards = new List<AttachmentCardVm>(attachmentsPage.Items.Count);
-            foreach (var a in attachmentsPage.Items)
+            var cards = new List<AttachmentCardVm>(_attachments.Items.Count);
+            foreach (var a in _attachments.Items)
             {
                 var key = a.Id.ToString();
                 if (!_urlCache.TryGetValue(key, out var url))
@@ -385,17 +386,21 @@
                     try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
                     catch { continue; } // skip failed file
                 }
-
+               
                 cards.Add(new AttachmentCardVm
                 {
                     Id = Guid.Parse(a.Id),
                     FileName = a.FileName,
                     ContentType = a.ContentType,
                     ViewUrl = url,
-                    DownloadHref = url
+                    DownloadHref = url,
+                    UploadedBy = a.UploadedBy,
+                    UploadedByDisplayName = a.UploadedByDisplayName,
+                    CreatedAt = a.CreatedAt,
+                    CanDelete = a.CanDelete
                 });
             }
-            _attachments = cards;
+            _cards = cards;
 
             // -------- Resolve display names (reporter + commenters) --------
             await ResolveCommenterNamesAsync();
@@ -498,8 +503,15 @@
                     ids.Add(uid!);
             }
         }
-
-        if (ids.Count == 0) return;
+        if (_attachments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _attachments.Items)
+            {
+                var uid = Norm(c.UploadedBy);
+                if (!string.IsNullOrWhiteSpace(uid))
+                    ids.Add(uid!);
+            }
+        }
 
         // בקשה אחת ל-Directory
         IDictionary<string, string> rawMap;
@@ -559,6 +571,29 @@
             }).ToList();
 
             _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, updated);
+        }
+        if (_attachments?.Items is { Count: > 0 })
+        {
+            var updated = _attachments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UploadedByDisplayName)) return c;
+
+                var uid = Norm(c.UploadedBy);
+                if (string.IsNullOrWhiteSpace(uid)) return c;
+
+                // 1) מהמפה של ה-Directory
+                if (map.TryGetValue(uid!, out var name) && !string.IsNullOrWhiteSpace(name))
+                    return c with { UploadedByDisplayName = name };
+
+                // 2) fallback: אם זה נראה כמו אימייל — השתמש בו כשם
+                if (uid!.Contains("@", StringComparison.Ordinal))
+                    return c with { UploadedByDisplayName = uid };
+
+                // 3) אחרת, נשאיר null — ה-UI כבר מציג GUID fallback
+                return c;
+            }).ToList();
+
+            _attachments = new PagedResult<AttachmentDto>(_attachments.Total, _attachments.Skip, _attachments.Take, updated);
         }
     }
 
@@ -692,7 +727,7 @@
 
         public string? UploadedBy { get; init; }
         public string? UploadedByDisplayName { get; set; } // נמלא דרך Directory
-        public DateTime CreatedAt { get; init; }
+        public DateTimeOffset CreatedAt { get; init; }
         public string CreatedAtLocal => CreatedAt.ToLocalTime().ToString("g");
         public bool CanDelete { get; init; }
     }
@@ -756,16 +791,21 @@
                     try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
                     catch { continue; }
                 }
+               
                 cards.Add(new AttachmentCardVm
                 {
                     Id = Guid.Parse(a.Id),
                     FileName = a.FileName,
                     ContentType = a.ContentType,
                     ViewUrl = url,
-                    DownloadHref = url
+                    DownloadHref = url,
+                    UploadedBy = a.UploadedBy,
+                    UploadedByDisplayName =a.UploadedByDisplayName,
+                    CreatedAt = a.CreatedAt,
+                    CanDelete = a.CanDelete
                 });
             }
-            _attachments = cards;
+            _cards = cards;
         }
         finally
         {

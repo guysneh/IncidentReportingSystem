@@ -10,6 +10,7 @@ using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.UpdateUserProfile;
 using IncidentReportingSystem.Application.Features.Users.Queries.GetCurrentUserProfile;
+using IncidentReportingSystem.Application.Features.Users.Queries.ResolveDisplayNames;
 using IncidentReportingSystem.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -84,17 +85,11 @@ namespace IncidentReportingSystem.API.Controllers
         }
 
         [HttpPost("resolve-display-names")]
-        public ActionResult<Dictionary<string, string>> Resolve([FromBody] ResolveRequest body)
+        public async Task<ActionResult<Dictionary<string, string>>> Resolve(
+        [FromBody] ResolveRequest body, CancellationToken ct)
         {
-            var res = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (body?.Ids != null)
-            {
-                foreach (var id in body.Ids.Where(s => !string.IsNullOrWhiteSpace(s)))
-                {
-                    res[id] = id;
-                }
-            }
-            return Ok(res);
+            var dict = await _sender.Send(new ResolveDisplayNamesQuery(body?.Ids ?? []), ct);
+            return Ok(dict);
         }
 
         /// <summary>Authenticate with email + password and receive a JWT.</summary>
