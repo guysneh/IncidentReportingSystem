@@ -209,7 +209,7 @@
 
                                     <input type="file"
                                            accept="image/*,application/pdf"
-                                           style="display:none"
+                                           style="position:absolute;left:-9999px;opacity:0;width:0;height:0"
                                            @ref="_fileInput"
                                            @onchange="OnFileChosen" />
 
@@ -905,9 +905,5 @@
         public string? Type { get; set; }
         public long Size { get; set; }
     }
-
 }
 
-    private record FileMeta(string name, string type, long size);
-
-}
