@@ -26,6 +26,10 @@ namespace IncidentReportingSystem.UI.Core.Auth
         // event אסינכרוני לשינויים (תואם לשימושים שלך ב-Welcome/AuthGuard/Me)
         public event Func<Task>? Changed;
 
+        public bool HasRole(string role) 
+        {
+            return true;
+        }
         public async Task HydrateAsync(string token, DateTimeOffset expiresAtUtc)
         {
             AccessToken = token;

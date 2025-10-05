@@ -14,6 +14,7 @@ namespace IncidentReportingSystem.UI.Core.Incidents
         Task<string> GetAttachmentDownloadUrlAsync(string attachmentId, int ttlMinutes = 15, CancellationToken ct = default);
         Task<string> CreateIncidentAsync(CreateIncidentRequest req, CancellationToken ct = default);
         Task AddCommentAsync(string incidentId, string text, CancellationToken ct = default);
+        Task ChangeStatusAsync(Guid id, string status, CancellationToken ct = default);
     }
 
     public sealed class IncidentService : IIncidentService
@@ -107,6 +108,8 @@ namespace IncidentReportingSystem.UI.Core.Incidents
             resp.EnsureSuccessStatusCode();
         }
 
+        public Task ChangeStatusAsync(Guid id, string status, CancellationToken ct = default)
+             => _api.PatchJsonAsync($"incidentreports/{id}/status", status, ct);
         private sealed class PresignedUrlResponse { public string? Url { get; set; } }
         private sealed class CreateIncidentResponse { public string? Id { get; set; } }
     }

@@ -19,6 +19,7 @@
 @inject IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService Uploads
 @inject Microsoft.Extensions.Logging.ILogger<IncidentReportingSystem.UI.Pages.Incidents.IncidentDetails> Log
 @inject IJSRuntime JS
+@inject AuthState State
 
 
 <AuthGuard>
@@ -106,6 +107,18 @@
                                 <div class="col-md-6">
                                     <div class="form-label">@T["Incidents.Col.Status"]</div>
                                     <div><span class="@StatusClass(_incident.Status)">@_incident.Status</span></div>
+                                    @if (_isAdmin)
+                                    {
+                                        <div class="d-flex align-items-center gap-2">
+                                            <select class="form-select form-select-sm" @bind="_statusToSet">
+                                                @foreach (var s in _allowedStatuses)
+                                                {
+                                                    <option value="@s">@s</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="OnChangeStatus">עדכון</button>
+                                        </div>
+                                    }
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-label">@T["Incidents.Col.Severity"]</div>
@@ -336,6 +349,9 @@
     private bool _showAddComment; // << control Add Comment form visibility
 
     private readonly Dictionary<string, string> _urlCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string[] _allowedStatuses = new[] { "Open", "InProgress", "Closed" };
+    private string _statusToSet = "Open";
+    private bool _isAdmin => State.HasRole("Admin");
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -980,6 +996,21 @@
         catch (Exception ex)
         {
             Log.LogError(ex, "Delete attachment failed.");
+        }
+    }
+
+    private async Task OnChangeStatus()
+    {
+        try
+        {
+            await IncSvc.ChangeStatusAsync(Guid.Parse(_incident!.Id), _statusToSet, CancellationToken.None);
+            _incident.Status = _statusToSet; // עדכון מקומי
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Change status failed.");
+            // Toast/Alert...
         }
     }
 

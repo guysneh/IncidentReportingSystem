@@ -66,8 +66,15 @@ public sealed class SecureApiClient : IApiClient
         return await _client.SendAsync(request, ct);
     }
 
-    public Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task PatchJsonAsync<TReq>(string path, TReq body, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Put, path)
+        { Content = JsonContent.Create(body) };
+        AttachBearer(req);
+        using var resp = await _client.SendAsync(req, ct);
+        if (!resp.IsSuccessStatusCode)
+            throw await ApiErrorException.FromResponseAsync(resp, ct);   
+    }
 
     public async Task DeleteAsync(string path, CancellationToken ct = default)
     {
