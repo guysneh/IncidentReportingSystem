@@ -63,7 +63,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
                 CompletedAt = a.CompletedAt,
                 HasThumbnail = a.HasThumbnail,
                 CanDownload = a.Status == Domain.Enums.AttachmentStatus.Completed,
-                CanDelete = false,
+                CanDelete = _currentUser.UserIdOrThrow() == a.UploadedBy,
                 UploadedBy = a.UploadedBy.ToString()
             }).ToArray();
 
