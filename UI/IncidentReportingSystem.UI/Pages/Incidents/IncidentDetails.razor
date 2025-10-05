@@ -236,7 +236,7 @@
                                 </div>
                             }
 
-                            @if ((_attachments?.Items.Count ?? 0) == 0)
+                            @if ((_cards?.Count ?? 0) == 0)
                             {
                                 <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
                             }
@@ -343,6 +343,42 @@
     {
         await _jsModule.InvokeVoidAsync("clickInput", _fileInput);
     }
+    private async Task<List<AttachmentCardVm>> BuildCardsAsync(PagedResult<AttachmentDto> page, CancellationToken ct)
+    {
+        var cards = new List<AttachmentCardVm>(page.Items.Count);
+
+        foreach (var a in page.Items)
+        {
+            var key = a.Id.ToString();
+            if (!_urlCache.TryGetValue(key, out var url))
+            {
+                try
+                {
+                    url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15, ct);
+                    _urlCache[key] = url;
+                }
+                catch
+                {
+                    continue; // אם presign נכשל — דלג על הקובץ
+                }
+            }
+
+            cards.Add(new AttachmentCardVm
+            {
+                Id = Guid.Parse(a.Id),
+                FileName = a.FileName,
+                ContentType = a.ContentType,
+                ViewUrl = url,
+                DownloadHref = url,
+                UploadedBy = a.UploadedBy,                     // מגיע מה-API
+                UploadedByDisplayName = a.UploadedByDisplayName, // אולי ריק – נמלא אח"כ
+                CreatedAt = a.CreatedAt,                       // DateTimeOffset מ-API
+                CanDelete = a.CanDelete                        // מחושב בשרת
+            });
+        }
+
+        return cards;
+    }
 
     private async Task LoadAsync()
     {
@@ -375,33 +411,7 @@
 
             _comments = cTask.Result; // PagedResult<CommentDto>
             _attachments = aTask.Result;
-
-            // Map attachments → cards and presign URLs (reuse cache)
-            var cards = new List<AttachmentCardVm>(_attachments.Items.Count);
-            foreach (var a in _attachments.Items)
-            {
-                var key = a.Id.ToString();
-                if (!_urlCache.TryGetValue(key, out var url))
-                {
-                    try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
-                    catch { continue; } // skip failed file
-                }
-               
-                cards.Add(new AttachmentCardVm
-                {
-                    Id = Guid.Parse(a.Id),
-                    FileName = a.FileName,
-                    ContentType = a.ContentType,
-                    ViewUrl = url,
-                    DownloadHref = url,
-                    UploadedBy = a.UploadedBy,
-                    UploadedByDisplayName = a.UploadedByDisplayName,
-                    CreatedAt = a.CreatedAt,
-                    CanDelete = a.CanDelete
-                });
-            }
-            _cards = cards;
-
+            _cards = await BuildCardsAsync(_attachments, CancellationToken.None);
             // -------- Resolve display names (reporter + commenters) --------
             await ResolveCommenterNamesAsync();
         }
@@ -595,6 +605,30 @@
 
             _attachments = new PagedResult<AttachmentDto>(_attachments.Total, _attachments.Skip, _attachments.Take, updated);
         }
+        if (_cards is { Count: > 0 })
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (string.IsNullOrWhiteSpace(card.UploadedByDisplayName) && !string.IsNullOrWhiteSpace(card.UploadedBy))
+                {
+                    if (map.TryGetValue(card.UploadedBy, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                        _cards[i] = new AttachmentCardVm
+                        {
+                            Id = card.Id,
+                            FileName = card.FileName,
+                            ContentType = card.ContentType,
+                            ViewUrl = card.ViewUrl,
+                            DownloadHref = card.DownloadHref,
+                            UploadedBy = card.UploadedBy,
+                            UploadedByDisplayName = dn,
+                            CreatedAt = card.CreatedAt,
+                            CanDelete = card.CanDelete
+                        };
+                }
+            }
+        }
+
     }
 
     // מנרמל מזהה משתמש לפורמט שמתאים יותר ל-Directory
@@ -782,30 +816,8 @@
         try
         {
             var attachmentsPage = await IncSvc.GetIncidentAttachmentsAsync(_incident.Id, 0, 100, CancellationToken.None);
-            var cards = new List<AttachmentCardVm>(attachmentsPage.Items.Count);
-            foreach (var a in attachmentsPage.Items)
-            {
-                var key = a.Id.ToString();
-                if (!_urlCache.TryGetValue(key, out var url))
-                {
-                    try { url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15); _urlCache[key] = url; }
-                    catch { continue; }
-                }
-               
-                cards.Add(new AttachmentCardVm
-                {
-                    Id = Guid.Parse(a.Id),
-                    FileName = a.FileName,
-                    ContentType = a.ContentType,
-                    ViewUrl = url,
-                    DownloadHref = url,
-                    UploadedBy = a.UploadedBy,
-                    UploadedByDisplayName =a.UploadedByDisplayName,
-                    CreatedAt = a.CreatedAt,
-                    CanDelete = a.CanDelete
-                });
-            }
-            _cards = cards;
+            _attachments = attachmentsPage;
+            _cards = await BuildCardsAsync(attachmentsPage, CancellationToken.None);
         }
         finally
         {
