@@ -1,4 +1,6 @@
-﻿using IncidentReportingSystem.UI.Core.Auth;
+﻿using Azure.Core;
+using IncidentReportingSystem.UI.Core.Auth;
+using MediatR;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using static System.Net.WebRequestMethods;
@@ -70,6 +72,7 @@ public sealed class SecureApiClient : IApiClient
     public async Task DeleteAsync(string path, CancellationToken ct = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Delete, path);
+        AttachBearer(req);
         var res = await _client.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
     }
