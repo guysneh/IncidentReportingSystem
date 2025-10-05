@@ -60,7 +60,6 @@ public static class AuthExtensions
             options.AddPolicy(PolicyNames.CanManageIncidents, p => p.RequireRole(Roles.Admin));
             options.AddPolicy(PolicyNames.CanCommentOnIncident, p => p.RequireRole(Roles.User, Roles.Admin));
             options.AddPolicy(PolicyNames.CanDeleteComment, p => p.RequireRole(Roles.User, Roles.Admin));
-            options.AddPolicy(PolicyNames.AttachmentOwnerOnly, p => p.Requirements.Add(new AttachmentOwnerRequirement()));
         });
 
         return services;

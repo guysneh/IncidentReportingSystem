@@ -427,11 +427,9 @@ namespace IncidentReportingSystem.API.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize]
         public async Task<IActionResult> Delete(Guid id, [FromServices] IAuthorizationService authz)
         {
-            var auth = await authz.AuthorizeAsync(User, id, PolicyNames.AttachmentOwnerOnly);
-            if (!auth.Succeeded) return Forbid();
-
             await _sender.Send(new DeleteAttachmentCommand(id));
             return NoContent();
         }
