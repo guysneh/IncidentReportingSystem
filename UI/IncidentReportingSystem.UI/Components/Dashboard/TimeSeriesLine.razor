@@ -1,0 +1,101 @@
+﻿@using System.Globalization
+@using MudBlazor
+@using IncidentReportingSystem.UI.Core.Dashboard
+@inject IAppTexts T
+
+@if (Data is null || Data.Count == 0)
+{
+    <MudText Class="text-muted">@EmptyText</MudText>
+}
+else
+{
+    <div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+        <MudChart ChartType="ChartType.Line"
+                  ChartSeries="@Series"
+                  XAxisLabels="@Labels"
+                  Height="100%" Width="100%"
+                  @key="@($"ts_{Labels.Length}_{Series[0].Data.Length}_{Resolution}_{From?.ToString("yyyyMMdd")}_{To?.ToString("yyyyMMdd")}")" />
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TrendPoint>? Data { get; set; }
+    [Parameter] public TimeResolution Resolution { get; set; } = TimeResolution.Daily;
+    [Parameter] public DateOnly? From { get; set; }
+    [Parameter] public DateOnly? To { get; set; }
+    [Parameter] public string EmptyText { get; set; } = "—";
+    [Parameter] public int Height { get; set; } = 360;
+
+    private string[] Labels => EffectivePoints
+        .Select(p => Resolution == TimeResolution.Weekly
+            ? WeekLabel(p.Date)
+            : p.Date.ToString("yyyy-MM-dd", CultureInfo.CurrentUICulture))
+        .ToArray();
+
+    private List<ChartSeries> Series => new()
+  {
+    new ChartSeries { Name = T["Dashboard.Chart.Series.Count"], Data = EffectivePoints.Select(p => (double)p.Count).ToArray() }
+  };
+
+    // --------- Core: build effective series (daily or weekly) ----------
+    private IReadOnlyList<TrendPoint> EffectivePoints
+    {
+        get
+        {
+            var src = (Data ?? Array.Empty<TrendPoint>()).ToList();
+            if (src.Count == 0) return src;
+
+            // איחוד כפילויות יומיות (אם קיימות)
+            var daily = src
+                .GroupBy(p => p.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new TrendPoint(g.Key, g.Sum(x => x.Count)))
+                .ToList();
+
+            // טווח עבודה
+            var start = From ?? daily.First().Date;
+            var end = To ?? daily.Last().Date;
+
+            if (Resolution == TimeResolution.Weekly)
+            {
+                // קיבוץ לשבועות ISO (שבוע מתחיל ביום שני) + מילוי חורים
+                var weeklyBuckets = daily
+                    .Select(p => new { Week = WeekStart(p.Date), p.Count })
+                    .GroupBy(x => x.Week)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+
+                var ws = WeekStart(start);
+                var we = WeekStart(end);
+                var result = new List<TrendPoint>();
+                for (var d = ws; d <= we; d = d.AddDays(7))
+                    result.Add(new TrendPoint(d, weeklyBuckets.TryGetValue(d, out var c) ? c : 0));
+                return result;
+            }
+            else
+            {
+                // יומי עם מילוי חורים בין start..end
+                var map = daily.ToDictionary(p => p.Date, p => p.Count);
+                var result = new List<TrendPoint>();
+                for (var d = start; d <= end; d = d.AddDays(1))
+                    result.Add(new TrendPoint(d, map.TryGetValue(d, out var c) ? c : 0));
+                return result;
+            }
+        }
+    }
+
+    private static DateOnly WeekStart(DateOnly d)
+    {
+        // ISO-8601: Monday-week
+        var dow = (int)d.DayOfWeek; // Sunday=0
+        var iso = dow == 0 ? 7 : dow;
+        return d.AddDays(-(iso - 1));
+    }
+
+    private string WeekLabel(DateOnly weekStart)
+    {
+        var dt = weekStart.ToDateTime(TimeOnly.MinValue);
+        var week = ISOWeek.GetWeekOfYear(dt);
+        var year = ISOWeek.GetYear(dt);
+        return $"{T["Period.WeekLabel", week]} {year}";
+    }
+}

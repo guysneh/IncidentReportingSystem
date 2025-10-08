@@ -21,14 +21,14 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Star
     public sealed class StartUploadAttachmentCommandHandler : IRequestHandler<StartUploadAttachmentCommand, StartUploadAttachmentResponse>
     {
         private readonly IAttachmentParentReadService _parents;
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
         private readonly IAttachmentStorage _storage;
         private readonly IUnitOfWork _uow;
         private readonly ICurrentUserService _currentUser;
 
         public StartUploadAttachmentCommandHandler(
             IAttachmentParentReadService parents,
-            IAttachmentRepository repo,
+            IAttachmentsRepository repo,
             IAttachmentStorage storage,
             IUnitOfWork uow,
             ICurrentUserService currentUser)

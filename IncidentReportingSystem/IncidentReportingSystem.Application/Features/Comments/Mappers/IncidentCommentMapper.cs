@@ -1,17 +1,16 @@
-﻿using IncidentReportingSystem.Application.Features.Comments.Dtos;
-using IncidentReportingSystem.Domain.Entities;
+﻿using IncidentReportingSystem.Domain.Entities;
 
-namespace IncidentReportingSystem.Application.Features.Comments.Mappers;
-
-/// <summary>Mapping helpers for converting domain comments to DTOs.</summary>
-public static class IncidentCommentMapper
+namespace IncidentReportingSystem.Application.Features.Comments.Mappers
 {
-    public static CommentDto ToDto(this IncidentComment c) => new CommentDto
+    public static class IncidentCommentMappers
     {
-        Id = c.Id,
-        IncidentId = c.IncidentId,
-        UserId = c.UserId,
-        Text = c.Text,
-        CreatedAtUtc = c.CreatedAtUtc
-    };
+        public static CommentDto ToDto(this IncidentComment c) => new CommentDto
+        {
+            Id = c.Id,
+            IncidentId = c.IncidentId,
+            UserId = c.UserId,
+            Text = c.Text ?? string.Empty,
+            CreatedAtUtc = c.CreatedAtUtc
+        };
+    }
 }

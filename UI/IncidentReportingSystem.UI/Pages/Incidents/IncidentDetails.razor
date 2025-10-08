@@ -1,0 +1,1024 @@
+﻿@page "/incidents/{id}"
+@rendermode RenderMode.InteractiveServer
+
+@using System.Text.Json.Serialization
+@using IncidentReportingSystem.UI.Shared
+@using Microsoft.AspNetCore.Components.Web
+@using IncidentReportingSystem.UI.Core.Http
+@using IncidentReportingSystem.UI.Core.Incidents
+@using IncidentReportingSystem.UI.Core.Users
+@using IncidentReportingSystem.UI.Components.Comments
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject IApiClient Api
+@inject IIncidentService IncSvc
+@inject IUserDirectory UserDir
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject IncidentReportingSystem.UI.Core.Users.IUserDirectory UserDirectory
+@inject IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService Uploads
+@inject Microsoft.Extensions.Logging.ILogger<IncidentReportingSystem.UI.Pages.Incidents.IncidentDetails> Log
+@inject IJSRuntime JS
+@inject AuthState State
+
+
+<AuthGuard>
+    @if (_loading)
+    {
+        <div class="container py-5 text-center">
+            <div class="spinner-border" role="status" aria-label="@T["Dashboard.Loading"]"></div>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="container py-4">
+            <div class="alert alert-danger">
+                <strong>@T["Incidents.Error.Title"]</strong>
+                <div class="small mt-2">@_error</div>
+                <button class="btn btn-outline-secondary mt-3" @onclick="Reload">@T["Common.Reload"]</button>
+            </div>
+        </div>
+    }
+    else if (_incident is null)
+    {
+        <div class="container py-4">
+            <div class="alert alert-warning">@T["Incidents.Empty"]</div>
+        </div>
+    }
+    else
+    {
+        <div class="container py-3">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">← @T["Incidents.BackToList"]</button>
+            </div>
+
+            <div class="card p-3">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <h2 class="h4 mb-1">@_incident.Title</h2>
+                        <div class="text-muted small">
+                            <span class="me-3">ID: @_incident.Id</span>
+                            <span class="me-3">@T["Incidents.Col.Date"]: @_incident.CreatedAtUtc.ToLocalTime().ToString("g")</span>
+                            @if (!string.IsNullOrWhiteSpace(_incident.ReporterId))
+                            {
+                                <span class="me-3">
+                                    @T["IncidentDetails.Field.Reporter"]:
+                                    @(_incident.ReporterDisplayName ?? _incident.ReporterId)
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="@StatusClass(_incident.Status)">@_incident.Status</span>
+                        <span class="badge bg-secondary-subtle text-secondary border">@_incident.Severity</span>
+                        <span class="badge bg-light text-dark border">@_incident.Category</span>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="@TabBtn("details")" @onclick='() => SetTab("details")'>@T["IncidentDetails.Tab.Details"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("comments")" @onclick='() => SetTab("comments")'>@T["IncidentDetails.Tab.Comments"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("attachments")" @onclick='() => SetTab("attachments")'>@T["IncidentDetails.Tab.Attachments"]</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="@TabBtn("history")" @onclick='() => SetTab("history")'>@T["IncidentDetails.Tab.History"]</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3 border border-top-0 rounded-bottom">
+
+                    @if (_activeTab == "details")
+                    {
+                        <div>
+                            <h3 class="h6 text-uppercase text-muted mb-3">@T["IncidentDetails.Section.Overview"]</h3>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Title"]</div>
+                                    <div>@_incident.Title</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Status"]</div>
+                                    <div><span class="@StatusClass(_incident.Status)">@_incident.Status</span></div>
+                                    @if (_isAdmin)
+                                    {
+                                        <div class="d-flex align-items-center gap-2">
+                                            <select class="form-select form-select-sm" @bind="_statusToSet">
+                                                @foreach (var s in _allowedStatuses)
+                                                {
+                                                    <option value="@s">@s</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="OnChangeStatus">עדכון</button>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Severity"]</div>
+                                    <div>@_incident.Severity</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Category"]</div>
+                                    <div>@_incident.Category</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">@T["Incidents.Col.Reporter"]</div>
+                                    <div>@(_incident.ReporterDisplayName ?? ShortIdOrDash(_incident.ReporterId))</div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-label">@T["IncidentDetails.Field.Description"]</div>
+                                    <div class="text-prewrap">@(_incident.Description ?? T["IncidentDetails.NoDescription"])</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (_activeTab == "comments")
+                    {
+                        @* ====== Add Comment: Button → Toggle Form ====== *@
+                        <div class="mb-3">
+                            @if (_showAddComment)
+                            {
+                                <AddCommentForm
+                                    OnSubmit="OnAddCommentSubmit"
+                                    OnCancel="OnAddCommentCancel"
+                                    MaxLength="2000" />
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-primary" @onclick="() => _showAddComment = true">
+                                    @T["IncidentDetails.Comments.AddButton"]
+                                </button>
+                            }
+                        </div>
+
+                        @if (_commentsLoading)
+                        {
+                            <div class="py-3 text-center">
+                                <div class="spinner-border" role="status"></div>
+                            </div>
+                        }
+                        else if ((_comments?.Items?.Count ?? 0) == 0)
+                        {
+                            <div class="text-muted">@T["IncidentDetails.Comments.Empty"]</div>
+                        }
+                        else
+                        {
+                            <div class="list-group">
+                                @foreach (var c in _comments!.Items)
+                                {
+                                    <div class="list-group-item">
+                                        <div class="small text-muted">
+                                            @c.CreatedAtUtc.ToLocalTime().ToString("g")
+                                            @if (!string.IsNullOrWhiteSpace(c.UserId) || !string.IsNullOrWhiteSpace(c.UserDisplayName))
+                                            {
+                                                <span> • @(c.UserDisplayName ?? ShortIdOrDash(c.UserId))</span>
+                                            }
+                                        </div>
+                                        <div class="mt-1">@c.Text</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else if (_activeTab == "attachments")
+                    {
+                        if (_attachmentsLoading)
+                        {
+                            <div class="py-3 text-center">
+                                <div class="spinner-border" role="status"></div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Add button is always visible -->
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <button class="btn btn-sm btn-primary" @onclick="ToggleUploadAsync">
+                                    @(!_showUpload ? T["Attachments.Add"] : T["Attachments.Cancel"])
+                                </button>
+                                @if (_uploading)
+                                {
+                                    <span class="text-muted small">@T["Attachments.Uploading"]…</span>
+                                }
+                            </div>
+
+                            @if (_showUpload)
+                            {
+                                <div class="border rounded p-3 mb-3">
+                                    <div class="mb-2 small text-muted">
+                                        @T["Attachments.Hint.Allowed"]
+                                        @if (_allowedTypes?.Count > 0)
+                                        {
+                                            <span>: @string.Join(", ", _allowedTypes)</span>
+                                        }
+                                        <span class="ms-2">• @T["Attachments.Hint.MaxSize", (_maxSizeBytes / (1024 * 1024))]</span>
+                                    </div>
+
+                                    <input type="file"
+                                           accept="image/*,application/pdf"
+                                           style="position:absolute;left:-9999px;opacity:0;width:0;height:0"
+                                           @ref="_fileInput"
+                                           @onchange="OnFileChosen" />
+
+                                    <button class="btn btn-sm btn-primary" @onclick="OpenPicker">
+                                        @T["Attachments.Form.PickFile"]
+                                    </button>
+
+                                    @if (_uploading)
+                                    {
+                                        <span class="text-muted small ms-2">@T["Attachments.Uploading"]</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(_uploadError))
+                                    {
+                                        <div class="alert alert-danger mt-2 mb-0">@_uploadError</div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(_uploadError))
+                                    {
+                                        <div class="alert alert-danger mt-2 mb-0">
+                                            @_uploadError
+                                        </div>
+                                    }
+                                    <div class="form-text mt-2">@T["Attachments.Hint.SelectFile"]</div>
+                                </div>
+                            }
+
+                            @if ((_cards?.Count ?? 0) == 0)
+                            {
+                                <div class="text-muted">@T["IncidentDetails.Attachments.Empty"]</div>
+                            }
+                            else
+                            {
+                                <div class="attachments-grid">
+                                    @foreach (var card in _cards)
+                                    {
+                                        <div class="attachment-card">
+                                            <div class="thumb-wrap">
+                                                @if (card.IsImage)
+                                                {
+                                                    <a href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                        <img src="@card.ThumbUrl" alt="@card.FileName" loading="lazy" />
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="file-icon d-flex align-items-center justify-content-center"
+                                                       href="@card.DownloadHref" title="@card.FileName">
+                                                        <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="currentColor" opacity=".08" />
+                                                            <path d="M14 2v6h6" stroke="currentColor" fill="none" />
+                                                            <text x="6" y="18" font-size="8" font-family="sans-serif">PDF</text>
+                                                        </svg>
+                                                    </a>
+                                                }
+                                            </div>
+
+                                            <div class="mt-2 small text-truncate" title="@card.FileName">@card.FileName</div>
+
+                                            <div class="actions">
+                                                <a class="btn btn-sm btn-primary" href="@card.ViewUrl" target="_blank" rel="noopener">
+                                                    @T["Attachments.Open"]
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-secondary" href="@card.DownloadHref">
+                                                    @T["Attachments.Download"]
+                                                </a>
+                                            </div>
+                                            <div class="small text-muted mt-1">
+                                                @T["Attachments.UploadedBy"] @((card.UploadedByDisplayName ?? ShortIdOrDash(card.UploadedBy)) ?? "—")
+                                                • @card.CreatedAtLocal
+                                            </div>
+
+                                            @if (card.CanDelete)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => OnDeleteAttachment(card.Id)">
+                                                    @T["Attachments.Delete"]
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                    else if (_activeTab == "history")
+                    {
+                        <div class="text-muted">@T["IncidentDetails.History.NotWired"]</div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</AuthGuard>
+
+<style>
+    .status-pill{display:inline-block;padding:.25rem .5rem;border-radius:999px;font-size:.75rem;border:1px solid rgba(0,0,0,.1);background:#f8f9fa;color:#444}
+    .status-open{background:#e6ffed;border-color:#b7f5c6;color:#0b6c2e}
+    .status-closed{background:#ffecec;border-color:#ffc2c2;color:#8a1f1f}
+
+    .attachments-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}
+    .attachment-card{display:flex;flex-direction:column}
+    .attachment-card .thumb-wrap{aspect-ratio:4/3;background:#f8f9fa;border:1px solid rgba(0,0,0,.08);border-radius:.5rem;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .attachment-card img{width:100%;height:100%;object-fit:cover;display:block}
+    .attachment-card .actions{display:flex;gap:.5rem;margin-top:.5rem}
+</style>
+
+@code {
+    [Parameter] public string? id { get; set; }
+
+    private const string DetailsEndpoint = "IncidentReports/{0}";
+
+    private bool _loading = true;
+    private string? _error;
+    private string _activeTab = "details";
+
+    private IncidentDetailsDto? _incident;
+
+    private PagedResult<CommentDto>? _comments;
+    private PagedResult<AttachmentDto> _attachments;
+    private List<AttachmentCardVm> _cards;
+    private bool _commentsLoading;
+    private bool _attachmentsLoading;
+
+    private bool _showAddComment; // << control Add Comment form visibility
+
+    private readonly Dictionary<string, string> _urlCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string[] _allowedStatuses = new[] { "Open", "InProgress", "Closed" };
+    private string _statusToSet = "Open";
+    private bool _isAdmin => State.HasRole("Admin");
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task OpenFilePicker()
+    {
+        await _jsModule.InvokeVoidAsync("clickInput", _fileInput);
+    }
+    private async Task<List<AttachmentCardVm>> BuildCardsAsync(PagedResult<AttachmentDto> page, CancellationToken ct)
+    {
+        var cards = new List<AttachmentCardVm>(page.Items.Count);
+
+        foreach (var a in page.Items)
+        {
+            var key = a.Id.ToString();
+            if (!_urlCache.TryGetValue(key, out var url))
+            {
+                try
+                {
+                    url = await IncSvc.GetAttachmentDownloadUrlAsync(key, 15, ct);
+                    _urlCache[key] = url;
+                }
+                catch
+                {
+                    continue; // אם presign נכשל — דלג על הקובץ
+                }
+            }
+
+            cards.Add(new AttachmentCardVm
+            {
+                Id = Guid.Parse(a.Id),
+                FileName = a.FileName,
+                ContentType = a.ContentType,
+                ViewUrl = url,
+                DownloadHref = url,
+                UploadedBy = a.UploadedBy,                     // מגיע מה-API
+                UploadedByDisplayName = a.UploadedByDisplayName, // אולי ריק – נמלא אח"כ
+                CreatedAt = a.CreatedAt,                       // DateTimeOffset מ-API
+                CanDelete = a.CanDelete                        // מחושב בשרת
+            });
+        }
+
+        return cards;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        _incident = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException("Missing id.");
+
+            // details
+            var path = string.Format(DetailsEndpoint, id);
+            _incident = await Api.GetJsonAsync<IncidentDetailsDto>(path, CancellationToken.None);
+            if (!string.IsNullOrWhiteSpace(_incident.ReporterId) &&
+                string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
+            {
+                var map = await UserDirectory.ResolveDisplayNamesAsync(new[] { _incident.ReporterId }, CancellationToken.None);
+                if (map.TryGetValue(_incident.ReporterId, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                    _incident.ReporterDisplayName = dn;
+            }
+
+            // comments + attachments in parallel
+            _commentsLoading = _attachmentsLoading = true;
+            var cTask = IncSvc.GetCommentsAsync(id!, 0, 100);
+            var aTask = IncSvc.GetIncidentAttachmentsAsync(id!, 0, 100);
+
+            await Task.WhenAll(cTask, aTask);
+
+            _comments = cTask.Result; // PagedResult<CommentDto>
+            _attachments = aTask.Result;
+            _cards = await BuildCardsAsync(_attachments, CancellationToken.None);
+            // -------- Resolve display names (reporter + commenters) --------
+            await ResolveCommenterNamesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _commentsLoading = _attachmentsLoading = false;
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Reload() => _ = LoadAsync();
+
+    private string TabBtn(string name) => $"nav-link {(_activeTab == name ? "active" : "")}";
+    private void SetTab(string name) => _activeTab = name;
+
+    private static string StatusClass(string? status)
+        => (status?.Equals("open", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-open"
+         : (status?.Equals("closed", StringComparison.OrdinalIgnoreCase) ?? false) ? "status-pill status-closed"
+         : "status-pill";
+
+    private void GoBack()
+    {
+        var ret = Microsoft.AspNetCore.WebUtilities.QueryHelpers
+            .ParseQuery(new Uri(Nav.Uri).Query)
+            .TryGetValue("returnUrl", out var rv) ? (string)rv! : null;
+
+        if (!string.IsNullOrWhiteSpace(ret)) Nav.NavigateTo(ret, true);
+        else Nav.NavigateTo("/incidents", true);
+    }
+
+    private static string ShortIdOrDash(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return "—";
+        var s = id.Trim();
+        return s.Length > 8 ? s[..8] + "…" : s;
+    }
+
+    // === Add Comment: handlers ===
+    private async Task OnAddCommentSubmit(string text)
+    {
+        if (_incident is null || string.IsNullOrWhiteSpace(text)) return;
+
+        try
+        {
+            await IncSvc.AddCommentAsync(_incident.Id, text, CancellationToken.None);
+            await ReloadComments();     // refresh just the comments
+            _showAddComment = false;    // close form
+        }
+        catch
+        {
+            // ה-ProblemDetailsHandler שלך כבר מציג הודעות. אפשר להוסיף Toast ייעודי אם תרצה.
+        }
+        StateHasChanged();
+    }
+
+    private void OnAddCommentCancel()
+    {
+        _showAddComment = false;
+    }
+
+    private async Task ReloadComments()
+    {
+        if (_incident is null) return;
+        _commentsLoading = true;
+        try
+        {
+            _comments = await IncSvc.GetCommentsAsync(_incident.Id, 0, 100, CancellationToken.None);
+            await ResolveCommenterNamesAsync(); // ← חשוב גם אחרי POST
+        }
+        finally { _commentsLoading = false; }
+    }
+
+
+
+    private async Task ResolveCommenterNamesAsync()
+    {
+        // נרמול מזהים (Trim + Case-insensitive)
+        static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Reporter (לכותרת למעלה)
+        var rid = Norm(_incident?.ReporterId);
+        if (!string.IsNullOrWhiteSpace(rid) && string.IsNullOrWhiteSpace(_incident?.ReporterDisplayName))
+            ids.Add(rid!);
+
+        // Commenters
+        if (_comments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _comments.Items)
+            {
+                var uid = Norm(c.UserId);
+                if (!string.IsNullOrWhiteSpace(uid) && string.IsNullOrWhiteSpace(c.UserDisplayName))
+                    ids.Add(uid!);
+            }
+        }
+        if (_attachments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _attachments.Items)
+            {
+                var uid = Norm(c.UploadedBy);
+                if (!string.IsNullOrWhiteSpace(uid))
+                    ids.Add(uid!);
+            }
+        }
+
+        // בקשה אחת ל-Directory
+        IDictionary<string, string> rawMap;
+        try
+        {
+            rawMap = await UserDirectory.ResolveDisplayNamesAsync(ids, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[NAMES] Resolve failed: {ex.Message}");
+            return;
+        }
+
+        // נרמול המפה החוזרת
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in rawMap)
+        {
+            var k = Norm(kv.Key);
+            var v = Norm(kv.Value);
+            if (!string.IsNullOrWhiteSpace(k) && !string.IsNullOrWhiteSpace(v))
+                map[k!] = v!;
+        }
+
+        // לוג קטן כדי לראות כמות מזהים שנפתרו
+        Console.WriteLine($"[NAMES] asked={ids.Count}, resolved={map.Count}");
+
+        // עדכון ה-Reporter (אם היה חסר)
+        if (_incident is not null &&
+            string.IsNullOrWhiteSpace(_incident.ReporterDisplayName) &&
+            rid is not null &&
+            map.TryGetValue(rid, out var rname) &&
+            !string.IsNullOrWhiteSpace(rname))
+        {
+            _incident.ReporterDisplayName = rname;
+        }
+
+        // עדכון כותבי ההערות (immutable)
+        if (_comments?.Items is { Count: > 0 })
+        {
+            var updated = _comments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserDisplayName)) return c;
+
+                var uid = Norm(c.UserId);
+                if (string.IsNullOrWhiteSpace(uid)) return c;
+
+                // 1) מהמפה של ה-Directory
+                if (map.TryGetValue(uid!, out var name) && !string.IsNullOrWhiteSpace(name))
+                    return c with { UserDisplayName = name };
+
+                // 2) fallback: אם זה נראה כמו אימייל — השתמש בו כשם
+                if (uid!.Contains("@", StringComparison.Ordinal))
+                    return c with { UserDisplayName = uid };
+
+                // 3) אחרת, נשאיר null — ה-UI כבר מציג GUID fallback
+                return c;
+            }).ToList();
+
+            _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, updated);
+        }
+        if (_attachments?.Items is { Count: > 0 })
+        {
+            var updated = _attachments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UploadedByDisplayName)) return c;
+
+                var uid = Norm(c.UploadedBy);
+                if (string.IsNullOrWhiteSpace(uid)) return c;
+
+                // 1) מהמפה של ה-Directory
+                if (map.TryGetValue(uid!, out var name) && !string.IsNullOrWhiteSpace(name))
+                    return c with { UploadedByDisplayName = name };
+
+                // 2) fallback: אם זה נראה כמו אימייל — השתמש בו כשם
+                if (uid!.Contains("@", StringComparison.Ordinal))
+                    return c with { UploadedByDisplayName = uid };
+
+                // 3) אחרת, נשאיר null — ה-UI כבר מציג GUID fallback
+                return c;
+            }).ToList();
+
+            _attachments = new PagedResult<AttachmentDto>(_attachments.Total, _attachments.Skip, _attachments.Take, updated);
+        }
+        if (_cards is { Count: > 0 })
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (string.IsNullOrWhiteSpace(card.UploadedByDisplayName) && !string.IsNullOrWhiteSpace(card.UploadedBy))
+                {
+                    if (map.TryGetValue(card.UploadedBy, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                        _cards[i] = new AttachmentCardVm
+                        {
+                            Id = card.Id,
+                            FileName = card.FileName,
+                            ContentType = card.ContentType,
+                            ViewUrl = card.ViewUrl,
+                            DownloadHref = card.DownloadHref,
+                            UploadedBy = card.UploadedBy,
+                            UploadedByDisplayName = dn,
+                            CreatedAt = card.CreatedAt,
+                            CanDelete = card.CanDelete
+                        };
+                }
+            }
+        }
+
+    }
+
+    // מנרמל מזהה משתמש לפורמט שמתאים יותר ל-Directory
+    private static string? NormalizeUserIdForDirectory(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var s = raw.Trim();
+
+        // אם יש מפריד זהויות (auth0|, azuread| וכו') – קח את הצד הימני
+        var pipeIdx = s.LastIndexOf('|');
+        if (pipeIdx >= 0 && pipeIdx < s.Length - 1)
+            s = s[(pipeIdx + 1)..].Trim();
+
+        // סילוק prefixים נפוצים
+        if (s.StartsWith("oid:", StringComparison.OrdinalIgnoreCase)) s = s[4..].Trim();
+        if (s.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) s = s[5..].Trim();
+
+        // אם זה אימייל – נעדיף lower (Directoryים רבים מאחסנים UPN ב-lower)
+        if (s.Contains('@')) s = s.ToLowerInvariant();
+
+        return string.IsNullOrWhiteSpace(s) ? null : s;
+    }
+
+    private async Task ResolveAllDisplayNamesAsync()
+    {
+        // אוספים את כל המזהים המקוריים שצריך לפתור (Reporter + Commenters)
+        var originals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(_incident?.ReporterId) &&
+            string.IsNullOrWhiteSpace(_incident?.ReporterDisplayName))
+        {
+            originals.Add(_incident!.ReporterId!);
+        }
+
+        if (_comments?.Items is { Count: > 0 })
+        {
+            foreach (var c in _comments.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserId) && string.IsNullOrWhiteSpace(c.UserDisplayName))
+                    originals.Add(c.UserId!);
+            }
+        }
+
+        if (originals.Count == 0) return;
+
+        // נרמול + מיפוי חזרה: original → normalized
+        var origToNorm = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var normalizedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var id in originals)
+        {
+            var norm = NormalizeUserIdForDirectory(id);
+            if (norm is null) continue;
+            origToNorm[id] = norm;
+            normalizedSet.Add(norm);
+        }
+
+        if (normalizedSet.Count == 0) return;
+
+        // קריאה אחת ל-Directory עם מזהים מנורמלים
+        IDictionary<string, string> rawMap;
+        try
+        {
+            rawMap = await UserDirectory.ResolveDisplayNamesAsync(normalizedSet, CancellationToken.None);
+        }
+        catch
+        {
+            // אם ה-Directory נפל — לא נשבור UI
+            rawMap = new Dictionary<string, string>();
+        }
+
+        // נרמול מפת התשובה (Case-insensitive) – key/value Trim
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in rawMap)
+        {
+            var k = NormalizeUserIdForDirectory(kv.Key); // חשוב! כדי להתאים לאותו כלל
+            var v = kv.Value?.Trim();
+            if (!string.IsNullOrWhiteSpace(k) && !string.IsNullOrWhiteSpace(v))
+                map[k!] = v!;
+        }
+
+        // פונקציית עזר: מ-id "מקורי" → DisplayName (אם נמצא ב-map אחרי נרמול)
+        string? ResolveFromMap(string? originalId)
+        {
+            var norm = NormalizeUserIdForDirectory(originalId);
+            if (norm is null) return null;
+            return map.TryGetValue(norm, out var name) && !string.IsNullOrWhiteSpace(name) ? name : null;
+        }
+
+        // עדכון ה-Reporter בראש הדף
+        if (_incident is not null &&
+            string.IsNullOrWhiteSpace(_incident.ReporterDisplayName))
+        {
+            var dn = ResolveFromMap(_incident.ReporterId);
+            if (!string.IsNullOrWhiteSpace(dn))
+                _incident.ReporterDisplayName = dn;
+        }
+
+        // עדכון כותבי ההערות (immutable list)
+        if (_comments?.Items is { Count: > 0 })
+        {
+            var updated = _comments.Items.Select(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(c.UserDisplayName)) return c;
+                var dn = ResolveFromMap(c.UserId);
+
+                // Fallback סביר: אם לא נמצא שם אבל ה-id נראה כמו אימייל, נציג אותו כשם תצוגה
+                if (string.IsNullOrWhiteSpace(dn) && !string.IsNullOrWhiteSpace(c.UserId) && c.UserId.Contains('@'))
+                    dn = c.UserId;
+
+                return string.IsNullOrWhiteSpace(dn) ? c : c with { UserDisplayName = dn };
+            }).ToList();
+
+            _comments = new PagedResult<CommentDto>(_comments.Total, _comments.Skip, _comments.Take, updated);
+        }
+    }
+
+
+    // UI VM for attachments
+    private sealed class AttachmentCardVm
+    {
+        public required Guid Id { get; init; }
+        public required string FileName { get; init; }
+        public required string ContentType { get; init; }
+        public bool IsImage => ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true;
+
+        public required string ViewUrl { get; init; }
+        public string ThumbUrl => ViewUrl;
+        public required string DownloadHref { get; init; }
+
+        public string? UploadedBy { get; init; }
+        public string? UploadedByDisplayName { get; set; } // נמלא דרך Directory
+        public DateTimeOffset CreatedAt { get; init; }
+        public string CreatedAtLocal => CreatedAt.ToLocalTime().ToString("g");
+        public bool CanDelete { get; init; }
+    }
+
+    // -------- Server contracts (DTOs used by this page) --------
+
+    public sealed class IncidentDetailsDto
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = default!;
+        [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("status")] public string Status { get; set; } = "open";
+        [JsonPropertyName("severity")] public string Severity { get; set; } = "";
+        [JsonPropertyName("category")] public string Category { get; set; } = "";
+        [JsonPropertyName("createdAt")] public DateTime CreatedAtUtc { get; set; }
+        [JsonPropertyName("description")] public string? Description { get; set; }
+        [JsonPropertyName("reporterId")] public string? ReporterId { get; set; }
+        [JsonPropertyName("reporterDisplayName")] public string? ReporterDisplayName { get; set; }
+    }
+
+    // Upload state
+    private bool _showUpload;
+    private bool _uploading;
+    private string? _uploadError;
+    private long _maxSizeBytes = 10 * 1024 * 1024; // default until constraints fetched
+    private HashSet<string> _allowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/gif", "application/pdf" };
+
+    private async Task ToggleUploadAsync()
+    {
+        _uploadError = null;
+        _showUpload = !_showUpload;
+        if (_showUpload)
+        {
+            try
+            {
+                var c = await Uploads.GetConstraintsAsync(CancellationToken.None);
+                _maxSizeBytes = c.MaxSizeBytes > 0 ? c.MaxSizeBytes : _maxSizeBytes;
+                _allowedTypes = new HashSet<string>(c.AllowedContentTypes ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning(ex, "Failed to load attachment constraints.");
+                // keep defaults
+            }
+        }
+    }
+
+
+    private async Task ReloadAttachments()
+    {
+        if (_incident is null) return;
+        _attachmentsLoading = true;
+        try
+        {
+            var attachmentsPage = await IncSvc.GetIncidentAttachmentsAsync(_incident.Id, 0, 100, CancellationToken.None);
+            _attachments = attachmentsPage;
+            _cards = await BuildCardsAsync(attachmentsPage, CancellationToken.None);
+        }
+        finally
+        {
+            _attachmentsLoading = false;
+        }
+    }
+
+    private ElementReference _fileInput;
+
+    private async Task OnFileSelected(ChangeEventArgs _)
+    {
+        if (_incident is null) return;
+
+        _uploadError = null;
+
+        // אפשר עדיין להשתמש ב-IBrowserFile לקבלת מטא-דאטה (גודל/סוג) לצורך ולידציות,
+        // אבל כדי להעלות מהדפדפן נשתמש ב-<input> דרך JS.
+        // אם אתה רוצה גם גישה ל-IBrowserFile: תוכל להחליף ל-<InputFile OnChange="OnFileSelectedInputFile">
+        // אבל כאן נשארים פשוטים עם <input>.
+
+        try
+        {
+            _uploading = true;
+            StateHasChanged();
+
+            // 1) קבלת SAS + כותרות מה-API שלך
+            var fileName = "selected-from-input"; // לא חובה ל-Start אם כבר מעבירים מטאדותה צד שרת
+            var contentType = "application/octet-stream"; // או שתקרא את זה מה-IBrowserFile אם שילבת InputFile
+            var start = await Uploads.StartIncidentUploadAsync(
+                Guid.Parse(_incident.Id), fileName, contentType, CancellationToken.None);
+
+            // 2) קריאה ל-JS להעלאה ישירה ל-SAS
+            await JS.InvokeVoidAsync("blobUpload.uploadFileToSas",
+                _fileInput, start.UploadUrl, start.Method, start.Headers);
+
+            // 3) השלמה ב-API
+            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
+
+            // 4) ריענון רשימת קבצים וסגירת ה-UI
+            await ReloadAttachments();
+            _showUpload = false;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Attachment upload (browser→SAS) failed.");
+            _uploadError = T["Attachments.Error.UploadFailed"];
+            // נסה לבטל רק אם התחלת
+            // (יש לך attachmentId מה-Start)
+            // try { await Uploads.AbortAsync(start.AttachmentId, CancellationToken.None); } catch {}
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IJSObjectReference? _jsModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // טוען את מודול ה-JS מה-wwwroot
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+        }
+    }
+
+    private async Task OpenPicker()
+    {
+        if (_jsModule is null)
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+
+        await _jsModule.InvokeVoidAsync("clickInput", _fileInput);
+    }
+
+
+    private async Task OnFileChosen(ChangeEventArgs _)
+    {
+        if (_incident is null) return;
+
+        _uploadError = null;
+        try
+        {
+            _uploading = true;
+            StateHasChanged();
+
+            if (_jsModule is null)
+                _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./lib/js/blobUpload.js");
+
+            // 1) מביאים מטא-דאטה אמיתית מהדפדפן (בלי IBrowserFile ובלי להעביר אותו ל-JS)
+            var meta = await _jsModule.InvokeAsync<FileMeta?>("getSelectedFileMeta", _fileInput);
+            if (meta is null || meta.Value.Size <= 0)
+            {
+                _uploadError = "לא נבחר קובץ או שהקובץ ריק.";
+                return;
+            }
+
+            var fileName = meta.Value.Name ?? "upload.bin";
+            var contentType = string.IsNullOrWhiteSpace(meta.Value.Type) ? "application/octet-stream" : meta.Value.Type!;
+            var size = meta.Value.Size;
+
+            // 2) ולידציות בצד לקוח לפי הקונסטריינטים שקראת קודם (אם לא – אפשר להשאיר ברירת מחדל)
+            if (_allowedTypes.Count > 0 && !_allowedTypes.Contains(contentType))
+            {
+                _uploadError = T["Attachments.Error.NotAllowedType"];
+                return;
+            }
+            if (size > _maxSizeBytes)
+            {
+                _uploadError = T["Attachments.Error.TooLarge", (_maxSizeBytes / (1024 * 1024)).ToString()];
+                return;
+            }
+
+            // 3) start – שולחים בדיוק את מה שה-API צריך (שם, סוג, גודל > 0)
+            var start = await Uploads.StartIncidentUploadAsync(
+                Guid.Parse(_incident.Id), fileName, contentType, CancellationToken.None);
+
+            // לוודא שהכותרות הן string->string (לא IEnumerable וכו')
+            var headers = start.Headers?.ToDictionary(kv => kv.Key, kv => kv.Value)
+                          ?? new Dictionary<string, string>();
+
+            // 4) העלאה לדפדפן ← SAS
+            await _jsModule.InvokeVoidAsync("uploadFileToSas",
+                _fileInput,
+                start.UploadUrl,
+                string.IsNullOrWhiteSpace(start.Method) ? "PUT" : start.Method,
+                headers);
+
+            // 5) complete
+            await Uploads.CompleteAsync(start.AttachmentId, CancellationToken.None);
+
+            // 6) רענון תצוגה, ניקוי input, סגירת UI
+            await ReloadAttachments();
+            _showUpload = false;
+
+            // אפס את הבחירה כדי לאפשר העלאת אותו קובץ שוב
+            await JS.InvokeVoidAsync("eval", "const i=document.querySelector('input[type=file][style*=\"display:none\"]'); if(i) i.value='';");
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Attachment upload (browser→SAS) failed.");
+            _uploadError = T["Attachments.Error.UploadFailed"];
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDeleteAttachment(Guid id)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", T["Attachments.DeleteFile"])) return;
+        try
+        {
+            await Uploads.DeleteAsync(id, CancellationToken.None);
+            await ReloadAttachments();
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Delete attachment failed.");
+        }
+    }
+
+    private async Task OnChangeStatus()
+    {
+        try
+        {
+            await IncSvc.ChangeStatusAsync(Guid.Parse(_incident!.Id), _statusToSet, CancellationToken.None);
+            _incident.Status = _statusToSet; // עדכון מקומי
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Change status failed.");
+            // Toast/Alert...
+        }
+    }
+
+    private struct FileMeta
+    {
+        public string? Name { get; set; }
+        public string? Type { get; set; }
+        public long Size { get; set; }
+    }
+}
+

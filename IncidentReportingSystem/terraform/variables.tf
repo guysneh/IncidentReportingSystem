@@ -98,7 +98,7 @@ variable "ai_retention_days" {
 
 variable "jwt_expiry_minutes" {
   type        = number
-  default     = 60
+  default     = 6000
   description = "JWT token expiry in minutes"
   validation {
     condition     = var.jwt_expiry_minutes >= 1 && var.jwt_expiry_minutes <= 1440

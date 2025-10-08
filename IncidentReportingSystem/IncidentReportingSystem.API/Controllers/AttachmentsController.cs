@@ -10,6 +10,7 @@ using IncidentReportingSystem.Application.Features.Attachments;
 using IncidentReportingSystem.Application.Features.Attachments.Commands;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.AbortUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.CompleteUploadAttachment;
+using IncidentReportingSystem.Application.Features.Attachments.Commands.DeleteAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Commands.StartUploadAttachment;
 using IncidentReportingSystem.Application.Features.Attachments.Dtos;
 using IncidentReportingSystem.Application.Features.Attachments.Queries;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -162,9 +164,8 @@ namespace IncidentReportingSystem.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Download(Guid attachmentId, CancellationToken cancellationToken)
         {
-            // Require a valid signed URL when caller is anonymous
+            // Mode: auth or signed URL
             var isAuthenticated = User?.Identity?.IsAuthenticated == true;
-
             if (!isAuthenticated)
             {
                 var expRaw = Request.Query[_signedUrls.ExpQueryName].FirstOrDefault();
@@ -182,43 +183,79 @@ namespace IncidentReportingSystem.API.Controllers
                 if (!_signedUrls.IsValid(attachmentId, expUnix, sigRaw))
                     return Unauthorized(new ProblemDetails { Title = "Invalid signature." });
             }
-            // signed URL validation (unchanged) using _signedUrls ...
 
-            var resp = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken).ConfigureAwait(false);
-            var etagValue = string.IsNullOrWhiteSpace(resp.ETag) ? null : new EntityTagHeaderValue(resp.ETag);
+            var meta = await _sender.Send(new GetAttachmentMetadataQuery(attachmentId), cancellationToken);
+            if (meta is null || meta.Status != AttachmentStatus.Completed)
+                return NotFound();
 
-            var reqHeaders = Request.GetTypedHeaders();
-            if (etagValue != null && reqHeaders.IfNoneMatch != null && reqHeaders.IfNoneMatch.Any(tag => tag.Tag == etagValue.Tag))
+            var opened = await _sender.Send(new OpenAttachmentStreamQuery(attachmentId), cancellationToken);
+            if (opened?.Stream is null) return NotFound();
+
+            var normalizedEtag = NormalizeEtag(opened.ETag)
+                ?? WeakEtagFrom(meta.Id, meta.Size ?? 0, meta.CompletedAt ?? meta.CreatedAt);
+            var etagHeader = new EntityTagHeaderValue(normalizedEtag);
+
+            var lastModified = opened.LastModifiedUtc ?? meta.CompletedAt ?? meta.CreatedAt;
+            var fileName = opened.FileName ?? meta.FileName ?? "download.bin";
+            var contentType = string.IsNullOrWhiteSpace(opened.ContentType) ? "application/octet-stream" : opened.ContentType;
+
+            var reqEtags = Request.GetTypedHeaders().IfNoneMatch;
+            if (reqEtags != null && reqEtags.Any(x => string.Equals(x.Tag.ToString(), etagHeader.Tag.ToString(), StringComparison.Ordinal)))
             {
-                var r = Response.GetTypedHeaders();
-                r.ETag = etagValue;
-                r.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
+                var th = Response.GetTypedHeaders();
+                th.ETag = etagHeader;
+                th.LastModified = lastModified;
+                th.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
 
-                // audit 304 without ILogger in controller
-                var isAuthed304 = User?.Identity?.IsAuthenticated == true;
-                var userId304 = isAuthed304
-                    ? User!.Claims!.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
-                    : null;
+                // audit: notModified=true
+                _audit.AttachmentDownloaded(
+                    attachmentId,
+                    isAuthenticated ? "auth" : "signed",
+                    notModified: true,
+                    userId: isAuthenticated ? User.RequireUserId().ToString() : null);
 
-                _audit.AttachmentDownloaded(attachmentId, isAuthed304 ? "auth" : "signed", notModified: true, userId: userId304);
                 return StatusCode(StatusCodes.Status304NotModified);
             }
 
+            var isImage = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+            var cd = new ContentDispositionHeaderValue(isImage ? "inline" : "attachment") { FileNameStar = fileName };
+            Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
+
+            // Cache headers (+ ETag)
             var headers = Response.GetTypedHeaders();
-            if (etagValue != null) headers.ETag = etagValue;
+            headers.ETag = etagHeader;
+            headers.LastModified = lastModified;
             headers.CacheControl = new CacheControlHeaderValue { Private = true, MaxAge = TimeSpan.FromMinutes(5) };
 
-            // audit 200 without ILogger in controller
-            var isAuthed = User?.Identity?.IsAuthenticated == true;
-            var userId = isAuthed
-                ? User!.Claims!.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value
-                : null;
+            // audit: notModified=false
+            _audit.AttachmentDownloaded(
+                attachmentId,
+                isAuthenticated ? "auth" : "signed",
+                notModified: false,
+                userId: isAuthenticated ? User.RequireUserId().ToString() : null);
 
-            _audit.AttachmentDownloaded(attachmentId, isAuthed ? "auth" : "signed", notModified: false, userId: userId);
+            return File(
+                fileStream: opened.Stream,
+                contentType: contentType,
+                fileDownloadName: null,
+                lastModified: lastModified,
+                entityTag: etagHeader,
+                enableRangeProcessing: true
+            );
 
-            return File(resp.Stream, resp.ContentType, fileDownloadName: resp.FileName);
+            static string? NormalizeEtag(string? raw)
+                => string.IsNullOrWhiteSpace(raw)
+                    ? null
+                    : (EntityTagHeaderValue.TryParse(raw, out _) ? raw : $"\"{raw}\"");
+
+            static string WeakEtagFrom(Guid id, long size, DateTimeOffset stamp)
+            {
+                var material = Encoding.UTF8.GetBytes($"{id:N}|{size}|{stamp.UtcTicks}");
+                using var sha = SHA256.Create();
+                var hash = Convert.ToHexString(sha.ComputeHash(material)).ToLowerInvariant();
+                return $"W/\"{hash}\"";
+            }
         }
-
 
         /// <summary>Get attachment constraints (allowed content types, max size, etc.).</summary>
         [HttpGet("constraints")]
@@ -388,5 +425,13 @@ namespace IncidentReportingSystem.API.Controllers
 
             return Ok(result);
         }
+
+        [HttpDelete("{id:guid}")]
+        [Authorize]
+        public async Task<IActionResult> Delete(Guid id, [FromServices] IAuthorizationService authz)
+        {
+            await _sender.Send(new DeleteAttachmentCommand(id));
+            return NoContent();
         }
+    }
 }

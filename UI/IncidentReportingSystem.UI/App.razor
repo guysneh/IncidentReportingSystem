@@ -1,14 +1,20 @@
-﻿@using Microsoft.AspNetCore.Components.Routing
+﻿@using IncidentReportingSystem.UI.Pages.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Nav
+@inject IncidentReportingSystem.UI.Core.Auth.IAuthService Auth
+@inject Microsoft.Extensions.Logging.ILogger<App> Logger
 
+ <CascadingAuthenticationState>
+    <AuthHydrator />
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)" />
     </Found>
-
     <NotFound>
-        <LayoutView Layout="@typeof(Shared.MainLayout)">
-            <MudText Typo="Typo.h5">Sorry, there's nothing at this address.</MudText>
+        <LayoutView Layout="@typeof(IncidentReportingSystem.UI.Shared.MainLayout)">
+            <!-- Optional: NotFound content -->
         </LayoutView>
     </NotFound>
 </Router>
+</CascadingAuthenticationState>

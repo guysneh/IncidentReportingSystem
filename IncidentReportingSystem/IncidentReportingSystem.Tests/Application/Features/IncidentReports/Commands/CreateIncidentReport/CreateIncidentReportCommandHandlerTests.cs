@@ -1,7 +1,8 @@
+using IncidentReportingSystem.Application.Abstractions.Identity;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Domain.Entities;
 using IncidentReportingSystem.Tests.Helpers;
-
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Moq;
 
 using Xunit;
@@ -16,7 +17,10 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
         {
             // Arrange
             var mockRepo = TestMockFactory.CreateIncidentReportRepository();
-            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object);
+            var mockCurrentUser = new Mock<ICurrentUser>();
+            var mockUserId = Guid.NewGuid();
+            mockCurrentUser.SetupGet(user => user.UserId).Returns(mockUserId.ToString());
+            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object, mockCurrentUser.Object);
             var command = TestMockFactory.CreateValidCreateCommand();
 
             // Act
@@ -26,7 +30,7 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
             Assert.NotNull(result);
             Assert.Equal(command.Description, result.Description);
             Assert.Equal(command.Location, result.Location);
-            Assert.Equal(command.ReporterId, result.ReporterId);
+            Assert.Equal(mockUserId, result.ReporterId);
         }
 
         [Fact]
@@ -35,7 +39,10 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
         {
             // Arrange
             var mockRepo = TestMockFactory.CreateIncidentReportRepository();
-            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object);
+            var mockCurrentUser = new Mock<ICurrentUser>();
+            var mockUserId = Guid.NewGuid();
+            mockCurrentUser.SetupGet(user => user.UserId).Returns(mockUserId.ToString());
+            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object, mockCurrentUser.Object);
             var command = TestMockFactory.CreateValidCreateCommand();
 
             // Act
@@ -51,7 +58,10 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
         {
             // Arrange
             var repository = TestMockFactory.CreateIncidentReportRepository();
-            var handler = new CreateIncidentReportCommandHandler(repository.Object);
+            var mockCurrentUser = new Mock<ICurrentUser>();
+            var mockUserId = Guid.NewGuid();
+            mockCurrentUser.SetupGet(user => user.UserId).Returns(mockUserId.ToString());
+            var handler = new CreateIncidentReportCommandHandler(repository.Object, mockCurrentUser.Object);
             var command = TestMockFactory.CreateValidCreateCommand();
 
             using var cts = new CancellationTokenSource();
@@ -72,11 +82,12 @@ namespace IncidentReportingSystem.Tests.Application.Features.IncidentReports.Com
             mockRepo.Setup(r => r.SaveAsync(It.IsAny<IncidentReport>(), It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new InvalidOperationException("DB error"));
 
-            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object);
+            var mockCurrentUser = new Mock<ICurrentUser>();
+            var handler = new CreateIncidentReportCommandHandler(mockRepo.Object, mockCurrentUser.Object);
             var command = TestMockFactory.CreateValidCreateCommand();
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 handler.Handle(command, CancellationToken.None));
         }
     }

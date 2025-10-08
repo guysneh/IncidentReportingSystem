@@ -41,10 +41,10 @@ namespace IncidentReportingSystem.Tests.Auth
         {
             var principal = BuildPrincipal(Array.Empty<(string, string)>());
 
-            Assert.Throws<InvalidOperationException>(() => principal.RequireUserId());
+            Assert.Throws<UnauthorizedAccessException>(() => principal.RequireUserId());
 
             var bad = BuildPrincipal(new[] { ("userId", "not-a-guid") });
-            Assert.Throws<InvalidOperationException>(() => bad.RequireUserId());
+            Assert.Throws<UnauthorizedAccessException>(() => bad.RequireUserId());
         }
 
         [Fact]

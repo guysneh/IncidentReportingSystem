@@ -1,0 +1,137 @@
+﻿@page "/dashboard"
+@using MudBlazor
+@using IncidentReportingSystem.UI.Core.Dashboard
+@using IncidentReportingSystem.UI.Components.Dashboard
+@inject DashboardState State
+@inject IAppTexts T
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>@T["Dashboard.Title"]</PageTitle>
+
+<DashboardFilters Query="State.Query" OnApply="ApplyFilters" OnExport="ExportCsv" />
+
+@if (State.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+        <MudText>@T["Dashboard.Error"]</MudText>
+        <div class="mt-2"><code>@State.Error</code></div>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="Reload" StartIcon="@Icons.Material.Filled.Refresh">
+            @T["Common.Reload"]
+        </MudButton>
+    </MudAlert>
+}
+else if (State.IsLoading || State.Overview is null)
+{
+    <MudText Typo="Typo.subtitle1">@T["Dashboard.Loading"]</MudText>
+    <MudGrid GutterSize="GutterSize.Small" Class="mt-2">
+        @for (var i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" lg="4"><MudSkeleton Height="220px" /></MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    var o = State.Overview;
+
+    <MudGrid GutterSize="GutterSize.Small">
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-3 d-flex align-center justify-space-between">
+                <MudText Typo="Typo.h6">@T["Dashboard.Total"]</MudText>
+                <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Text="@o.TotalIncidents.ToString()" />
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudCard Class="chart-block">
+                <MudCardHeader Class="chart-header">
+                    <div class="chart-title">
+                        <MudIcon Icon="@Icons.Material.Filled.Timeline" />
+                        <MudText Typo="Typo.subtitle2">@T["Dashboard.Chart.Timeseries"]</MudText>
+                    </div>
+                </MudCardHeader>
+                <MudCardContent>
+                    <TimeSeriesRawChart Data="State.Trend"
+                                        Resolution="State.Query.Resolution"
+                                        SeriesLabel="@T["Dashboard.Chart.Series.Count"]"
+                                        Height="380" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12">
+            <DualChartBlock Title="@T["Dashboard.Chart.ByStatus"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.Timeline"
+                            Data="o.ByStatus"
+                            Height="380"
+                            DefaultMode="0" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <DualChartBlock Title="@T["Dashboard.Chart.BySeverity"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.Warning"
+                            Data="o.BySeverity"
+                            Height="380"
+                            DefaultMode="0" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <DualChartBlock Title="@T["Dashboard.Chart.ByCategory"]"
+                            EmptyText="@T["Dashboard.Empty"]"
+                            HeaderIcon="@Icons.Material.Filled.PieChart"
+                            Data="o.ByCategory"
+                            Height="380"
+                            DefaultMode="1" />
+        </MudItem>
+
+    </MudGrid>
+}
+
+@code {
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnStateChanged;
+        _cts = new CancellationTokenSource();
+        await State.LoadAsync(_cts.Token);
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ApplyFilters(DashboardQuery q)
+    {
+        _cts?.Cancel(); _cts?.Dispose(); _cts = new CancellationTokenSource();
+        await State.ApplyAsync(q, _cts.Token);
+    }
+
+    private async Task Reload()
+    {
+        _cts?.Cancel(); _cts?.Dispose(); _cts = new CancellationTokenSource();
+        await State.LoadAsync(_cts.Token);
+    }
+
+    private async Task ExportCsv()
+    {
+        var lines = new List<string> { "date,count" };
+        foreach (var p in State.Trend) lines.Add($"{p.Date:yyyy-MM-dd},{p.Count}");
+        var csv = string.Join("\n", lines);
+
+        var from = State.Query.From?.ToString("yyyyMMdd") ?? "all";
+        var to = State.Query.To?.ToString("yyyyMMdd") ?? "all";
+        var per = State.Query.Resolution == TimeResolution.Weekly ? "weekly" : "daily";
+        var file = $"incidents_timeseries_{from}-{to}_{per}.csv";
+
+        await JS.InvokeVoidAsync("irsCharts.downloadCsv", file, csv);
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnStateChanged;
+        _cts?.Cancel(); _cts?.Dispose();
+    }
+}

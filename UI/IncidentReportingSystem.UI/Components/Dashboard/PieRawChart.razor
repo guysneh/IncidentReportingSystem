@@ -1,0 +1,36 @@
+﻿@using IncidentReportingSystem.UI.Core.Dashboard
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+    <canvas id="@_id"></canvas>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<KeyCount>? Data { get; set; }
+    [Parameter] public int Height { get; set; } = 360;
+
+    private readonly string _id = $"pie_{Guid.NewGuid():N}";
+    private bool _rendered;
+
+    private string[] Labels => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Key).ToArray();
+    private int[] Values => (Data ?? Array.Empty<KeyCount>()).Select(x => x.Count).ToArray();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _rendered = true;
+        try { await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values); } catch { }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_rendered) return;
+        try { await JS.InvokeVoidAsync("irsCharts.upsertPie", _id, Labels, Values); } catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("irsCharts.destroy", _id); } catch { }
+    }
+}

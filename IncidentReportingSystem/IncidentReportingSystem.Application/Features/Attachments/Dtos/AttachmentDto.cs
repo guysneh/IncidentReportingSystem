@@ -17,5 +17,6 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Dtos
         public bool HasThumbnail { get; init; }
         public bool CanDelete { get; init; }
         public bool CanDownload { get; init; }
+        public string? UploadedBy { get; set; }    
     }
 }

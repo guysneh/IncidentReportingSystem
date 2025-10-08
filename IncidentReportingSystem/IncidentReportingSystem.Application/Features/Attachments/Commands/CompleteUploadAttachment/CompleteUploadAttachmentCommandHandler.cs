@@ -23,7 +23,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
     /// </summary>
     public sealed class CompleteUploadAttachmentCommandHandler : IRequestHandler<CompleteUploadAttachmentCommand>
     {
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
         private readonly IAttachmentPolicy _policy;
         private readonly IAttachmentStorage _storage;
         private readonly IUnitOfWork _uow;
@@ -32,7 +32,7 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands
         private readonly IImageSanitizer _imageSanitizer;
 
         public CompleteUploadAttachmentCommandHandler(
-            IAttachmentRepository repo,
+            IAttachmentsRepository repo,
             IAttachmentPolicy policy,
             IAttachmentStorage storage,
             IUnitOfWork uow,

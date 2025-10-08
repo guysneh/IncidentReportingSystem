@@ -23,7 +23,7 @@ namespace IncidentReportingSystem.Tests.Attachments
         public async Task When_Sanitize_Enabled_And_Image_File_Size_Is_Updated_To_Sanitized_Length()
         {
             var att = new Attachment(AttachmentParentType.Incident, Guid.NewGuid(), "a.jpg", "image/jpeg", "incidents/x/a.jpg", Guid.NewGuid());
-            var repo = new Mock<IAttachmentRepository>();
+            var repo = new Mock<IAttachmentsRepository>();
             repo.Setup(r => r.GetAsync(att.Id, It.IsAny<CancellationToken>())).ReturnsAsync(att);
 
             var policy = new Mock<IAttachmentPolicy>();
@@ -57,7 +57,7 @@ namespace IncidentReportingSystem.Tests.Attachments
         public async Task When_Sanitize_Disabled_Size_Remains_From_StorageProps()
         {
             var att = new Attachment(AttachmentParentType.Incident, Guid.NewGuid(), "a.png", "image/png", "incidents/x/a.png", Guid.NewGuid());
-            var repo = new Mock<IAttachmentRepository>();
+            var repo = new Mock<IAttachmentsRepository>();
             repo.Setup(r => r.GetAsync(att.Id, It.IsAny<CancellationToken>())).ReturnsAsync(att);
 
             var policy = new Mock<IAttachmentPolicy>();

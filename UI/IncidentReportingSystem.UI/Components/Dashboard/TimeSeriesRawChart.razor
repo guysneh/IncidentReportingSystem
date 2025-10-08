@@ -1,0 +1,53 @@
+﻿@using IncidentReportingSystem.UI.Core.Dashboard
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="chart-frame" style="--chart-h:@($"{Height}px"); --chart-h-sm:@($"{Math.Max(200, Height - 100)}px");">
+    <canvas id="@_id"></canvas>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<TrendPoint>? Data { get; set; }
+    [Parameter] public TimeResolution Resolution { get; set; } = TimeResolution.Daily;
+    [Parameter] public string SeriesLabel { get; set; } = "Count";
+    [Parameter] public int Height { get; set; } = 380;
+
+    private readonly string _id = $"line_{Guid.NewGuid():N}";
+    private bool _rendered;
+
+    private string[] Labels => (Data ?? Array.Empty<TrendPoint>())
+        .Select(p => Resolution == TimeResolution.Weekly ? WeekLabel(p.Date) : p.Date.ToString("yyyy-MM-dd"))
+        .ToArray();
+
+    private int[] Values => (Data ?? Array.Empty<TrendPoint>()).Select(p => p.Count).ToArray();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return; _rendered = true; await UpsertAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered) await UpsertAsync();
+    }
+
+    private Task UpsertAsync()
+        => JS.InvokeVoidAsync("irsCharts.upsertLine", _id, Labels, Values, new { label = SeriesLabel }).AsTask();
+
+    public ValueTask DisposeAsync()
+        => JS.InvokeVoidAsync("irsCharts.destroy", _id);
+
+    private static DateOnly WeekStart(DateOnly d)
+    {
+        var dow = (int)d.DayOfWeek; var iso = dow == 0 ? 7 : dow;
+        return d.AddDays(-(iso - 1));
+    }
+
+    private static string WeekLabel(DateOnly weekStart)
+    {
+        var dt = weekStart.ToDateTime(TimeOnly.MinValue);
+        var week = System.Globalization.ISOWeek.GetWeekOfYear(dt);
+        var year = System.Globalization.ISOWeek.GetYear(dt);
+        return $"W{week} {year}";
+    }
+}

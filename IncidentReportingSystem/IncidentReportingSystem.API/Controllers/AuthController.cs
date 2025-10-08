@@ -10,6 +10,7 @@ using IncidentReportingSystem.Application.Features.Users.Commands.LoginUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.RegisterUser;
 using IncidentReportingSystem.Application.Features.Users.Commands.UpdateUserProfile;
 using IncidentReportingSystem.Application.Features.Users.Queries.GetCurrentUserProfile;
+using IncidentReportingSystem.Application.Features.Users.Queries.ResolveDisplayNames;
 using IncidentReportingSystem.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,7 @@ namespace IncidentReportingSystem.API.Controllers
         private readonly ISender _sender;
         private readonly ICurrentUserService _currentUser;
         private readonly ILogger<AuthController> _logger;
+        public sealed record ResolveRequest(string[] Ids);
 
         public AuthController(ISender sender, ICurrentUserService currentUser, ILogger<AuthController> logger)
         {
@@ -39,6 +41,7 @@ namespace IncidentReportingSystem.API.Controllers
         /// <summary>Registers a new user with roles. Anonymous for demo.</summary>
         [HttpPost("register")]
         [AllowAnonymous]
+        [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken ct)
@@ -81,6 +84,13 @@ namespace IncidentReportingSystem.API.Controllers
             }
         }
 
+        [HttpPost("resolve-display-names")]
+        public async Task<ActionResult<Dictionary<string, string>>> Resolve(
+        [FromBody] ResolveRequest body, CancellationToken ct)
+        {
+            var dict = await _sender.Send(new ResolveDisplayNamesQuery(body?.Ids ?? []), ct);
+            return Ok(dict);
+        }
 
         /// <summary>Authenticate with email + password and receive a JWT.</summary>
         [HttpPost("login")]

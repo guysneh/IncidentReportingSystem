@@ -1,71 +1,158 @@
 using IncidentReportingSystem.UI;
+using IncidentReportingSystem.UI.Core.Auth;
+using IncidentReportingSystem.UI.Core.Dashboard;
 using IncidentReportingSystem.UI.Core.Http;
+using IncidentReportingSystem.UI.Core.Incidents;
 using IncidentReportingSystem.UI.Core.Options;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using IncidentReportingSystem.UI.Core.Users;
+using IncidentReportingSystem.UI.Localization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
+using System.Globalization;
+using System.Net.Http.Headers;
+
+// Must be set before any hosting/builder is created
+AppContext.SetSwitch("Microsoft.AspNetCore.Watch.BrowserRefreshEnabled", false);
 
 var builder = WebApplication.CreateBuilder(args);
-// Persist DataProtection keys to a shared folder (mounted from Docker)
-// so antiforgery/data-protection cookies survive restarts.
+
+// DataProtection (containers)
 var keysDir = builder.Configuration["DataProtection:KeysDirectory"] ?? "/keys";
-builder.Services
-    .AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysDir))
     .SetApplicationName("IncidentReportingSystem.UI");
 
-// Make antiforgery cookie explicit (and “rotate” name once to drop old cookies safely)
+// Antiforgery
 builder.Services.AddAntiforgery(o =>
 {
-    o.Cookie.Name = ".irs.xsrf";                 
+    o.Cookie.Name = ".irs.xsrf";
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
     o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-// ---------- Options binding ----------
+// Options
 builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection("Api"));
 
-// ---------- UI services ----------
-builder.Services.AddMudServices();
+// Localization
+builder.Services.AddLocalization(o => o.ResourcesPath = "Localization");
+builder.Services.AddScoped<IAppTexts, AppTexts>();
 
-// ---------- HTTP: typed ApiClient + ProblemDetails handler ----------
-builder.Services.AddHttpClient<ApiClient>((sp, http) =>
+// Auth
+builder.Services.AddScoped<AuthState>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services.AddSingleton<IncidentReportingSystem.UI.Core.Auth.AuthEvents>();
+
+// Problems
+builder.Services.AddTransient<ProblemDetailsHandler>();
+
+// HTTP clients
+static string Slash(string u) => string.IsNullOrWhiteSpace(u) ? u : (u.EndsWith("/") ? u : u + "/");
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.PublicApiClient>();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.SecureApiClient>();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Http.IApiClient>(sp =>
+    sp.GetRequiredService<IncidentReportingSystem.UI.Core.Http.SecureApiClient>());
+
+
+builder.Services.AddHttpClient("ApiPublic", (sp, c) =>
 {
-    var api = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
-    if (string.IsNullOrWhiteSpace(api.BaseUrl))
-        throw new InvalidOperationException("Api:BaseUrl is required (appsettings or environment).");
+    var opts = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(opts.BaseUrl))
+        throw new InvalidOperationException("Api:BaseUrl is missing");
+    c.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/"); // e.g. https://localhost:7001/api/v1/
+    c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+});
 
-    http.BaseAddress = new Uri(api.BaseUrl, UriKind.Absolute);
-    http.Timeout = TimeSpan.FromSeconds(30);
-}).AddHttpMessageHandler(() => new ProblemDetailsHandler());
+builder.Services.AddHttpClient("Api", (sp, c) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(opts.BaseUrl))
+        throw new InvalidOperationException("Api:BaseUrl is missing");
+    c.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/"); // e.g. https://localhost:7001/api/v1/
+    c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+})
+.AddHttpMessageHandler<AuthHeaderHandler>()          
+.AddHttpMessageHandler<ProblemDetailsHandler>();
 
-// ---------- Blazor hosting ----------
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+// ***** THIS IS THE IMPORTANT PART FOR GUARANTEED INTERACTIVITY *****
+builder.WebHost.UseStaticWebAssets();
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor().AddCircuitOptions(o => o.DetailedErrors = true);
+builder.Services.AddMudServices();
+// Dashboard
+builder.Services.AddScoped<DashboardState>();
+builder.Services.AddScoped<IDashboardService, ApiDashboardService>();
+// after other services
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Incidents.IncidentsApi>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Users.IUserDirectory,
+                           IncidentReportingSystem.UI.Core.Users.UserDirectory>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IncidentReportingSystem.UI.Core.Attachments.IAttachmentUploadService,
+                           IncidentReportingSystem.UI.Core.Attachments.AttachmentUploadService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthSessionStore>();
+builder.Services.AddScoped<AuthState>();
 
 var app = builder.Build();
 
-// Redirect to HTTPS only if explicitly enabled (containers use HTTP by default)
-if (app.Configuration.GetValue<bool>("EnableHttpsRedirection"))
-{
-    app.UseHttpsRedirection();
-}
-
-// ---------- Middleware pipeline ----------
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", true);
     app.UseHsts();
 }
+if (app.Configuration.GetValue<bool>("EnableHttpsRedirection"))
+    app.UseHttpsRedirection();
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// RequestLocalization (en default; de, he)
+// --- Localization: cookie first ---
+var supported = new[] { "en", "de", "he" }.Select(c => new CultureInfo(c)).ToList();
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("en"),
+    SupportedCultures = supported,
+    SupportedUICultures = supported,
+    FallBackToParentCultures = false,
+    FallBackToParentUICultures = false
+});
+
+app.MapGet("/localize", (HttpContext ctx, string c, string? r) =>
+{
+    var cookie = CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(c));
+    ctx.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        cookie,
+        new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1), IsEssential = true, SameSite = SameSiteMode.Lax, Path = "/" }
+    );
+
+    var back = string.IsNullOrWhiteSpace(r) ? "/" : r;
+    if (Uri.TryCreate(back, UriKind.Absolute, out var abs)) back = abs.PathAndQuery;
+    return Results.LocalRedirect(back); 
+});
+
+
 app.UseAntiforgery();
 
-app.MapRazorComponents<App>()
-   .AddInteractiveServerRenderMode();
+// ***** MAP THE BLAZOR HUB + HOST PAGE *****
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
+app.MapGet("/ui/culture/{code}", (string code, HttpContext ctx) =>
+{
+    var culture = new System.Globalization.CultureInfo(code);
+    var cookie = CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture));
+    ctx.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        cookie,
+        new CookieOptions { IsEssential = true, Expires = DateTimeOffset.UtcNow.AddYears(1), Path = "/" });
+
+    var referer = ctx.Request.Headers.Referer.ToString();
+    return Results.Redirect(string.IsNullOrWhiteSpace(referer) ? "/" : referer);
+});
 
 app.Run();
+
+public partial class Program { }

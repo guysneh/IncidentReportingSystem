@@ -1,0 +1,11 @@
+﻿@using System.Globalization
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var culture = CultureInfo.CurrentUICulture.Name;
+        try { await JS.InvokeVoidAsync("irsDir.apply", culture); } catch { }
+    }
+}

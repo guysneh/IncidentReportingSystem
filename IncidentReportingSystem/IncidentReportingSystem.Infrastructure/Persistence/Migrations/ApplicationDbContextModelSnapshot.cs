@@ -116,10 +116,10 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
             modelBuilder.Entity("IncidentReportingSystem.Domain.Entities.IncidentReport", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<int>("Category")
+                        .HasMaxLength(128)
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
@@ -127,11 +127,13 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Location")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("timestamp with time zone");
@@ -139,22 +141,39 @@ namespace IncidentReportingSystem.Infrastructure.Migrations
                     b.Property<DateTime?>("ReportedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ReporterDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<Guid>("ReporterId")
+                        .HasMaxLength(64)
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Severity")
-                        .HasColumnType("integer");
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SystemAffected")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("IncidentReports");
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("Status", "Severity");
+
+                    b.ToTable("incident_reports", (string)null);
                 });
 
             modelBuilder.Entity("IncidentReportingSystem.Domain.Entities.User", b =>

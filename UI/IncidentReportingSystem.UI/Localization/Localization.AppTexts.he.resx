@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Welcome.Title" xml:space="preserve">
+    <value>דיווח תקלות מהר ובטוח.</value>
+  </data>
+  <data name="Welcome.Subtitle" xml:space="preserve">
+    <value>התחבר/י או הרשמ/י כדי להמשיך.</value>
+  </data>
+  <data name="Welcome.Point.Secure" xml:space="preserve">
+    <value>אימות מאובטח והרשאות</value>
+  </data>
+  <data name="Welcome.Point.Fast" xml:space="preserve">
+    <value>זרימה מהירה ופשוטה</value>
+  </data>
+  <data name="Welcome.Point.Modern" xml:space="preserve">
+    <value>ממשק מודרני ורספונסיבי</value>
+  </data>
+  <data name="Tab.Login" xml:space="preserve">
+    <value>התחברות</value>
+  </data>
+  <data name="Tab.Register" xml:space="preserve">
+    <value>הרשמה</value>
+  </data>
+  <data name="Field.Email" xml:space="preserve">
+    <value>אימייל</value>
+  </data>
+  <data name="Field.Password" xml:space="preserve">
+    <value>סיסמה</value>
+  </data>
+  <data name="Field.FirstName" xml:space="preserve">
+    <value>שם פרטי</value>
+  </data>
+  <data name="Field.LastName" xml:space="preserve">
+    <value>שם משפחה</value>
+  </data>
+  <data name="Btn.SignIn" xml:space="preserve">
+    <value>התחבר</value>
+  </data>
+  <data name="Btn.Create" xml:space="preserve">
+    <value>צור חשבון</value>
+  </data>
+  <data name="Legal.Continue" xml:space="preserve">
+    <value>בהמשך הפעולה את/ה מסכימ/ה לתנאים.</value>
+  </data>
+  <data name="SignedIn.Message" xml:space="preserve">
+    <value>נכנסת בהצלחה.</value>
+  </data>
+  <data name="Nav.Account" xml:space="preserve">
+    <value>לעמוד החשבון</value>
+  </data>
+  <data name="Nav.Home" xml:space="preserve">
+    <value>דף הבית</value>
+  </data>
+  <data name="Error.Login" xml:space="preserve">
+    <value>אימייל או סיסמה לא נכונים.</value>
+  </data>
+  <data name="Error.Register" xml:space="preserve">
+    <value>הרשמה נכשלה.</value>
+  </data>
+  <data name="Field.Role" xml:space="preserve">
+    <value>תפקיד</value>
+  </data>
+  <data name="Option.User" xml:space="preserve">
+    <value>משתמש רגיל</value>
+  </data>
+  <data name="Option.Admin" xml:space="preserve">
+    <value>אדמין</value>
+  </data>
+  <data name="Brand.Title" xml:space="preserve">
+    <value>Incident Reporting</value>
+  </data>
+  <data name="Account.Title" xml:space="preserve">
+    <value>החשבון שלי</value>
+  </data>
+  <data name="Field.Roles" xml:space="preserve">
+    <value>תפקידים</value>
+  </data>
+  <data name="Account.NotAuthorized.Title" xml:space="preserve">
+    <value>אין הרשאה</value>
+  </data>
+  <data name="Account.NotAuthorized.Body" xml:space="preserve">
+    <value>אין לך הרשאה או שהסשן פג. אנא התחבר/י מחדש.</value>
+  </data>
+  <data name="Action.GoSignIn" xml:space="preserve">
+    <value>להתחברות</value>
+  </data>
+  <data name="Action.Back" xml:space="preserve">
+    <value>חזרה</value>
+  </data>
+  <data name="Aria.Loading" xml:space="preserve">
+    <value>טוען</value>
+  </data>
+  <data name="Field.Name" xml:space="preserve">
+    <value>שם מלא</value>
+  </data>
+  <data name="Action.Logout" xml:space="preserve">
+    <value>התנתקות</value>
+  </data>
+  <data name="Auth.Register.Title" xml:space="preserve">
+    <value>יצירת חשבון</value>
+  </data>
+  <data name="Auth.SignIn.Failed" xml:space="preserve">
+    <value>ההתחברות נכשלה</value>
+  </data>
+  <data name="Auth.Register.Failed" xml:space="preserve">
+    <value>ההרשמה נכשלה</value>
+  </data>
+  <data name="Action.SignIn" xml:space="preserve">
+    <value>התחברות</value>
+  </data>
+  <data name="Action.Register" xml:space="preserve">
+    <value>הרשמה</value>
+  </data>
+  <data name="Role.SelectPlaceholder" xml:space="preserve">
+    <value>בחר תפקיד…</value>
+  </data>
+  <data name="Role.User" xml:space="preserve">
+    <value>משתמש</value>
+  </data>
+  <data name="Role.Admin" xml:space="preserve">
+    <value>מנהל</value>
+  </data>
+  <data name="Auth.SignIn.Title" xml:space="preserve">
+    <value>התחברות</value>
+  </data>
+  <data name="Account.Edit.Title" xml:space="preserve">
+    <value>עריכת פרופיל</value>
+  </data>
+  <data name="Account.Edit.Success" xml:space="preserve">
+    <value>הפרופיל עודכן</value>
+  </data>
+  <data name="Account.Edit.Failed" xml:space="preserve">
+    <value>עדכון פרופיל נכשל</value>
+  </data>
+  <data name="Account.Action.ChangePassword" xml:space="preserve">
+    <value>שינוי סיסמה</value>
+  </data>
+  <data name="Account.ChangePassword.Title" xml:space="preserve">
+    <value>שינוי סיסמה</value>
+  </data>
+  <data name="Account.ChangePassword.Success" xml:space="preserve">
+    <value>סיסמא שונתה</value>
+  </data>
+  <data name="Field.Password.Current" xml:space="preserve">
+    <value>סיסמה נוכחית</value>
+  </data>
+  <data name="Field.Password.New" xml:space="preserve">
+    <value>סיסמה חדשה</value>
+  </data>
+  <data name="Field.Password.Confirm" xml:space="preserve">
+    <value>אישור סיסמה חדשה</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>לוח מחוונים</value>
+  </data>
+  <data name="Dashboard.Mvp.Placeholder" xml:space="preserve">
+    <value>ממלא מקום לוח מחוונים</value>
+  </data>
+  <data name="Dashboard.Link.Profile" xml:space="preserve">
+    <value>הפרופיל שלי</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>שמירה</value>
+  </data>
+  <data name="Error.Generic" xml:space="preserve">
+    <value>משהו לא הלך כשורה</value>
+  </data>
+  <data name="Nav.Dashboard" xml:space="preserve">
+    <value>לוח מחוונים</value>
+  </data>
+  <data name="Nav.MyProfile" xml:space="preserve">
+    <value>הפרופיל שלי</value>
+  </data>
+  <data name="Nav.Side" xml:space="preserve">
+    <value>ניווט</value>
+  </data>
+  <data name="Nav.Menu" xml:space="preserve">
+    <value>תפריט</value>
+  </data>
+  <data name="Ation.Close" xml:space="preserve">
+    <value>סגירה</value>
+  </data>
+  <data name="Quick.Settings" xml:space="preserve">
+    <value>הגדרות</value>
+  </data>
+  <data name="Dashboard.Kpi.Total" xml:space="preserve">
+    <value>סה"כ תקלות</value>
+  </data>
+  <data name="Dashboard.Kpi.Open" xml:space="preserve">
+    <value>תקלות פתוחות</value>
+  </data>
+  <data name="Dashboard.Kpi.Closed" xml:space="preserve">
+    <value>תקלות סגורות</value>
+  </data>
+  <data name="Dashboard.Chart.ByStatus" xml:space="preserve">
+    <value>תקלות לפי סטטוס</value>
+  </data>
+  <data name="Dashboard.Chart.BySeverity" xml:space="preserve">
+    <value>תקלות לפי רמת חומרה</value>
+  </data>
+  <data name="Dashboard.Chart.ByCategory" xml:space="preserve">
+    <value>תקלות לפי קטגוריה</value>
+  </data>
+  <data name="Dashboard.Empty" xml:space="preserve">
+    <value>אין נתונים זמינים</value>
+  </data>
+  <data name="Auth.Login.Success" xml:space="preserve">
+    <value>ההתחברות הצליחה</value>
+  </data>
+  <data name="Dashboard.Error" xml:space="preserve">
+    <value>טעינת לוח המחוונים נכשלה</value>
+  </data>
+  <data name="Dashboard.Chart.Timeseries" xml:space="preserve">
+    <value>תקלות לאורך ציר הזמן</value>
+  </data>
+  <data name="Dashboard.Loading" xml:space="preserve">
+    <value>טוען...</value>
+  </data>
+  <data name="Common.Reload" xml:space="preserve">
+    <value>רענן נתונים</value>
+  </data>
+  <data name="Dashboard.Chart.Series.Count" xml:space="preserve">
+    <value>כמות</value>
+  </data>
+  <data name="Dashboard.Total" xml:space="preserve">
+    <value>סה"כ תקלות</value>
+  </data>
+  <data name="Filters.DateRange" xml:space="preserve">
+    <value>טווח תאריכים</value>
+  </data>
+  <data name="Filters.Period" xml:space="preserve">
+    <value>רזולוציה</value>
+  </data>
+  <data name="Filters.Apply" xml:space="preserve">
+    <value>החל</value>
+  </data>
+  <data name="Filters.Reset" xml:space="preserve">
+    <value>איפוס</value>
+  </data>
+  <data name="Period.Daily" xml:space="preserve">
+    <value>יומי</value>
+  </data>
+  <data name="Period.Weekly" xml:space="preserve">
+    <value>שבועי</value>
+  </data>
+  <data name="Export.CSV" xml:space="preserve">
+    <value>יצוא CSV</value>
+  </data>
+  <data name="Period.WeekLabel" xml:space="preserve">
+    <value>שבוע {0}</value>
+  </data>
+  <data name="Incidents.Title" xml:space="preserve">
+    <value>תקלות</value>
+  </data>
+  <data name="Nav.Incidents" xml:space="preserve">
+    <value>תקלות</value>
+  </data>
+  <data name="Incidents.Subtitle" xml:space="preserve">
+    <value>צפייה וניהול דיווחי תקלות</value>
+  </data>
+  <data name="Incidents.Search.Placeholder" xml:space="preserve">
+    <value>חיפוש לפי מזהה, כותרת או טקסט…</value>
+  </data>
+  <data name="Incidents.Empty" xml:space="preserve">
+    <value>לא נמצאו תקלות</value>
+  </data>
+  <data name="Incidents.Error.Title" xml:space="preserve">
+    <value>שגיאה בטעינת התקלות</value>
+  </data>
+  <data name="Incidents.Col.Date" xml:space="preserve">
+    <value>תאריך</value>
+  </data>
+  <data name="Incidents.Col.Title" xml:space="preserve">
+    <value>כותרת</value>
+  </data>
+  <data name="Incidents.Col.Status" xml:space="preserve">
+    <value>סטטוס</value>
+  </data>
+  <data name="Incidents.Col.Severity" xml:space="preserve">
+    <value>חומרה</value>
+  </data>
+  <data name="Incidents.Col.Category" xml:space="preserve">
+    <value>קטגוריה</value>
+  </data>
+  <data name="Incidents.Col.Id" xml:space="preserve">
+    <value>מזהה</value>
+  </data>
+  <data name="Action.Refresh" xml:space="preserve">
+    <value>רענון</value>
+  </data>
+  <data name="Common.Page" xml:space="preserve">
+    <value>עמוד</value>
+  </data>
+  <data name="Common.Total" xml:space="preserve">
+    <value>סה"כ</value>
+  </data>
+  <data name="Common.Prev" xml:space="preserve">
+    <value>חזרה</value>
+  </data>
+  <data name="Common.Next" xml:space="preserve">
+    <value>הבא</value>
+  </data>
+  <data name="IncidentDetails.Tab.Details" xml:space="preserve">
+    <value>פרטים</value>
+  </data>
+  <data name="IncidentDetails.Tab.Comments" xml:space="preserve">
+    <value>הערות</value>
+  </data>
+  <data name="IncidentDetails.Tab.Attachments" xml:space="preserve">
+    <value>קבצים מצורפים</value>
+  </data>
+  <data name="IncidentDetails.Tab.History" xml:space="preserve">
+    <value>היסטוריה</value>
+  </data>
+  <data name="IncidentDetails.Section.Overview" xml:space="preserve">
+    <value>סקירה</value>
+  </data>
+  <data name="IncidentDetails.Field.Description" xml:space="preserve">
+    <value>תיאור</value>
+  </data>
+  <data name="IncidentDetails.NoDescription" xml:space="preserve">
+    <value>אין תיאור לפריט זה.</value>
+  </data>
+  <data name="Incidents.BackToList" xml:space="preserve">
+    <value>חזרה לרשימה</value>
+  </data>
+  <data name="IncidentDetails.Comments.Title" xml:space="preserve">
+    <value>הערות</value>
+  </data>
+  <data name="IncidentDetails.Comments.Empty" xml:space="preserve">
+    <value>אין הערות.</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Title" xml:space="preserve">
+    <value>קבצים מצורפים</value>
+  </data>
+  <data name="IncidentDetails.Attachments.Empty" xml:space="preserve">
+    <value>אין קבצים מצורפים.</value>
+  </data>
+  <data name="IncidentDetails.OpenInNewTab" xml:space="preserve">
+    <value>פתח בטאב חדש</value>
+  </data>
+  <data name="IncidentDetails.Download" xml:space="preserve">
+    <value>הורדה</value>
+  </data>
+  <data name="Action.Download" xml:space="preserve">
+    <value>הורדה</value>
+  </data>
+  <data name="Action.Open" xml:space="preserve">
+    <value>פתיחה</value>
+  </data>
+  <data name="Attachments.Open" xml:space="preserve">
+    <value>פתיחה</value>
+  </data>
+  <data name="Auth.Register.Success" xml:space="preserve">
+    <value>ההרשמה הצליחה</value>
+  </data>
+  <data name="Attachments.Download" xml:space="preserve">
+    <value>הורדה</value>
+  </data>
+  <data name="IncidentCreate.Title" xml:space="preserve">
+    <value>פתיחת תקלה חדשה</value>
+  </data>
+  <data name="IncidentCreate.Subtitle" xml:space="preserve">
+    <value>מלא/י את הפרטים ליצירת תקלה חדשה.</value>
+  </data>
+  <data name="IncidentCreate.Back" xml:space="preserve">
+    <value>חזרה לרשימת התקלות</value>
+  </data>
+  <data name="Field.Title" xml:space="preserve">
+    <value>כותרת</value>
+  </data>
+  <data name="Field.Description" xml:space="preserve">
+    <value>תיאור</value>
+  </data>
+  <data name="Field.Location" xml:space="preserve">
+    <value>מיקום</value>
+  </data>
+  <data name="Field.SystemAffected" xml:space="preserve">
+    <value>מערכת מושפעת</value>
+  </data>
+  <data name="Field.Category" xml:space="preserve">
+    <value>קטגוריה</value>
+  </data>
+  <data name="Field.Severity" xml:space="preserve">
+    <value>דרגת חומרה</value>
+  </data>
+  <data name="Field.ReportedAt" xml:space="preserve">
+    <value>תאריך דיווח</value>
+  </data>
+  <data name="Action.CreateIncident" xml:space="preserve">
+    <value>פתיחת דו"ח תקלה</value>
+  </data>
+  <data name="Action.Cancel" xml:space="preserve">
+    <value>ביטול</value>
+  </data>
+  <data name="Nav.ReportIncident" xml:space="preserve">
+    <value>פתיחת תקלה</value>
+  </data>
+  <data name="Incidents.Col.Reporter" xml:space="preserve">
+    <value>מדווח</value>
+  </data>
+  <data name="IncidentDetails.Field.Reporter" xml:space="preserve">
+    <value>מדווח</value>
+  </data>
+  <data name="Comments.Add" xml:space="preserve">
+    <value>הוסף הערה</value>
+  </data>
+  <data name="Comments.Cancel" xml:space="preserve">
+    <value>בטל</value>
+  </data>
+  <data name="Comments.Placeholder" xml:space="preserve">
+    <value>כתוב הערה…</value>
+  </data>
+  <data name="Comments.Submit" xml:space="preserve">
+    <value>שלח</value>
+  </data>
+  <data name="Comments.Error.Empty" xml:space="preserve">
+    <value>אי אפשר לשלוח הערה ריקה.</value>
+  </data>
+  <data name="Comments.Error.Failed" xml:space="preserve">
+    <value>שמירת ההערה נכשלה. נסה שוב.</value>
+  </data>
+  <data name="Comments.Loading" xml:space="preserve">
+    <value>טוען הערות…</value>
+  </data>
+  <data name="Comments.Empty" xml:space="preserve">
+    <value>אין עדיין הערות.</value>
+  </data>
+  <data name="IncidentDetails.Comments.AddButton" xml:space="preserve">
+    <value>הוסף הערה</value>
+  </data>
+  <data name="Comments.Form.Placeholder" xml:space="preserve">
+    <value>כתוב את ההערה כאן</value>
+  </data>
+  <data name="Comments.Form.Submit" xml:space="preserve">
+    <value>שליחה</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>ביטול</value>
+  </data>
+  <data name="Comments.Form.Counter" xml:space="preserve">
+    <value>תווים: {0}/{1}</value>
+  </data>
+  <data name="Attachments.Add" xml:space="preserve">
+    <value>הוספה</value>
+  </data>
+  <data name="Attachments.Cancel" xml:space="preserve">
+    <value>ביטול</value>
+  </data>
+  <data name="Attachments.Hint.Allowed" xml:space="preserve">
+    <value>סוגי קבצים מותרים</value>
+  </data>
+  <data name="Attachments.Hint.MaxSize" xml:space="preserve">
+    <value>{0} MB גודל מקסימלי</value>
+  </data>
+  <data name="Attachments.Hint.SelectFile" xml:space="preserve">
+    <value>בחר קובץ להעלאה</value>
+  </data>
+  <data name="Attachments.Form.PickFile" xml:space="preserve">
+    <value>בחר קובץ</value>
+  </data>
+  <data name="Attachments.Uploading" xml:space="preserve">
+    <value>מעלה קובץ...</value>
+  </data>
+  <data name="Attachments.UploadedBy" xml:space="preserve">
+    <value>הועלה ע"י</value>
+  </data>
+  <data name="Attachments.DeleteFile" xml:space="preserve">
+    <value>למחוק את הקובץ?</value>
+  </data>
+  <data name="Attachments.Delete" xml:space="preserve">
+    <value>מחיקה</value>
+  </data>
+</root>

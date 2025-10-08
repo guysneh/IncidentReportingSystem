@@ -51,7 +51,6 @@ public class IncidentReportsControllerTests : IClassFixture<CustomWebApplication
         return new CreateIncidentReportCommand(
             description: description ?? "Test incident",
             location: "Berlin",
-            reporterId: Guid.NewGuid(),
             category: IncidentCategory.Security,
             systemAffected: "Backend",
             severity: severity ?? IncidentSeverity.High,

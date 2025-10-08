@@ -23,7 +23,6 @@ namespace IncidentReportingSystem.Tests.Helpers
             return new CreateIncidentReportCommand(
             description: "Test incident",
             location: "Berlin",
-            reporterId: Guid.NewGuid(),
             category: IncidentCategory.ITSystems,
             systemAffected: "System A",
             severity: IncidentSeverity.Medium,

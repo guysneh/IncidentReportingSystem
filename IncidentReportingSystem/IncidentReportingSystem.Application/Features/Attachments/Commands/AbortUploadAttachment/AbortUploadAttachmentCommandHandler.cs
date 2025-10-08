@@ -21,13 +21,13 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Commands.Abor
     {
         private static readonly EventId AuditEventId = new(20230, "AttachmentAbort");
 
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
         private readonly IAttachmentStorage _storage;
         private readonly IUnitOfWork _uow;
         private readonly ILogger<AbortUploadAttachmentCommandHandler> _logger;
 
         public AbortUploadAttachmentCommandHandler(
-            IAttachmentRepository repo,
+            IAttachmentsRepository repo,
             IAttachmentStorage storage,
             IUnitOfWork uow,
             ILogger<AbortUploadAttachmentCommandHandler> logger)

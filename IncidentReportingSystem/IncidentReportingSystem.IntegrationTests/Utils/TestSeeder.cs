@@ -39,7 +39,6 @@ namespace IncidentReportingSystem.IntegrationTests.Utils
             var cmd = new IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport.CreateIncidentReportCommand(
                 description: description,
                 location: location,
-                reporterId: Guid.NewGuid(),
                 category: IncidentCategory.PowerOutage,
                 systemAffected: "N/A",
                 severity: IncidentSeverity.Low

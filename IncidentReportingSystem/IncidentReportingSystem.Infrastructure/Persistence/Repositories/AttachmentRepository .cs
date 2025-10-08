@@ -15,7 +15,7 @@ namespace IncidentReportingSystem.Infrastructure.Persistence.Repositories
     /// EF-based repository for the Attachment aggregate. Implements full
     /// search/filter/sort/paging for listing attachments by parent.
     /// </summary>
-    public sealed class AttachmentRepository : IAttachmentRepository
+    public sealed class AttachmentRepository : IAttachmentsRepository
     {
         private readonly ApplicationDbContext _db;
         public AttachmentRepository(ApplicationDbContext db) => _db = db;

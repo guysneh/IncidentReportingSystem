@@ -1,0 +1,93 @@
+﻿@using System.Text.Json
+@inject IJSRuntime JS
+@inject AuthState State
+@inject IncidentReportingSystem.UI.Core.Auth.IAuthService AuthService
+@inject IncidentReportingSystem.UI.Core.Auth.AuthEvents Events
+@inject ILogger<AuthHydrator> Logger
+@inject NavigationManager Nav
+@inject AuthSessionStore Store
+@implements IDisposable
+
+@code {
+    private bool _subscribed;
+    private bool _redirecting;
+
+    private sealed record Payload(string? token, DateTimeOffset? expUtc);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TryHydrateFromLocalStorageAsync();
+        if (!_subscribed)
+        {
+            Events.Unauthorized += HandleUnauthorized;
+            _subscribed = true;
+        }
+    }
+
+    private sealed class AuthBlob
+    {
+        public string? t { get; set; } // access token
+        public long exp { get; set; }  // epoch ms (UTC)
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // טען מה-localStorage אם צריך
+        await State.EnsureHydratedAsync(JS);
+
+        // רישום לאירוע שינויים
+        State.Changed += OnAuthChanged;
+
+        // אם תרצה לנקות ברינטיימים:
+        // StateHasChanged();  // לא חובה – רק אם ה־UI תלוי בזה מיידית
+    }
+
+    private Task OnAuthChanged()
+    {
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private async Task TryHydrateFromLocalStorageAsync()
+    {
+        var raw = await JS.InvokeAsync<string?>("irsAuth.getRaw");
+        if (string.IsNullOrWhiteSpace(raw)) return;
+
+        AuthBlob? blob;
+        try { blob = JsonSerializer.Deserialize<AuthBlob>(raw); }
+        catch { return; }
+
+        if (!string.IsNullOrWhiteSpace(blob?.t) && blob!.exp > 0)
+        {
+            var exp = DateTimeOffset.FromUnixTimeMilliseconds(blob.exp);
+            await State.HydrateAsync(blob.t!, exp);
+        }
+    }
+
+    private async void HandleUnauthorized(string? source)
+    {
+        if (_redirecting) return;
+        _redirecting = true;
+
+        try
+        {
+            Logger.LogWarning("[UNAUTH] source={Source} – clearing and redirecting", source ?? "unknown");
+            await State.ClearAsync(JS);
+            try { await JS.InvokeVoidAsync("irsAuth.clear"); } catch { /* ignore */ }
+
+            var ret = Uri.EscapeDataString(Nav.Uri);
+            Nav.NavigateTo($"/login?returnUrl={ret}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "HandleUnauthorized failed");
+        }
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnAuthChanged;
+    }
+}

@@ -1,12 +1,12 @@
 ﻿using Asp.Versioning;
 using IncidentReportingSystem.API.Auth;
 using IncidentReportingSystem.API.Contracts.Paging;
+using IncidentReportingSystem.Application.Abstractions.Persistence; 
 using IncidentReportingSystem.Application.Common.Auth;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Create;
 using IncidentReportingSystem.Application.Features.Comments.Commands.Delete;
-using IncidentReportingSystem.Application.Features.Comments.Dtos;
+using IncidentReportingSystem.Application.Features.Comments.Queries.GetById;
 using IncidentReportingSystem.Application.Features.Comments.Queries.ListComment;
-using IncidentReportingSystem.Application.Abstractions.Persistence; // <-- add
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,18 +58,8 @@ namespace IncidentReportingSystem.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(Guid incidentId, Guid commentId, CancellationToken cancellationToken = default)
         {
-            var c = await _comments.GetAsync(incidentId, commentId, cancellationToken).ConfigureAwait(false);
-            if (c is null) return NotFound();
-
-            var dto = new CommentDto
-            {
-                Id = c.Id,
-                IncidentId = c.IncidentId,
-                UserId = c.UserId,
-                Text = c.Text,
-                CreatedAtUtc = c.CreatedAtUtc
-            };
-
+            var dto = await _mediator.Send(new GetCommentByIdQuery(incidentId, commentId), cancellationToken)
+                            .ConfigureAwait(false);
             return Ok(dto);
         }
 

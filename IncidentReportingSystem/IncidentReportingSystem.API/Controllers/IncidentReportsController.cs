@@ -5,8 +5,8 @@ using IncidentReportingSystem.Application.Features.IncidentReports.Commands.Bulk
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.CreateIncidentReport;
 using IncidentReportingSystem.Application.Features.IncidentReports.Commands.UpdateIncidentStatus;
 using IncidentReportingSystem.Application.Features.IncidentReports.Dtos;
-using IncidentReportingSystem.Application.Features.IncidentReports.Mappers;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportById;
+using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReportDetails;
 using IncidentReportingSystem.Application.Features.IncidentReports.Queries.GetIncidentReports;
 using IncidentReportingSystem.Application.Persistence;
 using IncidentReportingSystem.Domain.Enums;
@@ -53,20 +53,18 @@ namespace IncidentReportingSystem.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result.ToDto());
         }
 
-        /// <summary>
-        /// Retrieves an incident report by its unique ID.
-        /// </summary>
+        /// <summary>Retrieves an incident report by its unique ID.</summary>
         /// <param name="id">The incident ID.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>The incident report as DTO if found.</returns>
         [Authorize(Policy = PolicyNames.CanReadIncidents)]
-        [HttpGet("{id}")]
         [ProducesResponseType(typeof(IncidentReportDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(new GetIncidentReportByIdQuery(id), cancellationToken).ConfigureAwait(false);
-            return Ok(result.ToDto());
+            var dto = await _mediator.Send(new GetIncidentReportDetailsQuery(id), cancellationToken)
+                                     .ConfigureAwait(false);
+            return Ok(dto);
         }
 
         /// <summary>

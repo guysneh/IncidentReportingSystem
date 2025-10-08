@@ -1,0 +1,425 @@
+﻿@page "/incidents"
+@rendermode RenderMode.InteractiveServer
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using IncidentReportingSystem.UI.Core.Http
+@using IncidentReportingSystem.UI.Core.Users
+@inject IApiClient Api
+@inject IUserDirectory UserDir
+@inject IncidentReportingSystem.UI.Localization.IAppTexts T
+@inject NavigationManager Nav
+
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="h5 mb-0">@T["Incidents.Title"]</h1>
+
+        <a class="btn btn-primary btn-sm" href="/incidents/new">
+            <svg viewBox="0 0 24 24" width="16" height="16" class="me-1" aria-hidden="true">
+                <path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z" fill="currentColor"></path>
+            </svg>
+            @T["Action.CreateIncident"]
+        </a>
+    </div>
+
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
+        <div>
+            <h1 class="h4 mb-1">@T["Incidents.Title"]</h1>
+            <div class="text-muted small">@T["Incidents.Subtitle"]</div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group">
+                <span class="input-group-text" id="search-addon" aria-hidden="true">🔎</span>
+                <input class="form-control" type="search"
+                       placeholder="@T["Incidents.Search.Placeholder"]"
+                       aria-label="@T["Incidents.Search.Placeholder"]"
+                       @bind="_search"
+                       @bind:event="oninput" />
+            </div>
+
+            <select class="form-select" style="width: 140px" @bind="_pageSize">
+                <option value="25">25 / @T["Common.Page"]</option>
+                <option value="50">50 / @T["Common.Page"]</option>
+                <option value="100">100 / @T["Common.Page"]</option>
+            </select>
+
+            <button class="btn btn-outline-secondary" @onclick="Reload" disabled="@_busy">
+                @if (_busy)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" />
+                }
+                @T["Action.Refresh"]
+            </button>
+        </div>
+    </div>
+
+    @if (_busy && _items.Count == 0)
+    {
+        <div class="py-5 text-center">
+            <div class="spinner-border" role="status" aria-label="@T["Dashboard.Loading"]"></div>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between" role="alert">
+            <div>
+                <strong class="me-2">@T["Incidents.Error.Title"]</strong>
+                <span class="small">@_error</span>
+            </div>
+            <button class="btn btn-sm btn-outline-light" @onclick="Reload">@T["Common.Reload"]</button>
+        </div>
+    }
+    else if (_items.Count == 0)
+    {
+        <div class="py-5 text-center text-muted">@T["Incidents.Empty"]</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Date)))">
+                            @T["Incidents.Col.Date"] @HeaderGlyph(nameof(IncidentRow.Date))
+                        </th>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Status)))">
+                            @T["Incidents.Col.Status"] @HeaderGlyph(nameof(IncidentRow.Status))
+                        </th>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Severity)))">
+                            @T["Incidents.Col.Severity"] @HeaderGlyph(nameof(IncidentRow.Severity))
+                        </th>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Category)))">
+                            @T["Incidents.Col.Category"] @HeaderGlyph(nameof(IncidentRow.Category))
+                        </th>
+                        <th role="button" @onclick="@(() => SortBy(nameof(IncidentRow.Reporter)))">
+                            @T["Incidents.Col.Reporter"] @HeaderGlyph(nameof(IncidentRow.Reporter))
+                        </th>
+                        <th class="text-muted">@T["Incidents.Col.Id"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var it in _items)
+                    {
+                        <tr>
+                            <td>@(it.Date?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td>
+                                <span class="badge @StatusBadgeClass(it.Status)">@it.Status</span>
+                            </td>
+                            <td>@it.Severity</td>
+                            <td>@it.Category</td>
+                            <td>@it.Reporter</td>
+                            <td class="text-muted small"><a href="@DetailsHref(it.Id)">@it.Id</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div class="text-muted small">
+                @T["Common.Total"]:
+                <strong>@(_total is null ? $"{_items.Count}" : $"{_total}")</strong>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary" @onclick="PrevPage" disabled="@(_page <= 1 || _busy)">
+                    « @T["Common.Prev"]
+                </button>
+                <span class="btn btn-outline-secondary disabled">
+                    @T["Common.Page"] @_page
+                </span>
+                <button class="btn btn-outline-secondary" @onclick="NextPage" disabled="@(!_hasMore || _busy)">
+                    @T["Common.Next"] »
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // ---- View model ----
+    private sealed record IncidentRow(
+        string Id,
+        DateOnly? Date,
+        string Title,
+        string Status,
+        string Severity,
+        string Category,
+        string Reporter,     // display name or short id / "—"
+        string? ReporterId   // raw id for resolving, optional
+    );
+
+    // ---- State ----
+    private bool _busy;
+    private string? _error;
+
+    private string _search = string.Empty;
+
+    private int _page = 1;
+    private int _pageSize = 25;
+    private bool _hasMore;
+    private int? _total;
+
+    private string _sortBy = nameof(IncidentRow.Date);
+    private bool _sortDesc = true;
+
+    private readonly List<IncidentRow> _items = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task Reload()
+    {
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task PrevPage()
+    {
+        if (_page <= 1) return;
+        _page--;
+        await LoadAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (!_hasMore) return;
+        _page++;
+        await LoadAsync();
+    }
+
+    private void SortBy(string field)
+    {
+        if (_sortBy == field) _sortDesc = !_sortDesc;
+        else { _sortBy = field; _sortDesc = field is nameof(IncidentRow.Date) or nameof(IncidentRow.Severity); }
+        ApplyClientSort();
+        StateHasChanged();
+    }
+
+    private void ApplyClientSort()
+    {
+        Comparison<IncidentRow> cmp = _sortBy switch
+        {
+            nameof(IncidentRow.Title) => (a, b) => string.Compare(a.Title, b.Title, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Status) => (a, b) => string.Compare(a.Status, b.Status, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Severity) => (a, b) => string.Compare(a.Severity, b.Severity, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Category) => (a, b) => string.Compare(a.Category, b.Category, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Reporter) => (a, b) => string.Compare(a.Reporter, b.Reporter, StringComparison.OrdinalIgnoreCase),
+            nameof(IncidentRow.Date) => (a, b) => Nullable.Compare(a.Date, b.Date),
+            _ => (a, b) => 0
+        };
+        _items.Sort(cmp);
+        if (_sortDesc) _items.Reverse();
+    }
+
+    private MarkupString HeaderGlyph(string field)
+        => new((_sortBy == field) ? (_sortDesc ? " ↓" : " ↑") : "");
+
+    // ---- Data access ----
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        try
+        {
+            var qs = new List<string> { $"page={_page}", $"pageSize={_pageSize}" };
+            if (!string.IsNullOrWhiteSpace(_search))
+                qs.Add($"search={Uri.EscapeDataString(_search)}");
+
+            var order = _sortDesc ? "desc" : "asc";
+            var orderField = _sortBy switch
+            {
+                nameof(IncidentRow.Date) => "date",
+                nameof(IncidentRow.Title) => "title",
+                nameof(IncidentRow.Status) => "status",
+                nameof(IncidentRow.Severity) => "severity",
+                nameof(IncidentRow.Category) => "category",
+                nameof(IncidentRow.Reporter) => "reporter",
+                _ => "date"
+            };
+            qs.Add($"order={orderField}%20{order}");
+
+            var url = "IncidentReports" + (qs.Count > 0 ? "?" + string.Join("&", qs) : "");
+            var json = await Api.GetJsonAsync<JsonElement>(url, CancellationToken.None);
+
+            ParsePaged(json, out var rows, out var total, out var hasMore);
+
+            // post-load name resolution for rows that have ReporterId but no name
+            var missingIds = rows
+                .Where(r => string.IsNullOrWhiteSpace(r.Reporter) && !string.IsNullOrWhiteSpace(r.ReporterId))
+                .Select(r => r.ReporterId!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+
+            if (missingIds.Length > 0)
+            {
+                var map = await UserDir.ResolveDisplayNamesAsync(missingIds, CancellationToken.None);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var r = rows[i];
+
+                    if (!string.IsNullOrWhiteSpace(r.Reporter))
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(r.ReporterId))
+                    {
+                        rows[i] = r with { Reporter = ShortIdOrDash(null) };
+                        continue;
+                    }
+
+                    if (map.TryGetValue(r.ReporterId, out var dn) && !string.IsNullOrWhiteSpace(dn))
+                        rows[i] = r with { Reporter = dn };
+                    else
+                        rows[i] = r with { Reporter = ShortIdOrDash(r.ReporterId) };
+                }
+            }
+
+            else
+            {
+                // ensure we have at least short id instead of blank
+                rows = rows.Select(r => r with { Reporter = string.IsNullOrWhiteSpace(r.Reporter) ? ShortIdOrDash(r.ReporterId) : r.Reporter }).ToList();
+            }
+
+            _items.Clear();
+            _items.AddRange(rows);
+            _total = total;
+            _hasMore = hasMore;
+
+            ApplyClientSort();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items.Clear();
+            _total = null;
+            _hasMore = false;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    // Supports multiple server shapes
+    private void ParsePaged(JsonElement json, out List<IncidentRow> rows, out int? total, out bool hasMore)
+    {
+        rows = new();
+        total = null;
+        hasMore = false;
+
+        JsonElement itemsEl;
+
+        if (json.ValueKind == JsonValueKind.Array)
+        {
+            itemsEl = json;
+        }
+        else if (json.ValueKind == JsonValueKind.Object &&
+                 (json.TryGetProperty("items", out itemsEl) || json.TryGetProperty("data", out itemsEl)))
+        {
+            if (json.TryGetProperty("total", out var tot) && tot.TryGetInt32(out var t)) total = t;
+            else if (json.TryGetProperty("count", out var cnt) && cnt.TryGetInt32(out var c)) total = c;
+        }
+        else
+        {
+            itemsEl = default;
+        }
+
+        if (itemsEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var el in itemsEl.EnumerateArray())
+                if (el.ValueKind == JsonValueKind.Object)
+                    rows.Add(MapRow(el));
+        }
+
+        hasMore = total is not null
+            ? (_page * _pageSize) < total.Value
+            : rows.Count >= _pageSize;
+    }
+
+    private static IncidentRow MapRow(JsonElement el)
+    {
+        var id = GetString(el, new[] { "id", "incidentId", "reportId" }) ?? "—";
+        var title = GetString(el, new[] { "title", "summary", "name", "subject" }) ?? "—";
+        var status = GetString(el, new[] { "status", "state" }) ?? "Unknown";
+        var severity = GetString(el, new[] { "severity", "level", "priority" }) ?? "—";
+        var category = GetString(el, new[] { "category", "type", "incidentType", "classification" }) ?? "—";
+
+        // Reporter name / id (prefer display name if present)
+        var reporterDisplay = GetString(el, new[] { "reporterDisplayName", "reporterName", "reporter" });
+        var reporterId = GetString(el, new[] { "reporterId", "userId" });
+
+        string reporter = !string.IsNullOrWhiteSpace(reporterDisplay)
+            ? reporterDisplay!
+            : ShortIdOrDash(reporterId);
+
+        // Date
+        DateOnly? date = null;
+        if (TryGetDate(el, out var dd)) date = dd;
+
+        return new IncidentRow(id, date, title, status, severity, category, reporter, reporterId);
+    }
+
+    private static string? GetString(JsonElement el, IEnumerable<string> keys)
+    {
+        foreach (var k in keys)
+            if (el.TryGetProperty(k, out var v))
+                try { return v.ValueKind == JsonValueKind.String ? v.GetString() : v.ToString(); } catch { }
+        return null;
+    }
+
+    private static bool TryGetDate(JsonElement el, out DateOnly d)
+    {
+        d = default;
+        var keys = new[] { "date", "occurredAt", "createdAt", "createdAtUtc", "timestamp", "eventDate" };
+        foreach (var k in keys)
+        {
+            if (!el.TryGetProperty(k, out var v)) continue;
+
+            try
+            {
+                if (v.ValueKind == JsonValueKind.String)
+                {
+                    var s = v.GetString();
+                    if (DateOnly.TryParse(s, out var d1)) { d = d1; return true; }
+                    if (DateTimeOffset.TryParse(s, out var d2)) { d = DateOnly.FromDateTime(d2.UtcDateTime.Date); return true; }
+                }
+                else if (v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var unix))
+                {
+                    var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
+                    d = DateOnly.FromDateTime(dto.UtcDateTime.Date);
+                    return true;
+                }
+            }
+            catch { /* ignore */ }
+        }
+        return false;
+    }
+
+    private static string StatusBadgeClass(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return "bg-secondary";
+        var s = status.Trim().ToLowerInvariant();
+        return s switch
+        {
+            "open" => "bg-danger",
+            "closed" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string DetailsHref(object id)
+    {
+        var ret = Uri.EscapeDataString(Nav.Uri);
+        return $"/incidents/{id}?returnUrl={ret}";
+    }
+
+    private static string ShortIdOrDash(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return "—";
+        var s = id.Trim();
+        return s.Length > 8 ? s[..8] + "…" : s;
+    }
+}

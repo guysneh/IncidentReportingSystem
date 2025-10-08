@@ -1,0 +1,68 @@
+﻿@page "/__chart_smoke"
+@using MudBlazor
+@inject IJSRuntime JS
+
+<h3>Chart smoke</h3>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.caption">mudGetSvgBBox: @_mudFnType, Chart: @_chartType</MudText>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2">MudChart (Pie)</MudText>
+    <MudChart ChartType="ChartType.Pie"
+              Labels="_labels"
+              ChartSeries="_series"
+              Height="360px" Width="100%"
+              @key="_keyPie" />
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2">MudChart (Bar)</MudText>
+    <MudChart ChartType="ChartType.Bar"
+              XAxisLabels="_labels"
+              ChartSeries="_series"
+              Height="360px" Width="100%"
+              @key="_keyBar" />
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2">Raw Chart.js (sanity)</MudText>
+    <canvas id="pie_raw" width="800" height="360" style="display:block;border:1px solid #eee;"></canvas>
+</MudPaper>
+
+@code {
+    private string[] _labels = new[] { "A", "B" };
+    private List<ChartSeries> _series = new()
+  { new ChartSeries { Name = "Count", Data = new double[] { 8, 2 } } };
+
+    private string _keyPie = Guid.NewGuid().ToString();
+    private string _keyBar = Guid.NewGuid().ToString();
+    private string _mudFnType = "?";
+    private string _chartType = "?";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _mudFnType = await JS.InvokeAsync<string>("eval", "typeof window.mudGetSvgBBox");
+        _chartType = await JS.InvokeAsync<string>("eval", "typeof window.Chart");
+
+        // Try to draw a raw Chart.js pie to prove the library is available
+        await JS.InvokeVoidAsync("eval", @"
+      (function(){
+        var cv=document.getElementById('pie_raw');
+        if(!cv){ console.error('no canvas'); return; }
+        var ctx=cv.getContext('2d');
+        if(!window.Chart){ console.error('Chart undefined'); return; }
+        new Chart(ctx, {
+          type:'pie',
+          data:{ labels:['A','B'], datasets:[{ data:[8,2] }] },
+          options:{ responsive:false }
+        });
+      })();
+    ");
+
+        StateHasChanged();
+    }
+}

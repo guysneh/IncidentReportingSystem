@@ -20,6 +20,7 @@ public static class PersistenceExtensions
         services.AddScoped<IIncidentReportRepository, IncidentReportRepository>();
         services.AddScoped<IIncidentCommentsRepository, IncidentCommentsRepository>();
         services.AddScoped<IUserRepository, UserRepository>();          
+        services.AddScoped<IIncidentReadRepository, IncidentReadRepository>();
 
         // UoW + Idempotency
         services.AddScoped<IUnitOfWork, UnitOfWork>();

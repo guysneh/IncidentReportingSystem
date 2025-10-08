@@ -42,7 +42,7 @@ namespace IncidentReportingSystem.IntegrationTests.Attachments
             await _seeder.CompleteAttachmentAsync(id3);
 
             using var scope = _factory.Services.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentRepository>();
+            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentsRepository>();
             var (items, total) = await repo.ListByParentAsync(
                 AttachmentParentType.Incident, incidentId,
                 new AttachmentListFilters(Search: "alpha", OrderBy: "fileName", Direction: "asc"),
@@ -66,7 +66,7 @@ namespace IncidentReportingSystem.IntegrationTests.Attachments
             await _seeder.CompleteAttachmentAsync(a3);
 
             using var scope = _factory.Services.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentRepository>();
+            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentsRepository>();
             var (items, total) = await repo.ListByParentAsync(
                 AttachmentParentType.Incident, incidentId,
                 new AttachmentListFilters(
@@ -95,7 +95,7 @@ namespace IncidentReportingSystem.IntegrationTests.Attachments
             await _seeder.CompleteAttachmentAsync(idC);
 
             using var scope = _factory.Services.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentRepository>();
+            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentsRepository>();
             var (items, total) = await repo.ListByParentAsync(
                 AttachmentParentType.Incident, incidentId,
                 new AttachmentListFilters(OrderBy: "size", Direction: "desc", Skip: 1, Take: 1),
@@ -118,7 +118,7 @@ namespace IncidentReportingSystem.IntegrationTests.Attachments
             await _seeder.CompleteAttachmentAsync(c1);
 
             using var scope = _factory.Services.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentRepository>();
+            var repo = scope.ServiceProvider.GetRequiredService<IAttachmentsRepository>();
             var (items, total) = await repo.ListByParentAsync(
                 AttachmentParentType.Comment, commentId,
                 new AttachmentListFilters(OrderBy: "createdAt", Direction: "desc"),

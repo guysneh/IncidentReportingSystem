@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using IncidentReportingSystem.Domain;
+using IncidentReportingSystem.API.Auth;
 
 namespace IncidentReportingSystem.API.Extensions;
 

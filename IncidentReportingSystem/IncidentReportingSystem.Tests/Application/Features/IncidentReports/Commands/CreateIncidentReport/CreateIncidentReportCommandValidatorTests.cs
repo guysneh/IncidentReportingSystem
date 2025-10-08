@@ -15,7 +15,6 @@ public class CreateIncidentReportCommandValidatorTests
         var command = new CreateIncidentReportCommand(
             "", // Invalid Description
             "Berlin",
-            Guid.NewGuid(),
             IncidentCategory.Security,
             "Firewall",
             IncidentSeverity.High,
@@ -35,7 +34,6 @@ public class CreateIncidentReportCommandValidatorTests
         var command = new CreateIncidentReportCommand(
             "Outage",
             longLocation,
-            Guid.NewGuid(),
             IncidentCategory.Security,
             "Postgres",
             IncidentSeverity.Medium,
@@ -48,30 +46,11 @@ public class CreateIncidentReportCommandValidatorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void Should_Have_Error_When_ReporterId_Is_Empty()
-    {
-        var command = new CreateIncidentReportCommand(
-            "System Error",
-            "Berlin",
-            Guid.Empty, // Invalid
-            IncidentCategory.Security,
-            "Router",
-            IncidentSeverity.Low,
-            DateTime.UtcNow
-        );
-
-        var result = _validator.TestValidate(command);
-        result.ShouldHaveValidationErrorFor(x => x.ReporterId);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
     public void Should_Pass_When_All_Fields_Are_Valid()
     {
         var command = new CreateIncidentReportCommand(
             "System outage in datacenter",
             "Frankfurt",
-            Guid.NewGuid(),
             IncidentCategory.Infrastructure,
             "PowerGrid",
             IncidentSeverity.High,

@@ -21,14 +21,14 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
         private const int DefaultPageSize = 100;
         private const int MaxPageSize = 200;
 
-        private readonly IAttachmentRepository _repo;
+        private readonly IAttachmentsRepository _repo;
         private readonly ICurrentUserService _currentUser;
 
         /// <summary>
         /// Creates a new handler instance.
         /// </summary>
         public ListAttachmentsByParentQueryHandler(
-            IAttachmentRepository repo,
+            IAttachmentsRepository repo,
             ICurrentUserService currentUser)
         {
             _repo = repo ?? throw new ArgumentNullException(nameof(repo));
@@ -63,7 +63,8 @@ namespace IncidentReportingSystem.Application.Features.Attachments.Queries.ListA
                 CompletedAt = a.CompletedAt,
                 HasThumbnail = a.HasThumbnail,
                 CanDownload = a.Status == Domain.Enums.AttachmentStatus.Completed,
-                CanDelete = false
+                CanDelete = _currentUser.UserIdOrThrow() == a.UploadedBy,
+                UploadedBy = a.UploadedBy.ToString()
             }).ToArray();
 
             return new PagedResult<AttachmentDto>(items, total, f.Skip, f.Take);
