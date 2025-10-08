@@ -1,6 +1,8 @@
 ﻿using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
+using Azure.Monitor.OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
 
 namespace IncidentReportingSystem.API.Extensions
 {
@@ -14,7 +16,8 @@ namespace IncidentReportingSystem.API.Extensions
         public static IServiceCollection AddAppTelemetry(
             this IServiceCollection services,
             IConfiguration configuration,
-            IHostEnvironment env)
+            IHostEnvironment env,
+            ILoggingBuilder logging)
         {
             var connectionString = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -95,6 +98,36 @@ namespace IncidentReportingSystem.API.Extensions
                     });
                 });
 
+            /// Open Telemtry ///
+            var serviceName = "IncidentReportingSystem.API";
+
+            services.AddOpenTelemetry()
+              .ConfigureResource(res => res.AddService(serviceName))
+              .WithTracing(traces =>
+              {
+                  traces
+                      .AddAspNetCoreInstrumentation(o =>
+                      {
+                          o.RecordException = true;
+                      })
+                      .AddHttpClientInstrumentation()
+                      .AddAzureMonitorTraceExporter();
+              })
+              .WithMetrics(metrics =>
+              {
+                  metrics.AddAspNetCoreInstrumentation()
+                         .AddHttpClientInstrumentation()
+                         .AddAzureMonitorMetricExporter();
+              });
+
+            // Structured logs to App Insights via OpenTelemetry:
+            logging.ClearProviders();
+            logging.AddOpenTelemetry(logging =>
+            {
+                logging.IncludeFormattedMessage = true;
+                logging.IncludeScopes = true;
+                logging.AddAzureMonitorLogExporter();
+            });
             return services;
         }
     }

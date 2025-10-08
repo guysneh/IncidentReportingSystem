@@ -13,8 +13,22 @@ public static class MiddlewareExtensions
 {
     public static void UseAppPipeline(this WebApplication app)
     {
-        app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
+        app.Use(async (ctx, next) =>
+        {
+            var otelTraceId = System.Diagnostics.Activity.Current?.TraceId.ToString();
+            using (app.Logger.BeginScope(new Dictionary<string, object?> { ["OTelTraceId"] = otelTraceId }))
+            {
+                if (!string.IsNullOrEmpty(otelTraceId))
+                    ctx.Response.Headers["x-trace-id"] = otelTraceId;
+
+                await next();
+            }
+        });
+
+        app.UseMiddleware<AccessLogMiddleware>();
+        app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
         if (!app.Environment.IsEnvironment("Test"))
         {
             app.UseHttpsRedirection();

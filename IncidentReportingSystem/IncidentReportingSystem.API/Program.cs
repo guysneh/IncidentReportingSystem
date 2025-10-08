@@ -20,7 +20,7 @@ builder.Services
     .AddAttachmentsStorage(builder.Configuration);
 
 // Telemetry (OpenTelemetry + Azure Monitor) 
-builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment);
+builder.Services.AddAppTelemetry(builder.Configuration, builder.Environment, builder.Logging);
 builder.Services.AddScoped<IUserDirectory, DbUserDirectory>();
 
 // 3) Build

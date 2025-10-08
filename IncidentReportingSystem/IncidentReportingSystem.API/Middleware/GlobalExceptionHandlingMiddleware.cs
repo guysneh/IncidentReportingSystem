@@ -48,7 +48,11 @@ namespace IncidentReportingSystem.API.Middleware
                 };
 
                 problem.Extensions["traceId"] = context.TraceIdentifier;
-
+                var otelTraceId = System.Diagnostics.Activity.Current?.TraceId.ToString();
+                if (!string.IsNullOrWhiteSpace(otelTraceId))
+                {
+                    problem.Extensions["otelTraceId"] = otelTraceId;
+                }
                 if (extras is not null)
                 {
                     foreach (var kv in extras)

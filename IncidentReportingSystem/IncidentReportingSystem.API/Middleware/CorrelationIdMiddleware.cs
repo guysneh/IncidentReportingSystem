@@ -1,5 +1,6 @@
 ﻿using Serilog.Context;
 using Serilog.Context;
+using System.Diagnostics;
 
 namespace IncidentReportingSystem.API.Middleware;
 
@@ -26,8 +27,8 @@ public class CorrelationIdMiddleware
         }
 
         context.Response.Headers[Header] = correlationId;
-
-        using (LogContext.PushProperty("CorrelationId", correlationId))
+        Activity.Current?.SetTag("correlation.id", correlationId.ToString());
+        using (LogContext.PushProperty("CorrelationId", correlationId.ToString()))
         {
             await _next(context);
         }
